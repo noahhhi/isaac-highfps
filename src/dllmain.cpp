@@ -14,7 +14,11 @@
 #include <cstdint>
 #include <cstdio>
 #include <cerrno>
+#ifdef HIGHFPS_BUILD_19715
+#include "offsets_19715.h"
+#else
 #include "offsets.h"
+#endif
 #include "version.h"
 
 namespace {
@@ -212,7 +216,7 @@ WrapperFn g_wrapperTrampoline = nullptr;
 // 0.5 * TimeScale * Friction * Velocity and marking the entity so the next logic tick can
 // roll it back. We reuse that storage and that marker, but compute the step ourselves for
 // an arbitrary fraction of the tick.
-uintptr_t GameObj() { return *reinterpret_cast<uintptr_t*>(Addr(0x00C71678)); }
+uintptr_t GameObj() { return *reinterpret_cast<uintptr_t*>(Addr(isaac::kGGamePtr)); }
 
 // The gameplay clock, distinct from the render frame counter: it only advances inside
 // the full 30 Hz logic pass, so it stands still on the pause menu, during room
@@ -800,7 +804,11 @@ int __cdecl HookedUpdateWrapper() {
         // we remove the engine's limiter but never touch the GL swap interval, so with vsync
         // on the loop is pinned to the refresh rate no matter what we patched. When it is on,
         // loop/s IS the refresh rate, which is the other half of the same diagnosis.
+        #ifdef HIGHFPS_BUILD_19715
+        const bool vsync = *Addr(0x00BD5795) != 0;
+#else
         const bool vsync = (*reinterpret_cast<uint32_t*>(Addr(isaac::kGWindowFlags)) & 0x200) != 0;
+#endif
 
         Log("[stat] loop=%llu/s wrapper=%llu/s world=%s vsync=%s | iter avg %.2f max %.1f ms |"
             " engine-upd avg %.2f max %.1f | render~%.2f | ours avg %.3f max %.2f |"
@@ -972,6 +980,43 @@ int __cdecl HookedUpdateWrapper() {
     return result;
 }
 
+#ifdef HIGHFPS_BUILD_19715
+// J374 calls stdcall Manager::Update(bool) directly, unlike J460's cdecl wrapper.
+int __cdecl Update19715() {
+    using UpdateFn = void(__stdcall*)(bool);
+    reinterpret_cast<UpdateFn>(Addr(isaac::kPhaseMachine))(true);
+    return 0;
+}
+
+bool Validate19715Sites() {
+    static const uint8_t call[] = {0x6A,0x01,0xE8,0xF3,0x34,0x02,0x00};
+    static const uint8_t limiter[] = {0x84,0xDB,0x75,0x0C};
+    static const uint8_t branch[] = {0x0F,0x85,0xF3,0xFE,0xFF,0xFF};
+    static const uint8_t update[] = {0x55,0x8B,0xEC,0x83,0xE4,0xF0,0x81,0xEC,0x68,0x04,0x00,0x00};
+    return Expect(0x9295D6,call,sizeof call,"J374 update call") &&
+           Expect(0x929611,limiter,sizeof limiter,"J374 limiter") &&
+           Expect(0x92961B,branch,sizeof branch,"J374 loop branch") &&
+           Expect(0x94CAD0,update,sizeof update,"J374 Manager::Update");
+}
+
+bool InstallWrapperHook() {
+    if (!Validate19715Sites()) return false;
+    g_wrapperTrampoline = &Update19715;
+    uint8_t patch[7] = {0xE8,0,0,0,0,0x90,0x90};
+    *reinterpret_cast<int32_t*>(patch+1) = static_cast<int32_t>(
+        reinterpret_cast<uintptr_t>(&HookedUpdateWrapper) -
+        (reinterpret_cast<uintptr_t>(Addr(0x9295D6))+5));
+    return Poke(0x9295D6,patch,sizeof patch);
+}
+
+bool RemoveFrameLimiter() {
+    // NOP the force-limiter test, then always take the existing loop-head branch.
+    static const uint8_t nop[] = {0x90,0x90,0x90,0x90};
+    static const uint8_t jump[] = {0xE9,0xF4,0xFE,0xFF,0xFF,0x90};
+    if (!Poke(0x929611,nop,sizeof nop)) return false;
+    return Poke(0x92961B,jump,sizeof jump);
+}
+#else
 bool InstallWrapperHook() {
     // The prologue is `68 10 C5 C5 00` = push offset off_C5C510. That operand is an
     // absolute address, so the loader rebases it: comparing against the on-disk bytes
@@ -1024,6 +1069,9 @@ bool RemoveFrameLimiter() {
     static const uint8_t kJmpLoopHead[] = {0xE9, 0xD1, 0xFE, 0xFF, 0xFF, 0x90};
     return Poke(0x0093135B, kJmpLoopHead, sizeof kJmpLoopHead);
 }
+
+
+#endif
 
 // ------------------------------------------------ file probe cache
 // Profiling a room load shows a steady stream of NtQueryFullAttributesFile - the game
@@ -1958,6 +2006,18 @@ DWORD WINAPI Init(LPVOID) {
     }
 
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr));
+#ifdef HIGHFPS_BUILD_19715
+    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(g_base);
+    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(g_base + dos->e_lfanew);
+    if (nt->FileHeader.TimeDateStamp != 0x68D45723 ||
+        nt->OptionalHeader.SizeOfImage != 0x8B6000) {
+        Log("[FATAL] unsupported executable: this DLL requires 1.9.7.15.J374");
+        return 0;
+    }
+    // J374's KAGE ABI differs (including vtable slots). Never call J460 graphics.
+    g_cfg.luaOverlay = false;
+    Log("1.9.7.15.J374 port: entity/camera interpolation enabled; Lua overlay unavailable");
+#endif
     LARGE_INTEGER f;
     QueryPerformanceFrequency(&f);
     g_qpcToSeconds = 1.0 / double(f.QuadPart);

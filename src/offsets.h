@@ -14,6 +14,7 @@
 namespace isaac {
 
 inline constexpr uintptr_t kImageBase = 0x00400000;
+inline constexpr uintptr_t kGGamePtr = 0x00C71678;
 
 // ---------------------------------------------------------------- globals
 // g_Manager: the global Manager*. [SIG] captured from the g_Manager ZHL pattern,

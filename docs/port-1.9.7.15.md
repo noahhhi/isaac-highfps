@@ -1,7 +1,8 @@
-# Repentance+ 1.9.7.15 port (in progress)
+# Repentance+ 1.9.7.15.J374 port (beta)
 
-This branch is preparation only; it does not yet provide a compatible DLL.
-Do not disable the original checks to run the 1.9.7.17 DLL on this version.
+This branch builds a dedicated J374 DLL, tested on Steam Deck OLED with Proton.
+The J460 DLL remains incompatible: use build-wsl.sh for J374.
+PE timestamp/size and all affected instruction sites are checked before patching.
 
 ## Confirmed from 1.9.7.15.J374
 
@@ -31,23 +32,46 @@ at 0x929615 `cmp byte ptr [0xBD5795],bl`, and at 0x92961B
 Do not reuse the old branch bytes/displacement. The logic gate must be
 installed before uncapping, and all patch sites must be validated together.
 
-## Still to verify
+## Build on WSL / Linux
 
-- Game frame counter, entity fields, room/list/scroll offsets.
-- Projection globals and pixel snap scales.
-- KAGE render targets, Lua post-render callback, overlay state.
-- Menu/loading behavior, 60 Hz wrapper and 30 Hz simulation cadence,
-  scrolling rooms, mod HUD and Proton stability.
-- Build/version fingerprint before dereferencing any version-specific global.
+Install clang-cl, lld-link, Python 3, and obtain an x86 Windows CRT/SDK sysroot
+with xwin (`--accept-license --arch x86 splat --output /path/to/msvc`).
 
-## WSL build handoff
+```sh
+XWIN_ROOT=/path/to/msvc WINMM_SOURCE=/path/to/32bit/winmm.dll bash build-wsl.sh
+```
 
-Use the existing MSVC x86 build.bat through Windows interoperability when
-Visual Studio Build Tools is available. The source uses SEH and naked MS
-inline assembly; keep those protections. An LLVM-MinGW 20261104 Linux build
-attempt failed on x86 SEH assembler labels, even with -fseh-exceptions;
-do not advertise that toolchain as working or remove SEH to hide the failure.
-The explicit cerrno include fixes ENOENT declaration portability.
+The export source can be Wine's syswow64/winmm.dll. It is only parsed to generate
+forwarders; do not commit it. The resulting DLL uses the static CRT and imports
+only KERNEL32.dll. The tested compiler was Fedora clang-cl 22.1.8 with MSVC ABI.
+GNU-ABI LLVM-MinGW failed to assemble x86 SEH for this source; use clang-cl instead.
+
+## Install
+
+Copy build/winmm.dll next to isaac-ng.exe. Under Proton set winmm=native,builtin
+using an application DLL override or the upstream Steam launch option.
+Use Enabled=1, Interpolate=1, MaxFps=90, LuaOverlay=0, Log=1 on Deck OLED.
+Keep the game's VSync disabled and avoid a Steam frame cap below 90.
+
+## Validation on Steam Deck
+
+- Full startup, save selection, room loading, and character movement completed.
+- Logs measured 90-91 render-loop iterations and 60-61 wrapper calls per
+  one-second reporting interval (boundary rounding accounts for the extra one).
+- Independent 3-second live-memory sampling measured 59.998 Manager ticks/s
+  and 29.999 Game ticks/s, preserving normal game speed.
+- During a short movement sample, 45 position changes occurred without a change
+  to the Manager frame counter, confirming intermediate position previews.
+- Pause automatically returned rendering to approximately 60 FPS.
+
+## Known limitations
+
+The J374 KAGE ABI differs from J460. This build forcibly disables LuaOverlay;
+unported graphics addresses are never called. Lua presence/rate globals still
+work, but render callbacks run at render rate, not the original 60 Hz. Mods that
+count render callbacks may advance those counters faster. Upstream generic log
+messages about the Lua gate do not imply cadence suppression with overlay off.
+Large-room scrolling and lengthy combat still need broader player testing.
 
 No proprietary executable, memory dump, user saves, credentials, or generated
-DLLs are included in the repository. Local analysis inputs remain on the Deck.
+DLLs are included in the repository. Analysis files remain outside the checkout.

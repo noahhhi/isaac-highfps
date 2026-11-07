@@ -1,3 +1,8 @@
+> **1.9.7.15.J374 fork:** this branch includes a dedicated Steam Deck-tested beta
+> port. Build with `build-wsl.sh`; see [port notes](docs/port-1.9.7.15.md) for
+> setup, validation and the currently disabled Lua overlay. The upstream
+> description below applies to its original 1.9.7.17 build.
+
 # isaac-highfps
 
 Native high-refresh support for The Binding of Isaac: Rebirth (Repentance+).
