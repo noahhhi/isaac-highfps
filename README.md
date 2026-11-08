@@ -1,231 +1,114 @@
-> **1.9.7.15.J374 fork:** this branch includes a dedicated Steam Deck-tested beta
-> port. Build with `build-wsl.sh`; see [port notes](docs/port-1.9.7.15.md) for
-> setup, validation and the currently disabled Lua overlay. The upstream
-> description below applies to its original 1.9.7.17 build.
+# isaac-highfps — Repentance+ 1.9.7.15.J374
 
-# isaac-highfps
+This fork of [hunchcldev/isaac-highfps](https://github.com/hunchcldev/isaac-highfps) separates Isaac's display output from its native update clocks. It targets the **32-bit Repentance+ 1.9.7.15.J374 executable** and is being tested on Steam Deck under Proton.
 
-Native high-refresh support for The Binding of Isaac: Rebirth (Repentance+).
+The main update stays at 60 Hz, full world updates stay at 30 Hz, and presentation follows the configured display or frame cap. Native entity and room-scroll previews provide intermediate positions. Audited native render-side animation updates and supported Lua drawing run on the fixed timeline, with their results reused for additional presentations.
 
-Isaac renders at a hard 60 FPS and simulates at 30 Hz. This mod lets the renderer run at your
-display's refresh rate and fills the frames in between with real intermediate positions. Game
-speed does not change by a single tick.
+**0.13.0-j374.2 — validation candidate.** The final R5 DLL is bound to production source commit `7c2a47d`; its SHA256 and final 80/100 Hz checks are in the [R5 evidence](docs/validation/release-r5-evidence.json). The tested cases and remaining gaps are listed below. This is not a claim that every mod, animation or graphics path is compatible. The upstream 1.9.7.17/J460 DLL cannot be installed directly on J374; bypassing its version check does not make its addresses or calling conventions compatible.
 
-Built for build v1.9.7.17 (`isaac-ng.exe`, 32-bit). On a build it does not recognise it patches
-nothing at all, see *Safety* below.
+## Install on Steam Deck
 
-> **Beta.** Entity motion is verified: 180 FPS with the logic tick provably unchanged at 30/s.
-> Since v0.12.0 the room scroll moves at the full frame rate too, and the player holds his
-> pixel exactly while the room scrolls past him. If something still judders, please report it
-> — `Diag = 1` in the ini records what a report needs.
+1. Exit the game. Back up any existing `winmm.dll`, `isaac-highfps.ini`, game options and saves.
+2. Copy the **J374 build** of `winmm.dll` beside `isaac-ng.exe`.
+3. Add this Steam launch option, preserving any other options you use:
 
-## Install
+   ```text
+   WINEDLLOVERRIDES="winmm=n,b" %command%
+   ```
 
-Drop `winmm.dll` next to `isaac-ng.exe`:
-
-```
-Steam\steamapps\common\The Binding of Isaac Rebirth\winmm.dll
-```
-
-That's it. To uninstall, delete the file.
-
-You need a display that runs above 60 Hz, and vsync has to be off or set to your real refresh
-rate. The mod removes the game's own frame limiter but never touches the OpenGL swap interval, so
-with vsync on you stay pinned to whatever the display does. On a 60 Hz panel there is nothing
-above 60 for it to show you.
-
-The game imports `winmm` statically, so Windows loads the mod before the game's own entry point
-runs. Every export of the real `winmm.dll` is forwarded to the system copy, so nothing else in
-the process notices. No injector, no launcher, and nothing asks for elevated permissions.
-
-### If nothing happens at all
-
-No log file and no change in frame rate means the loader never picked the DLL up. The download
-carries the same build a second time under a different name, in `alternative-name/`. Delete
-`winmm.dll` from the game folder, put `dbghelp.dll` there instead, and try again. The executable
-imports that too, so it loads at the same point in startup.
-
-Use one or the other, never both. They patch the same sites, and two copies doing it means the
-second one detours the first one's trampoline. The DLL takes a single-instance lock so a
-double install does nothing rather than something strange, but there's no reason to rely on it.
-
-### Steam Deck and Linux
-
-Works under Proton, with one extra step. Wine ships its own `winmm`, and for system DLLs like
-that it prefers its built-in copy over the one in the game folder, so ours never loads. Force it
-with a launch option (Properties, then paste into Launch Options):
-
-```
-WINEDLLOVERRIDES="winmm=n,b" %command%
-```
-
-`n,b` means native first, built-in second: Wine loads our `winmm.dll` and falls back to its own
-if ours is missing. The forwarding still works, it just points at Wine's built-in winmm instead
-of a real system one.
-
-Two Deck-specific notes. The internal LCD is 60 Hz, so the mod has nothing to show there; the
-OLED at 90 Hz or an external high-refresh screen is where it helps. And the Deck isn't a strong
-machine, so a busy room may not hold the higher rate. If it crashes rather than just doing
-nothing, set `LuaOverlay = 0`, same as on Windows: the overlay does real GL work through Proton's
-translation layer and that's where the risk is.
-
-This can't ship on the Steam Workshop. The Workshop only accepts Lua content mods, and no Lua
-API reaches the render loop. REPENTOGON has the same problem: a Workshop item can point at the
-download, but the native part gets installed by hand.
-
-## For mod authors
-
-Three globals are published into the Lua state while this is running:
-
-```lua
-HIGH_FPS_NATIVE   -- api version, absent when the native component isn't there
-HIGH_FPS_VERSION  -- release version, e.g. "0.13.0"; absent means 0.12.0 or older
-HIGH_FPS_RATE     -- frames per second measured over the last second
-```
-
-Read them per frame rather than once at load, since they appear on the first dispatch and that
-can land after mods have finished loading.
-
-Counting `MC_POST_RENDER` to work out the frame rate does not work here, and the reason is the
-cadence gate below: that callback is deliberately held at 60 no matter how fast the game renders.
-`HIGH_FPS_RATE` exists because a mod can no longer measure the rate for itself.
-
-## Configuration
-
-Optional. Create `isaac-highfps.ini` next to the DLL:
+4. Start with the defaults below. Restart the game after changing the INI.
 
 ```ini
 [highfps]
-Enabled           = 1   ; 0 disables the mod without deleting it
-Interpolate       = 1   ; 0 = uncap the frame rate but do not add intermediate positions
-MaxFps            = 0   ; 0 = whatever the display allows; otherwise a cap, e.g. 120
-LuaVanillaCadence = 1   ; hold the mod render pass at 60 Hz, see Mod compatibility
-LuaOverlay        = 1   ; composite what mods draw onto every frame
-Log               = 1   ; writes %TEMP%\isaac-highfps.log
-Diag              = 0   ; per-frame render-state dump into the log, for stutter reports
+Enabled=1
+Interpolate=1
+MaxFps=0
+VSync=1
+IdleFps=0
+LuaVanillaCadence=1
+LuaOverlay=1
+Log=1
+Diag=0
 ```
 
-The log goes next to the DLL if `%TEMP%` isn't writable. "No log" and "the DLL never loaded" are
-otherwise the same symptom, and that is the most common thing people report.
+`MaxFps=0` follows the available presentation pacing; it does not force 90 or 100 FPS. `VSync=1` requests actual OpenGL swap synchronization. A display mode limited to 80 Hz can therefore use the same configuration. To request a 100 FPS cap, set `MaxFps=100`; presenting 100 distinct frames also requires a suitable display mode and enough rendering performance.
 
-## Mod compatibility
+`IdleFps=0` keeps the normal display pacing in menus and while paused. There is no default forced 60 FPS idle cap.
 
-Uncapping the render loop means the engine asks every installed mod "do you want to draw?" at the
-display rate instead of 60 times a second. That triples the Lua cost of every mod you have, and it
-breaks mods that keep counters or timers in their render callback, which was for a long time the
-only per-frame hook the api offered.
+Variable presentation intervals are supported by the scheduler. VRR still depends on the display, driver, compositor and game session enabling it. **Physical VRR and runtime refresh-change validation are pending.** An attempted runtime compositor-limit change did not change measured presentation cadence, so it is not counted as a passing variable-rate test. The offline variable-interval scheduler tests and separate 80/100 Hz runs cover different scopes.
 
-So the mod render pass is held at its original 60 Hz. Every engine call into Lua goes through two
-imported functions, `lua_pcallk` and `lua_callk`, both swapped in the import table. On a frame the
-engine would never have drawn, that pass is not forwarded to Lua at all: the call is emulated
-instead, popping the callee and its arguments off the Lua stack, pushing the requested number of
-nils and returning `LUA_OK`. That is indistinguishable from no mod having registered anything, a
-case every call site already handles.
+To disable the mod, set `Enabled=0` and restart. To remove it, exit the game, remove this fork's DLL and restore any previous DLL/configuration and launch option from your backup. The mod does not patch the executable on disk.
 
-That alone would mean mod graphics existed on one frame in three, which reads as flicker. So what
-mods draw goes onto a surface of its own, and that surface is composited onto every frame. The
-engine already has the machinery, because it uses render targets for its own bloom, pixelation and
-colormod passes, so nothing here is drawn by us. Mod graphics are present on every frame while
-their Lua still runs 60 times a second.
+## Configuration
 
-The per-entity render callbacks are left alone and run at the full rate. They are cheap, and they
-draw relative to entities whose positions we are already interpolating, so running them per frame
-means they track that movement instead of being pinned to 60 Hz.
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `Enabled` | `1` | Enable the native component. |
+| `Interpolate` | `1` | Preview intermediate native entity/camera positions for presentation. |
+| `MaxFps` | `0` | Follow presentation pacing, or request a positive FPS cap. |
+| `VSync` | `1` | `1`: request swap synchronization; `0`: disable it; `-1`: follow the engine's interval. |
+| `IdleFps` | `0` | No separate idle cap; a positive value requests one. |
+| `LuaVanillaCadence` | `1` | Enable the fixed native-render/callback pipeline. |
+| `LuaOverlay` | `1` | Legacy configuration name that enables supported draw capture/replay in this pipeline. |
+| `Log` | `1` | Write `%TEMP%\isaac-highfps.log`, with a game-directory fallback. |
+| `Diag` | `0` | Detailed timing/cache diagnostics; enable for controlled tests or bug reports. |
 
-One consequence worth naming: a mod drawing in both the main pass and a per-entity callback used
-to see them once each per frame and now sees the main pass less often. `LuaVanillaCadence = 0`
-turns the whole thing off and gives every callback the display rate, at the cost above.
+Keep both Lua options enabled for the tested pipeline. In this fork, `LuaOverlay=1` no longer describes the old per-callback FBO overlay approach: the active pipeline captures supported native draw commands and replays them. Turning either option off leaves the tested compatibility path and is not a recommended fix for a rendering fault.
 
-## How it works
+## Mod drawing and compatibility
 
-Three changes, all applied to the running process in memory. No files are modified.
+A fixed tick completes native **Update → Render → GC** before the next tick. Supported main and entity render callbacks execute in that native render, so state changes made by callbacks are not repeated for every display refresh. Additional presentations replay supported drawing without executing those Lua callbacks again.
 
-### The frame limiter comes out
+**Update-owned render-to-texture is a separate category.** Some effects render and invoke Lua while the engine is updating, then are removed. Those calls must execute natively even if the previous display pass was pure; they must not be suppressed as extra presentations. Blood Splat (effect variant 7) exposed this boundary. The dedicated direct-spawn regression restored all 30 native render callbacks across ten instances; the previous build produced only 20. Baked pixels and natural damage producers need separate evidence. [Report](docs/validation/blood-callback-comparison.json).
 
-`Isaac::IsaacMain` paces every iteration to exactly 1/60 s with a `Sleep` plus a busy-spin. Two
-small patches make the loop skip that and run free.
+The replay keeps the drawing coordinates sampled at the canonical 60 Hz render. It does **not** guess how to translate arbitrary mod graphics to an interpolated entity position. A native sprite can move smoothly between ticks while a mod-drawn label or marker attached to it still changes position at 60 Hz.
 
-One trap here cost us an afternoon: the 1/60 constant is read from three places, not two. The
-third is a watchdog that force-enables the limiter after 31 consecutive fast frames. Patch only
-the two obvious sites and the cap quietly comes back.
+Capture is bounded and checks draw layout, resource ownership and render state. Custom shaders, direct GL operations and other unsupported drawing can prevent a scope from being replayed on extra presentations. Shader-parameter callback caching is a separate path; broad custom-shader compatibility remains under validation. Report missing or flickering mod graphics with the log and mod list rather than assuming all render callbacks are safe to resample.
 
-### The logic cadence is pinned
+The Lua globals `HIGH_FPS_NATIVE`, `HIGH_FPS_VERSION` and `HIGH_FPS_RATE` remain available. `HIGH_FPS_RATE` reports measured output-loop cadence; counting `MC_POST_RENDER` is not an output-FPS measurement in the fixed pipeline.
 
-The loop drives the simulation, so an unpaced loop runs the game several times too fast. A
-trampoline hook on the engine's update wrapper calls it on a real-time schedule at the original
-60 Hz.
+## Validation status
 
-Both of Isaac's clocks, the render frame counter and the gameplay tick, then advance exactly as
-they always did. That matters more than it sounds: roughly 52 places in the binary test the
-frame counter's parity, and several more read it modulo 4, modulo 30, or shifted right by one.
+Tests use a separate game copy, Proton prefix and saves. Native 60 Hz on **the same J374 executable** is the baseline. Reports identify the DLL, fixture and executable hashes so results can be tied to the revision that was tested.
 
-### The frames in between get real positions
+| Check | Observed result | Scope |
+| --- | --- | --- |
+| Final R5 callback/draw smoke | All 483 recorded events matched native60; 286 paired player/tear position samples had zero error. Measured output was 100.010 FPS. One inspected capture showed MAIN/PLAYER/TEAR labels and M/P/T markers. | Same R5 DLL as the 80 Hz test; one inspected frame is not every-frame pixel coverage. [Report](docs/validation/release-r5-evidence.json). |
+| Final R5 adaptive 80 Hz | Measured output 79.994 FPS, active game regression 30.003 Hz; measured callback/update counts and listed player/timer/fire/bomb states matched. The 33-shot game-tick sequence matched. | Natural tear births differed; early birth-relative displacement was compared separately. [Report](docs/validation/release-r5-evidence.json). |
+| Callback order at other output rates | Earlier 90 and 45 Hz cases matched all 483 recorded events and callback state/order in the controlled fixture. | Reports retain each tested DLL hash. [Report](docs/validation/canonical-overlay-comparison.json). |
+| Output versus update cadence | 100 Hz fixture: median present interval 9.999 ms, Manager regression 59.992 Hz, active game rate 30.004 Hz. | Isolated Proton/Gamescope presentation trace, not physical scanout. [Report](docs/validation/render-types-comparison.json). |
+| Rendering below 60 FPS | 45 Hz fixture: median present interval 22.222 ms, Manager regression 60.004 Hz, active game rate 30.000 Hz. | Exercises multiple complete fixed ticks between some presentations. [Report](docs/validation/render-types-comparison.json). |
+| Main and ten entity callback categories | All eleven categories were observed at 60, 100 and 45 Hz. | Coverage is not universal equivalence: short-lived tear/projectile totals differed; the Blood Splat Update-owned render path is covered separately below. [Report](docs/validation/render-types-comparison.json). |
+| Update-owned Blood Splat rendering | Ten direct spawns: 540 normalized event records and ten terminal summaries matched native60; 30 render calls restored, including ten Update-owned calls. | Controlled direct-spawn path and callback state/order; not natural NPC-damage production or baked pixels. [Report](docs/validation/blood-callback-comparison.json). |
+| Room transitions | WALK, FADE and TELEPORT had matching phase sequences and aligned Manager-tick spans; maximum paired alpha-curve timing differences were 4.24, 6.49 and 10.13 ms. | One native 60 Hz/output 100 Hz pair per transition style; not all animation types or repeatability. [Report](docs/validation/transition-matrix-comparison.json). |
+| Screen-shader parameter callbacks | All 2,240 recorded parameter events matched after excluding wall time, with matching per-game-tick order. | Parameter cadence/table isolation only; GPU pixels and Sprite/Image custom shaders remain pending. [Report](docs/validation/shader-comparison.json). |
+| Normal/Hard/Greed menu fades | All 16 paired fade curves matched their interior values over 18 Manager ticks; maximum relative curve timing difference was 10.474 ms. | Real difficulty changes in character selection. Greedier and other menu paths are not covered. [Report](docs/validation/menu-curve-comparison.json). |
+| Ordinary floor transition | Stage 1→2 trapdoor: all 125 event snapshots matched after time/origin normalization; request through ten resumed world updates took 11.784/11.787 s. | One ordinary floor route, not every cinematic or alternate stage. [Report](docs/validation/floor-comparison.json). |
+| Moving pause/resume | About three seconds paused with nonzero retained velocity: position, game frame and TimeCounter stayed fixed. Each two-second resume window advanced 60 world/120 UI ticks. | Within-run invariants; the two run seeds differ. [Report](docs/validation/pause-moving-comparison.json). |
+| Glowing Hour Glass rewind | 104 normalized records matched; one use restored the room/game clock, then resumed ten world updates with matching counters. | Actual RestoreState/backwards-clock path; no live Lua VM replacement was observed. [Report](docs/validation/rewind-comparison.json). |
+| Remaining coverage | Physical/runtime VRR, broader menu/floor/custom-shader paths and persistent dice/emote behavior. | No universal mod compatibility claim. |
+| Physical VRR | Pending. | Requires suitable display hardware and a VRR-enabled presentation stack. |
 
-Each entity's position is written directly, reusing the same backup slot and "preview applied"
-marker the engine uses itself, so the engine's own rollback undoes our work exactly as it would
-undo its own.
+No single FPS counter proves correct gameplay speed or smooth output. The validation separates simulation state/timers, callback order, native presentation timing and visible pixels. See the [port notes](docs/port-1.9.7.15.md) and [clock design](docs/clock-design.md) for details and remaining tests.
 
-Everything except the player is interpolated between its previous and current authoritative
-position. Predicting instead is what the engine does for its single half-step, and over 1/60 s
-that's fine. Over a whole tick it isn't: Isaac's AI changes direction constantly, the prediction
-turns out wrong, and the position snaps back when the real tick lands. That snap is visible as
-stutter. The player is the exception and gets extrapolated, because a tick of latency on the
-character you're steering is worse than a little imprecision.
+## Build
 
-We deliberately don't call the engine's own `Interpolate` for these frames. It isn't a pure
-function. `Entity_Tear::Interpolate` alone runs to 2678 bytes, rewrites velocity, forces the
-height field and calls 27 other functions. Run that several times per tick and you corrupt real
-game state.
+Use the J374-specific Linux/WSL build with **clang-cl targeting the x86 MSVC ABI**, `lld-link`, Python 3, and an x86 Windows CRT/SDK sysroot:
 
-## Safety
-
-Every patch site is compared against its expected bytes before anything is written, and the
-comparison accounts for ASLR relocation. The update wrapper's prologue contains an absolute
-address that the loader rewrites, so a naive comparison against the on-disk bytes fails on every
-single launch. If any site doesn't match, nothing is patched and the game runs normally.
-
-The hooks go in in an order that a partial failure can't break: cadence hook first, limiter only
-once that's live. Doing it the other way round, which is what happened during development, hands
-you a game running at triple speed.
-
-The per-frame work sits inside an exception handler. A fault there disables intermediate frames
-and writes a log line instead of taking the game down.
-
-## Building
-
-Needs MSVC (x86) and Python 3 for the export-table generator.
-
-```
-build.bat
+```sh
+XWIN_ROOT=/path/to/x86-msvc-sysroot \
+WINMM_SOURCE=/path/to/32-bit/winmm.dll \
+bash build-wsl.sh
 ```
 
-Produces `build\winmm.dll`. `tools\gen_proxy.py` regenerates the 192 forwarding thunks from the
-real `winmm.dll`; you only need to re-run it if that file ever changes.
+The script defines `HIGHFPS_BUILD_19715`, uses `/MT` for the static CRT, and writes `build/winmm.dll`. `WINMM_SOURCE` is parsed locally to generate forwarding exports; do not distribute or commit that system DLL. GNU-ABI MinGW is not a substitute for this build's x86 SEH/MSVC ABI requirements. The unmodified upstream `build.bat` path is not the documented J374 build.
 
-`src\inject.cpp` builds a small loader used during development. It is not shipped. Injecting
-into a running process trips antivirus and needs permissions the proxy never asks for.
+Startup cache installation waits for the initializer thread to exit, and required-hook readiness is published only after successful patching. If the required full pipeline is unavailable, the fork falls back to 60 FPS with native Lua execution. One earlier test exceeded a 45-second startup budget; its cause was not established and retry succeeded. See the [port notes](docs/port-1.9.7.15.md) for that limit.
 
-## Testing
+Build details and rollback notes are in [docs/port-1.9.7.15.md](docs/port-1.9.7.15.md).
 
-`mods/fps-probe` is a tiny Lua mod that logs the real callback rates. The invariant that matters:
+Standalone checks are documented in [tests/README.md](tests/README.md). `tests/run-tests.sh core` runs the production-clock, UI and mock draw-cache tests; `abi` adds the game-independent Windows x86 tests. The optional shader test uses a supplied local Lua runtime. None of these tests starts the game.
 
-```
-[FPSProbe] update=30/s render=180/s
-```
+## Credits and license
 
-`update` has to stay at 30/s no matter how high `render` goes. If it doesn't, game speed has
-changed and something is wrong.
-
-## Credits and licence
-
-MIT, see `LICENSE`.
-
-No REPENTOGON code is used here. What was used is their published AOB signatures
-(`libzhl/functions/*.zhl`), scanned against this build to recover real names for functions we
-had already found by address. Those signatures are factual observations about someone else's
-binary rather than a work we copied, and none of REPENTOGON's GPLv2 source is linked, vendored
-or derived from. It saved a lot of time all the same, so thanks to the REPENTOGON team.
-
-For the record: 53 of 109 signatures matched, and a unique match is not proof. Their published
-`Manager::Render` pattern matches a window-resize handler in this build. Every symbol recovered
-that way was cross-checked structurally before it was trusted.
+MIT; see [LICENSE](LICENSE). Based on the original native high-FPS work by [hunchcldev](https://github.com/hunchcldev/isaac-highfps). REPENTOGON function signatures were used as reverse-engineering references; a signature match was checked against J374 instructions and calling conventions before use. Game executables, memory dumps, saves and system DLLs are not part of this repository.

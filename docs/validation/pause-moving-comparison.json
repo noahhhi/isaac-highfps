@@ -1,0 +1,160 @@
+{
+  "schema": "isaac-highfps-public-validation-v1",
+  "source_summary": "pause-moving-comparison.json",
+  "source_summary_sha256": "27bbfc8c83695b754ae755464970fe82fe4b2bdb8348848a6737976253b2aec5",
+  "scope_note": "Quantified results apply to the identified artifacts and cases; no game files, mod lists or private paths are included.",
+  "cases": [
+    {
+      "case_id": "pause-moving-native60",
+      "artifacts": {
+        "dll_sha256": "e910b370f93b4c6e903bac8fefeb6f1c2791ff50a2479f4aef4d0eb8c69869a6",
+        "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "05da5772e6ef21c072f3201abf99338205627c029653e0f83882de0f8cec2124"
+      },
+      "complete": true,
+      "pause_measurements": {
+        "raw_read_only_samples": 551,
+        "raw_pause_observation_seconds": 2.9967318209965015,
+        "raw_manager_hz_regression": 60.002928510448996,
+        "raw_state_ranges": {
+          "game_frame": [
+            39,
+            39
+          ],
+          "time_counter": [
+            39,
+            39
+          ],
+          "paused": [
+            1,
+            1
+          ],
+          "px": [
+            347.5317687988281,
+            347.5317687988281
+          ],
+          "py": [
+            380.0,
+            380.0
+          ],
+          "vx": [
+            3.5722317695617676,
+            3.5722317695617676
+          ],
+          "vy": [
+            0.0,
+            0.0
+          ]
+        },
+        "all_samples_paused": true,
+        "game_timer_position_velocity_constant": true,
+        "nonzero_velocity_covered": true,
+        "resume_window": {
+          "seconds": 2.0009999999999994,
+          "deltas": {
+            "gf": 60.0,
+            "tc": 60.0,
+            "ui": 120.0,
+            "u": 60.0,
+            "r": 120.0,
+            "pu": 120.0
+          },
+          "game_hz": 29.98500749625188,
+          "ui_hz": 59.97001499250376,
+          "post_resume_update_interval_min_ms": 30.999999999998806,
+          "sub12ms_update_intervals": 0
+        }
+      },
+      "presentation": {
+        "status": "no_native_trace",
+        "high_refresh_confirmed": false
+      }
+    },
+    {
+      "case_id": "pause-moving-cached100",
+      "artifacts": {
+        "dll_sha256": "e910b370f93b4c6e903bac8fefeb6f1c2791ff50a2479f4aef4d0eb8c69869a6",
+        "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "05da5772e6ef21c072f3201abf99338205627c029653e0f83882de0f8cec2124"
+      },
+      "complete": true,
+      "pause_measurements": {
+        "raw_read_only_samples": 550,
+        "raw_pause_observation_seconds": 2.997310856007971,
+        "raw_manager_hz_regression": 59.99549942994525,
+        "raw_state_ranges": {
+          "game_frame": [
+            39,
+            39
+          ],
+          "time_counter": [
+            39,
+            39
+          ],
+          "paused": [
+            1,
+            1
+          ],
+          "px": [
+            347.5317687988281,
+            347.5317687988281
+          ],
+          "py": [
+            380.0,
+            380.0
+          ],
+          "vx": [
+            3.5722317695617676,
+            3.5722317695617676
+          ],
+          "vy": [
+            0.0,
+            0.0
+          ]
+        },
+        "all_samples_paused": true,
+        "game_timer_position_velocity_constant": true,
+        "nonzero_velocity_covered": true,
+        "resume_window": {
+          "seconds": 1.9999999999999991,
+          "deltas": {
+            "gf": 60.0,
+            "tc": 60.0,
+            "ui": 120.0,
+            "u": 60.0,
+            "r": 120.0,
+            "pu": 120.0
+          },
+          "game_hz": 30.000000000000014,
+          "ui_hz": 60.00000000000003,
+          "post_resume_update_interval_min_ms": 25.9999999999998,
+          "sub12ms_update_intervals": 0
+        }
+      },
+      "presentation": {
+        "status": "native_high_refresh_present_confirmed",
+        "high_refresh_confirmed": true,
+        "steady_candidate_median_ms": 10.001,
+        "median_present_hz": 99.99000099990002,
+        "scope": "native swap trace; does not prove physical display scanout or VRR"
+      }
+    }
+  ],
+  "comparison": {
+    "setup": {
+      "same_exe_and_fixture": true,
+      "same_metadata": false,
+      "same_enabled_lua_modset": true,
+      "candidate_actual_high_refresh": true
+    },
+    "scope": "True externally triggered pause and resume. The fixture is read-only; within-run invariants remain meaningful even if random run seeds differ.",
+    "nonzero_velocity_pause_verified": true
+  },
+  "limits": [
+    "The run seeds differ; the verified pause invariants are within each observed run, not a claim of cross-seed world equivalence.",
+    "Both interior pause windows retain nonzero velocity while position, game frame and TimeCounter remain unchanged.",
+    "The resumed windows cover two wall seconds; they do not establish every pause route, focus-loss behavior or suspend handling."
+  ]
+}

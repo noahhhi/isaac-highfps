@@ -1,0 +1,74 @@
+{
+  "schema": "isaac-highfps-standalone-tests-v1",
+  "date": "2026-11-08",
+  "production_source_commit": "7c2a47d",
+  "production_tree_matches_commit": true,
+  "compiler": "clang version 22.1.8 (Fedora 22.1.8-4.fc44)",
+  "target": "i686-pc-windows-msvc",
+  "crt": "static /MT",
+  "execution": "WSL Windows interop, standalone console tests",
+  "runner_exit_code": 0,
+  "source_inputs_stable": true,
+  "tests": [
+    {
+      "source": "tests/render_timing_test.cpp",
+      "result": "pass"
+    },
+    {
+      "source": "tests/clock_lifecycle_test.cpp",
+      "result": "pass"
+    },
+    {
+      "source": "tests/native_render_clock_test.cpp",
+      "result": "pass"
+    },
+    {
+      "source": "tests/native_ui_replay_test.cpp",
+      "result": "pass"
+    },
+    {
+      "source": "tests/entity_draw_cache_probe_test.cpp",
+      "result": "pass"
+    },
+    {
+      "source": "tests/entity_draw_cache_runtime_test.cpp",
+      "result": "pass"
+    },
+    {
+      "source": "tests/shader_params_cache_test.cpp",
+      "result": "pass"
+    },
+    {
+      "source": "tests/lua_fixture_test.cpp",
+      "result": "pass"
+    }
+  ],
+  "source_sha256": {
+    "tests/render_timing_test.cpp": "be99c7fed1a01cdd48c4f6baadfb1ecb58873e7f87eab798e4a3ee6a4feaf024",
+    "tests/clock_lifecycle_test.cpp": "d22f6af0e23bfeccb8b299d1da89164deb85afe1e93cd2ed8c6f4fcbc54689f5",
+    "tests/native_render_clock_test.cpp": "c7f0852f43468aa64b6b073c8667a56e5ce7ebc8c259b1848b352f1e36423b7b",
+    "tests/native_ui_replay_test.cpp": "6a078170cfd8c1641486fb59d2d7f29fdae0119ff411375744f3673affcae9dd",
+    "tests/entity_draw_cache_probe_test.cpp": "7c198fb09fbcc0351166e801bc4d7a4e163d69738bc2e84bd35b5688d7a6bdcb",
+    "tests/entity_draw_cache_runtime_test.cpp": "aba7617065c699ec80b223a08d07de104b7f75d8f485938bbc6dde6404347f0c",
+    "tests/shader_params_cache_test.cpp": "69e49660a89775b4ff706bca662eac61c7fa61c715a86776872062a8c4724350",
+    "tests/lua_fixture_test.cpp": "cefe83edd4a16a1e95a939feb20a7c4ce181f5bcac1797e09230cd74a8433839",
+    "tests/run-tests.sh": "198c3b14e72dc69f30152953c45e393cfd203df01dac049b99655c52329419a9",
+    "tests/rewind_state_machine_test.lua": "cd2cb7b407b2944a2189c499ed173d3af135a33102a45d0b5788261b2b205aa8",
+    "tests/fixtures/rewind-fixture.lua": "d7af5fa8f4b57d59e87026ff40d51ed7dd6122234e72bf95262261561687f88d",
+    "src/render_timing.h": "c7bb691a05c46f2166c18591f091320c7f666899c5669e77e7e9016cae8693d3",
+    "src/native_render_clock.h": "c376293b188901bae6d063df2fcd5fbb7a700d6c09bc5b64bf4bf8ff3f1f5685",
+    "src/native_ui_replay.h": "68df43e096e272e16434af11dae3cc56f1919c3b31e9272dfdc59f23a3ad5118",
+    "src/entity_draw_cache_probe.h": "0129893055f0e76c7bb084b5d8acc026f18b3515d8ab0ce9a656ca8764b7318f",
+    "src/entity_draw_cache_j374_hooks.h": "1d01de70ad30eaf2ae22e0204f5bae57e07ab1e7004e6d2aa453d5dd83e4fd97",
+    "src/entity_draw_cache_j374_ref.h": "51ae72544819fdfd6aaa4a3a7785f487a1931077cbe172538a8281ead11f3ea0",
+    "src/entity_draw_cache_j374_runtime.h": "5200985d592b2be28b931ddf9ed1a883b3e20a91f00659baf4d7898f64288706",
+    "src/shader_params_cache_j374.h": "bb774a4ff8782c30837d3a829d5bbe753293f6d9e2f98b31fb2adbe244d25901"
+  },
+  "external_lua_runtime_sha256": "fb84afbc5b227b06f71022bb6c0bcc0a39f85e5939b789489906bc128d05a13e",
+  "scope": [
+    "No game was started, attached to or controlled.",
+    "No game/system/Lua DLL was copied into the repository. The optional Lua runtime was loaded from an external local path.",
+    "Tests cover production headers with fake memory/backends and standalone Windows ABI/Lua calls; they do not prove live-game timing, rendered pixels, physical VRR, or startup patch installation.",
+    "The Wine backend did not complete first-prefix initialization in this environment; the successful run used Windows interop."
+  ]
+}

@@ -1,0 +1,233 @@
+{
+  "schema": "isaac-highfps-public-validation-v1",
+  "source_summary": "rewind-comparison.json",
+  "source_summary_sha256": "671c9f5d95bfb5c9fa69384ffe8eefd41fdef92ee781f59a627bc2afb2cf832e",
+  "scope_note": "Quantified results apply to the identified artifacts and cases; no game files, mod lists or private paths are included.",
+  "cases": [
+    {
+      "case_id": "rewind-native60",
+      "artifacts": {
+        "dll_sha256": "e910b370f93b4c6e903bac8fefeb6f1c2791ff50a2479f4aef4d0eb8c69869a6",
+        "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "2a0318b685fe2984b01d0208a42fc0f98dff0bb8942b8be14e5fd18c596fcb82"
+      },
+      "event_count": 104,
+      "complete": true,
+      "use_request_count": 1,
+      "actual_vm_resume_events": 0,
+      "fixture_matches_template_with_only_case_token_change": true,
+      "presentation": {
+        "status": "no_native_trace",
+        "high_refresh_confirmed": false
+      }
+    },
+    {
+      "case_id": "rewind-cached100",
+      "artifacts": {
+        "dll_sha256": "e910b370f93b4c6e903bac8fefeb6f1c2791ff50a2479f4aef4d0eb8c69869a6",
+        "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "c3f5cdf109faf6ee59e4cca5fda954dfad47031ade1c33fe43acbff3c1963ecb"
+      },
+      "event_count": 104,
+      "complete": true,
+      "use_request_count": 1,
+      "actual_vm_resume_events": 0,
+      "fixture_matches_template_with_only_case_token_change": true,
+      "presentation": {
+        "status": "native_high_refresh_present_confirmed",
+        "high_refresh_confirmed": true,
+        "steady_candidate_median_ms": 9.997,
+        "median_present_hz": 100.03000900270081,
+        "scope": "native swap trace; does not prove physical display scanout or VRR"
+      }
+    }
+  ],
+  "comparison": {
+    "same_metadata_except_case_token": true,
+    "same_exe": true,
+    "both_fixture_variants_hash_verified": true,
+    "same_enabled_lua_after_verified_token_normalization": true,
+    "all_event_snapshots_identical_after_token_time_ui_origin_normalization": true,
+    "actual_high_refresh_present": true,
+    "phase_comparisons": [
+      {
+        "from": "walk_request",
+        "to": "target_ready",
+        "baseline": {
+          "seconds": 0.847,
+          "deltas": {
+            "gf": 10.0,
+            "ui": 38.0,
+            "tc": 10.0,
+            "u": 10.0,
+            "r": 38.0,
+            "pu": 23.0
+          },
+          "rooms": [
+            84.0,
+            71.0
+          ]
+        },
+        "trial": {
+          "seconds": 0.8689999999999998,
+          "deltas": {
+            "gf": 10.0,
+            "ui": 38.0,
+            "tc": 10.0,
+            "u": 10.0,
+            "r": 38.0,
+            "pu": 23.0
+          },
+          "rooms": [
+            84.0,
+            71.0
+          ]
+        }
+      },
+      {
+        "from": "use_request",
+        "to": "new_room_rewind_requested",
+        "baseline": {
+          "seconds": 0.8319999999999999,
+          "deltas": {
+            "gf": -15.0,
+            "ui": 46.0,
+            "tc": -15.0,
+            "u": 0.0,
+            "r": 46.0,
+            "pu": 38.0
+          },
+          "rooms": [
+            71.0,
+            84.0
+          ]
+        },
+        "trial": {
+          "seconds": 0.8359999999999999,
+          "deltas": {
+            "gf": -15.0,
+            "ui": 46.0,
+            "tc": -15.0,
+            "u": 0.0,
+            "r": 46.0,
+            "pu": 38.0
+          },
+          "rooms": [
+            71.0,
+            84.0
+          ]
+        }
+      },
+      {
+        "from": "use_request",
+        "to": "returned",
+        "baseline": {
+          "seconds": 1.0269999999999997,
+          "deltas": {
+            "gf": -14.0,
+            "ui": 58.0,
+            "tc": -14.0,
+            "u": 1.0,
+            "r": 58.0,
+            "pu": 42.0
+          },
+          "rooms": [
+            71.0,
+            84.0
+          ]
+        },
+        "trial": {
+          "seconds": 1.04,
+          "deltas": {
+            "gf": -14.0,
+            "ui": 58.0,
+            "tc": -14.0,
+            "u": 1.0,
+            "r": 58.0,
+            "pu": 42.0
+          },
+          "rooms": [
+            71.0,
+            84.0
+          ]
+        }
+      },
+      {
+        "from": "returned",
+        "to": "done",
+        "baseline": {
+          "seconds": 0.3330000000000002,
+          "deltas": {
+            "gf": 10.0,
+            "ui": 20.0,
+            "tc": 10.0,
+            "u": 10.0,
+            "r": 20.0,
+            "pu": 20.0
+          },
+          "rooms": [
+            84.0,
+            84.0
+          ]
+        },
+        "trial": {
+          "seconds": 0.3299999999999996,
+          "deltas": {
+            "gf": 10.0,
+            "ui": 20.0,
+            "tc": 10.0,
+            "u": 10.0,
+            "r": 20.0,
+            "pu": 20.0
+          },
+          "rooms": [
+            84.0,
+            84.0
+          ]
+        }
+      },
+      {
+        "from": "use_request",
+        "to": "done",
+        "baseline": {
+          "seconds": 1.3599999999999999,
+          "deltas": {
+            "gf": -4.0,
+            "ui": 78.0,
+            "tc": -4.0,
+            "u": 11.0,
+            "r": 78.0,
+            "pu": 62.0
+          },
+          "rooms": [
+            71.0,
+            84.0
+          ]
+        },
+        "trial": {
+          "seconds": 1.3699999999999997,
+          "deltas": {
+            "gf": -4.0,
+            "ui": 78.0,
+            "tc": -4.0,
+            "u": 11.0,
+            "r": 78.0,
+            "pu": 62.0
+          },
+          "rooms": [
+            71.0,
+            84.0
+          ]
+        }
+      }
+    ]
+  },
+  "limits": [
+    "These runtime cases exercise actual Glowing Hour Glass and RestoreState with the game clock rolling backwards.",
+    "Zero vm_resume events means a real Lua VM replacement was not observed here. The separate offline state-machine and real-Lua lifetime tests cover different evidence scopes.",
+    "A terminal_case_token_reused line after Done is the fixture's next update checking its durable terminal latch, not proof of an actual second use or restart.",
+    "Only the caseToken parameter is normalized in fixture/modset hashes; the reconstructed exact bytes must match both recorded artifact hashes first."
+  ]
+}

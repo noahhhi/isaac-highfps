@@ -1,0 +1,104 @@
+<shaders>
+  <shader name="HFShaderProbeA">
+    <parameters>
+      <param name="ProbeEnabled" type="float"/>
+      <param name="ProbeCode" type="float"/>
+      <param name="ProbeTint" type="vec4"/>
+    </parameters>
+    <vertex><![CDATA[attribute vec3 Position;
+attribute vec4 Color;
+attribute vec2 TexCoord;
+attribute vec4 RenderData;
+attribute float Scale;
+attribute float ProbeEnabled;
+attribute float ProbeCode;
+attribute vec4 ProbeTint;
+uniform mat4 Transform;
+varying vec4 Color0;
+varying vec2 TexCoord0;
+varying vec4 RenderDataOut;
+varying float ScaleOut;
+varying float EnabledOut;
+varying float CodeOut;
+varying vec4 TintOut;
+void main() {
+    gl_Position = Transform * vec4(Position, 1.0);
+    Color0 = Color;
+    TexCoord0 = TexCoord;
+    RenderDataOut = RenderData;
+    ScaleOut = Scale;
+    EnabledOut = ProbeEnabled;
+    CodeOut = ProbeCode;
+    TintOut = ProbeTint;
+}]]></vertex>
+    <fragment><![CDATA[varying vec4 Color0;
+varying vec2 TexCoord0;
+varying vec4 RenderDataOut;
+varying float ScaleOut;
+varying float EnabledOut;
+varying float CodeOut;
+varying vec4 TintOut;
+uniform sampler2D Texture0;
+void main() {
+    vec4 original = texture2D(Texture0, TexCoord0) * Color0;
+    if (EnabledOut > 0.5 && TexCoord0.x < 0.2 && TexCoord0.y < 0.12) {
+        float band = mod(floor(TexCoord0.y * 120.0), 2.0);
+        float level = 0.55 + 0.45 * mod(CodeOut, 60.0) / 59.0;
+        gl_FragColor = vec4(TintOut.rgb * mix(level, 1.0, band), 1.0);
+    } else {
+        gl_FragColor = original;
+    }
+}]]></fragment>
+  </shader>
+  <shader name="HFShaderProbeB">
+    <parameters>
+      <param name="ProbeEnabled" type="float"/>
+      <param name="ProbeCode" type="float"/>
+      <param name="ProbeTint" type="vec4"/>
+    </parameters>
+    <vertex><![CDATA[attribute vec3 Position;
+attribute vec4 Color;
+attribute vec2 TexCoord;
+attribute vec4 RenderData;
+attribute float Scale;
+attribute float ProbeEnabled;
+attribute float ProbeCode;
+attribute vec4 ProbeTint;
+uniform mat4 Transform;
+varying vec4 Color0;
+varying vec2 TexCoord0;
+varying vec4 RenderDataOut;
+varying float ScaleOut;
+varying float EnabledOut;
+varying float CodeOut;
+varying vec4 TintOut;
+void main() {
+    gl_Position = Transform * vec4(Position, 1.0);
+    Color0 = Color;
+    TexCoord0 = TexCoord;
+    RenderDataOut = RenderData;
+    ScaleOut = Scale;
+    EnabledOut = ProbeEnabled;
+    CodeOut = ProbeCode;
+    TintOut = ProbeTint;
+}]]></vertex>
+    <fragment><![CDATA[varying vec4 Color0;
+varying vec2 TexCoord0;
+varying vec4 RenderDataOut;
+varying float ScaleOut;
+varying float EnabledOut;
+varying float CodeOut;
+varying vec4 TintOut;
+uniform sampler2D Texture0;
+void main() {
+    vec4 original = texture2D(Texture0, TexCoord0) * Color0;
+    if (EnabledOut > 0.5 && TexCoord0.x > 0.8 && TexCoord0.y < 0.12) {
+        float band = mod(floor(TexCoord0.y * 120.0), 2.0);
+        float level = 0.55 + 0.45 * mod(CodeOut, 60.0) / 59.0;
+        gl_FragColor = vec4(TintOut.rgb * mix(level, 1.0, band), 1.0);
+    } else {
+        gl_FragColor = original;
+    }
+}]]></fragment>
+  </shader>
+</shaders>

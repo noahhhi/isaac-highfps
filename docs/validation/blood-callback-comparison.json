@@ -1,0 +1,159 @@
+{
+  "schema": "isaac-highfps-public-validation-v1",
+  "source_summary": "blood-callback-comparison.json",
+  "source_summary_sha256": "82c5c7a21eacdde9241d5a333ccb8bc46b7c56ecbfbd8d89d4b8d6a9bb08f3a6",
+  "scope_note": "Quantified results apply to the identified artifacts and cases; no game files, mod lists or private paths are included.",
+  "cases": [
+    {
+      "case_id": "blood-native60",
+      "artifacts": {
+        "dll_sha256": "e910b370f93b4c6e903bac8fefeb6f1c2791ff50a2479f4aef4d0eb8c69869a6",
+        "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "26b4abc33e7073a25b0e87da7fc9a91fdf9a964b8cb7519dc42e3b7d120d01d3"
+      },
+      "complete": true,
+      "totals": {
+        "u": 330.0,
+        "r": 706.0,
+        "init": 10.0,
+        "update": 10.0,
+        "render": 30.0,
+        "remove": 10.0
+      },
+      "source_init_counts": {
+        "direct_spawn": 10
+      },
+      "outside_native_calls": {},
+      "detailed_miss_count": 0,
+      "presentation": {
+        "status": "no_native_trace",
+        "high_refresh_confirmed": false
+      }
+    },
+    {
+      "case_id": "blood-old100",
+      "artifacts": {
+        "dll_sha256": "b8bd35fa6be0c19dd8eda5149ab643bbe1891a070ac3621f69606e88d3df6a14",
+        "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "26b4abc33e7073a25b0e87da7fc9a91fdf9a964b8cb7519dc42e3b7d120d01d3"
+      },
+      "complete": true,
+      "totals": {
+        "u": 330.0,
+        "r": 706.0,
+        "init": 10.0,
+        "update": 10.0,
+        "render": 20.0,
+        "remove": 10.0
+      },
+      "source_init_counts": {
+        "direct_spawn": 10
+      },
+      "outside_native_calls": {},
+      "detailed_miss_count": 10,
+      "presentation": {
+        "status": "native_high_refresh_present_confirmed",
+        "high_refresh_confirmed": true,
+        "steady_candidate_samples": 83,
+        "steady_candidate_median_ms": 9.998999999999999,
+        "median_present_hz": 100.01000100010002,
+        "scope": "native swap trace; does not prove physical display scanout or VRR"
+      }
+    },
+    {
+      "case_id": "blood-fixed100-retry",
+      "artifacts": {
+        "dll_sha256": "e910b370f93b4c6e903bac8fefeb6f1c2791ff50a2479f4aef4d0eb8c69869a6",
+        "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "26b4abc33e7073a25b0e87da7fc9a91fdf9a964b8cb7519dc42e3b7d120d01d3"
+      },
+      "complete": true,
+      "totals": {
+        "u": 330.0,
+        "r": 706.0,
+        "init": 10.0,
+        "update": 10.0,
+        "render": 30.0,
+        "remove": 10.0
+      },
+      "source_init_counts": {
+        "direct_spawn": 10
+      },
+      "outside_native_calls": {
+        "56": 10
+      },
+      "detailed_miss_count": 0,
+      "presentation": {
+        "status": "native_high_refresh_present_confirmed",
+        "high_refresh_confirmed": true,
+        "steady_candidate_samples": 82,
+        "steady_candidate_median_ms": 9.997,
+        "median_present_hz": 100.03000900270081,
+        "scope": "native swap trace; does not prove physical display scanout or VRR"
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "same_metadata": true,
+      "same_exe_fixture": true,
+      "same_enabled_lua_modset": true,
+      "actual_high_refresh_present": true,
+      "ordered_nonterminal_event_records_identical": false,
+      "terminal_instance_summaries_identical": false,
+      "normalized_record_counts": [
+        540,
+        530
+      ],
+      "totals_difference": {
+        "u": 0.0,
+        "r": 0.0,
+        "init": 0.0,
+        "update": 0.0,
+        "render": -10.0,
+        "remove": 0.0
+      },
+      "normalization": "Remove wall time; subtract starting UI tick; pair entity identities by source, bornGF and spawn ordinal; ignore only pairs-order sequence numbers in terminal summaries.",
+      "trial_case_id": "blood-old100",
+      "instance_shape_difference_count": 10
+    },
+    {
+      "same_metadata": true,
+      "same_exe_fixture": true,
+      "same_enabled_lua_modset": true,
+      "actual_high_refresh_present": true,
+      "ordered_nonterminal_event_records_identical": true,
+      "terminal_instance_summaries_identical": true,
+      "normalized_record_counts": [
+        540,
+        540
+      ],
+      "totals_difference": {
+        "u": 0.0,
+        "r": 0.0,
+        "init": 0.0,
+        "update": 0.0,
+        "render": 0.0,
+        "remove": 0.0
+      },
+      "normalization": "Remove wall time; subtract starting UI tick; pair entity identities by source, bornGF and spawn ordinal; ignore only pairs-order sequence numbers in terminal summaries.",
+      "trial_case_id": "blood-fixed100-retry",
+      "instance_shape_difference_count": 0
+    }
+  ],
+  "acceptance": [
+    "Each controlled direct spawn retains native init -> two ordinary renders -> floor-flag update -> one floor render -> remove order.",
+    "Ten controlled instances yield 10 init, 10 update, 30 render and 10 remove calls, with 10 floor renders.",
+    "Fixed candidate records 10 outside-render native passthrough calls for callback56 and no corresponding floor-target replay miss.",
+    "No extra ordinary callbacks or altered world/main counts; actual high-refresh presentation and matching code/modset verified."
+  ],
+  "limits": [
+    "Direct spawns provide deterministic instance count and position; entity seeds/pointers vary and are explicitly normalized.",
+    "NPC damage is an attempted additional producer. Only producers actually present in source_init_counts are covered.",
+    "Lua logs show the floor render between effect update/remove before the next world-post-update; the native Update callsite is corroborated by the static audit.",
+    "Callback restoration does not alone prove the baked texture's pixels, or every other possible out-of-render invocation."
+  ]
+}

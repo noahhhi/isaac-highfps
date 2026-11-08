@@ -1,0 +1,167 @@
+{
+  "schema": "isaac-highfps-public-validation-v1",
+  "source_summary": "release-r5-evidence.json",
+  "source_summary_sha256": "e529725bbd2b4710ba5a4df149c7daef156493e730717e5bdebfcaf3fa79d833",
+  "scope_note": "Quantified results apply to the identified artifacts and cases; no game files, mod lists or private paths are included.",
+  "release_label": "0.13.0-j374.2 (R5)",
+  "dll_sha256": "64ef7294beac052590079c65ec8ec622142a81a3e4c8d79105e40418bb046318",
+  "same_dll_in_global_and_overlay": true,
+  "overlay": {
+    "recorded_events": {
+      "baseline": 483,
+      "trial": 483
+    },
+    "all_recorded_events_except_t_identical": true,
+    "count_differences": {
+      "u": 0.0,
+      "pu": 0.0,
+      "tu": 0.0,
+      "r": 0.0,
+      "pr": 0.0,
+      "tr": 0.0,
+      "mw": 0.0,
+      "pw": 0.0,
+      "tw": 0.0
+    },
+    "position_errors": {
+      "px": {
+        "samples": 286,
+        "max": 0.0
+      },
+      "py": {
+        "samples": 286,
+        "max": 0.0
+      },
+      "tx": {
+        "samples": 286,
+        "max": 0.0
+      },
+      "ty": {
+        "samples": 286,
+        "max": 0.0
+      }
+    },
+    "actual_median_present_hz": 100.01000100010002,
+    "diagnostic_report_counts": {
+      "faults": 0,
+      "pure_state_or_lua_reports": 0,
+      "unsafe_cache_reports": 0,
+      "resource_or_shader_rejects": 0,
+      "nonzero_ui_miss_or_restore_reports": 0
+    },
+    "entity_cache_misses": 0,
+    "same_enabled_lua_modset": true,
+    "case_id": "release-overlay100",
+    "artifacts": {
+      "dll_sha256": "64ef7294beac052590079c65ec8ec622142a81a3e4c8d79105e40418bb046318",
+      "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+      "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "b5d12d00cd83b963fb028905480bf31c6fd2df964f3c1ecec7b50aa5ed79f1e3"
+    },
+    "source_commit": "7c2a47d"
+  },
+  "global": {
+    "same_seed_fixture_exe": true,
+    "same_enabled_lua_modset": true,
+    "actual_median_present_hz": 79.99360051195904,
+    "game_hz_regression": 30.00281389895725,
+    "fixed_360_tick_seconds": 11.978,
+    "counter_delta_difference": {
+      "gf": 0.0,
+      "tc": 0.0,
+      "u": 0.0,
+      "pu": 0.0,
+      "tu": 0.0,
+      "r": 0.0,
+      "pr": 0.0,
+      "tr": 0.0,
+      "shots": 0.0,
+      "newtears": 0.0
+    },
+    "same_tick_verified_zero_error_fields": [
+      "tc",
+      "px",
+      "py",
+      "pvx",
+      "pvy",
+      "fireDelay",
+      "maxFireDelay",
+      "paf",
+      "shots",
+      "newtears",
+      "ta",
+      "ba",
+      "bf",
+      "baf",
+      "bu",
+      "br"
+    ],
+    "shot_events": 33,
+    "shot_game_ticks_identical": true,
+    "natural_tear_birth_differences": 33,
+    "early_tear_comparison": {
+      "samples": 198,
+      "purpose": "Separate initial flight from later bomb/room collisions; this is a declared subset, not a replacement for the full results.",
+      "raw_max_errors": {
+        "tvx": 0.0,
+        "tvy": 0.0,
+        "taf": 0.0,
+        "th": 0.8135699999999986,
+        "tfall": 0.17363300000000004
+      },
+      "birth_relative_ground_displacement_max_errors": {
+        "tx": 1.499999996212864e-05,
+        "ty": 5.684341886080802e-14
+      }
+    },
+    "case_id": "global-release80",
+    "artifacts": {
+      "dll_sha256": "64ef7294beac052590079c65ec8ec622142a81a3e4c8d79105e40418bb046318",
+      "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+      "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "61256590d607f40cdb6d19719f243ccec5b654052d711ec39c581a857c3aae07"
+    },
+    "source_commit": "7c2a47d"
+  },
+  "visual_evidence": {
+    "source": "root agent observation",
+    "frame": "capture/frame-0359.jpg",
+    "observed": "MAIN/PLAYER/TEAR labels and M/P/T markers visible",
+    "scope": "One reported inspected frame, not every-frame or all-path pixel coverage",
+    "case_id": "release-overlay100"
+  },
+  "not_validated": [
+    "Physical VRR/scanout chain",
+    "Runtime variable refresh/frame-rate response: GAMESCOPE_FPS_LIMIT target120 remained239.6fps, so global-variable240 is a failed control attempt",
+    "Direct Image/Sprite custom shader paths",
+    "Every-frame pixel absence/presence across all render paths"
+  ],
+  "report_files": [
+    "canonical-overlay-comparison.json",
+    "render-types-comparison.json",
+    "blood-callback-comparison.json",
+    "pause-moving-comparison.json",
+    "rewind-comparison.json"
+  ],
+  "source_commit": "7c2a47d",
+  "baseline_artifacts": [
+    {
+      "case_id": "canonical-overlay-native60",
+      "artifacts": {
+        "dll_sha256": "6b33ede128cb938b6b7c3aef4da1a4e7b7ded8b52d029c6f5c65ef22ec831beb",
+        "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "b5d12d00cd83b963fb028905480bf31c6fd2df964f3c1ecec7b50aa5ed79f1e3"
+      }
+    },
+    {
+      "case_id": "global-live-mods-native60",
+      "artifacts": {
+        "dll_sha256": "7f93942038fe0d89b404f24d68df6e5e007d3c603779dbc6ab69f4a31ec0d77b",
+        "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "61256590d607f40cdb6d19719f243ccec5b654052d711ec39c581a857c3aae07"
+      }
+    }
+  ]
+}
