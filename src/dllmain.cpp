@@ -10,6 +10,7 @@
 // Motion is still only 60 Hz at this stage — intermediate previews come in milestone B.
 #include <windows.h>
 #include <tlhelp32.h>
+#include <intrin.h>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -20,6 +21,11 @@
 #include "offsets.h"
 #endif
 #include "version.h"
+#include "render_timing.h"
+#ifdef HIGHFPS_BUILD_19715
+#include "entity_draw_cache_j374_runtime.h"
+#include "shader_params_cache_j374.h"
+#endif
 
 namespace {
 
@@ -37,11 +43,24 @@ void Log(const char* fmt, ...) {
 
 uintptr_t g_base = 0;
 HMODULE g_self = nullptr;
+HANDLE g_initThread = nullptr;
+
+bool InitThreadExited() {
+    static bool exited = false;
+    if (!exited && g_initThread && WaitForSingleObject(g_initThread, 0) == WAIT_OBJECT_0) {
+        CloseHandle(g_initThread);
+        g_initThread = nullptr;
+        exited = true;
+    }
+    return exited;
+}
 
 // ---------------------------------------------------------------- config
 struct Config {
     bool enabled = true;
     bool interpolate = true;
+    int idleFps = 0;       // 0 keeps display cadence in menus and while paused
+    int vsync = 1;         // -1 follows engine, 0 off, 1 actual display synchronization
     int  maxFps = 0;        // 0 = as fast as the display allows
     bool log = true;
     bool profile = false;   // sampling profiler; costs real time, for diagnosis only
@@ -61,6 +80,8 @@ void LoadConfig() {
     g_cfg.enabled     = GetPrivateProfileIntA("highfps", "Enabled", 1, path) != 0;
     g_cfg.interpolate = GetPrivateProfileIntA("highfps", "Interpolate", 1, path) != 0;
     g_cfg.maxFps      = GetPrivateProfileIntA("highfps", "MaxFps", 0, path);
+    g_cfg.vsync = GetPrivateProfileIntA("highfps", "VSync", 1, path);
+    g_cfg.idleFps = GetPrivateProfileIntA("highfps", "IdleFps", 0, path);
     g_cfg.log         = GetPrivateProfileIntA("highfps", "Log", 1, path) != 0;
     g_cfg.profile     = GetPrivateProfileIntA("highfps", "Profile", 0, path) != 0;
     g_cfg.diag        = GetPrivateProfileIntA("highfps", "Diag", 0, path) != 0;
@@ -153,6 +174,11 @@ void WriteRel32Jmp(uint8_t* at, const void* target) {
         static_cast<int32_t>(reinterpret_cast<uintptr_t>(target) - (reinterpret_cast<uintptr_t>(at) + 5));
 }
 
+} // anonymous namespace
+#include "native_render_clock.h"
+#include "native_ui_replay.h"
+namespace {
+
 // ---------------------------------------------------------------- pacing
 double g_qpcToSeconds = 0.0;
 int64_t g_qpcStart = 0;
@@ -169,8 +195,13 @@ double Now() {
 constexpr double kWrapperPeriod = 1.0 / 60.0;
 constexpr double kTickPeriod    = 1.0 / 30.0;
 
-double g_nextWrapper = 0.0;
+highfps::FixedTimeline g_simClock;
+double& g_nextWrapper = g_simClock.next;
 double g_lastWrapperTime = 0.0, g_lastTickTime = 0.0;
+// Loading is excluded explicitly, rather than inferred from a slow frame.
+uint64_t g_lifecycleEpoch = 0;
+double g_excludedLoadSeconds = 0.0, g_appliedLoadSeconds = 0.0;
+bool g_presentAnchorValid = false;
 bool g_previewEnabled = false;
 uint64_t g_loopFrames = 0, g_wrapperCalls = 0;
 double g_statWindow = 0.0;
@@ -217,6 +248,16 @@ WrapperFn g_wrapperTrampoline = nullptr;
 // roll it back. We reuse that storage and that marker, but compute the step ourselves for
 // an arbitrary fraction of the tick.
 uintptr_t GameObj() { return *reinterpret_cast<uintptr_t*>(Addr(isaac::kGGamePtr)); }
+bool NativeGamePaused19715() {
+#ifdef HIGHFPS_BUILD_19715
+    const uintptr_t game = GameObj();
+    if (game < 0x10000) return true;
+    using Fn = bool(__fastcall*)(void*, void*);
+    return reinterpret_cast<Fn>(Addr(0x6FE500))(reinterpret_cast<void*>(game), nullptr);
+#else
+    return !g_worldAdvancing;
+#endif
+}
 
 // The gameplay clock, distinct from the render frame counter: it only advances inside
 // the full 30 Hz logic pass, so it stands still on the pause menu, during room
@@ -340,6 +381,35 @@ float* CamField() {
 // Both the sample and the preview below need his position, because the lock is defined
 // by where the RENDERER will draw him, not by where the camera is.
 uintptr_t g_playerEnt = 0;
+uintptr_t g_interpGame = 0;
+uintptr_t g_interpRoom = 0;
+uint64_t g_interpEpoch = ~uint64_t(0);
+uint32_t g_interpRoomIndex = ~uint32_t(0), g_interpDimension = ~uint32_t(0);
+uint32_t RoomIdentity(unsigned offset) {
+    const uintptr_t game = GameObj();
+    return game >= 0x10000 ? *reinterpret_cast<uint32_t*>(game + offset) : ~uint32_t(0);
+}
+void EnsureInterpolationScope() {
+    const uintptr_t game = GameObj();
+    const uintptr_t room = EntityList();
+    const uint32_t index = RoomIdentity(0x18304), dimension = RoomIdentity(0x1830C);
+    if (game == g_interpGame && room == g_interpRoom && g_interpEpoch == g_lifecycleEpoch &&
+        index == g_interpRoomIndex && dimension == g_interpDimension) return;
+    g_interpEpoch = g_lifecycleEpoch;
+    g_interpRoomIndex = index;
+    g_interpDimension = dimension;
+    g_interpGame = game;
+    g_interpRoom = room;
+    g_worldAdvancing = false;
+    g_lastGameFrame = GameFrame();
+    g_cam = {};
+    g_playerEnt = 0;
+    g_playerRenderDelta[0] = g_playerRenderDelta[1] = 0;
+    memset(g_track, 0, sizeof g_track);
+    g_trackStamp = 0;
+    Log("[interp] reset history for room 0x%08X", unsigned(room));
+}
+
 
 inline bool PlayerValid(uintptr_t e) {
     return e >= 0x10000 && *reinterpret_cast<uint32_t*>(e + isaac::kEntType) == 1;
@@ -372,6 +442,12 @@ constexpr float kCamMaxStepSq = 120.0f * 120.0f;
 // (visibility checks, spawn positions), and that logic must see engine state, not ours.
 void RollbackCamera() {
     if (!g_cam.applied) return;
+    if (GameObj() != g_interpGame || EntityList() != g_interpRoom ||
+        g_interpEpoch != g_lifecycleEpoch || RoomIdentity(0x18304) != g_interpRoomIndex ||
+        RoomIdentity(0x1830C) != g_interpDimension) {
+        g_cam.applied = false;  // never restore the previous room's scroll into a new room
+        return;
+    }
     if (float* c = CamField()) { c[0] = g_cam.cur[0]; c[1] = g_cam.cur[1]; }
     g_cam.applied = false;
 }
@@ -383,6 +459,7 @@ void RollbackCamera() {
 // own step (camera easing, room-edge clamps). Both terms unsnapped, both smooth - the
 // sawtooth lives only in the snapped term, and that one is handled by PreviewCamera.
 void SampleCamera() {
+    EnsureInterpolationScope();
     float* c = CamField();
     if (!c) { g_cam.valid = false; g_cam.applied = false; return; }
     bool fresh = !g_cam.valid;
@@ -470,11 +547,11 @@ void DiagDump(bool realFrame, float a30, float a60) {
     const auto* backup = reinterpret_cast<float*>(e + isaac::kEntPosBackup);
     ++g_diagLines;
     Log("[d] t=%.3f k=%u %s p=(%.3f,%.3f) b=(%.3f,%.3f) c=(%.3f,%.3f) cc=(%.3f,%.3f) "
-        "cp=(%.3f,%.3f) pd=(%.3f,%.3f) a30=%.3f a60=%.3f",
+        "cp=(%.3f,%.3f) pd=(%.3f,%.3f) a30=%.3f a60=%.3f gf=%u",
         Now() * 1000.0, FrameCounter(), realFrame ? "R" : "i",
         pos[0], pos[1], backup[0], backup[1], c[0], c[1],
         g_cam.cur[0], g_cam.cur[1], g_cam.prev[0], g_cam.prev[1],
-        g_playerRenderDelta[0], g_playerRenderDelta[1], a30, a60);
+        g_playerRenderDelta[0], g_playerRenderDelta[1], a30, a60, GameFrame());
 }
 
 // Byte-for-byte what the engine does at 0x9551F0 before an authoritative tick.
@@ -502,6 +579,8 @@ void RollbackPreviews() {
 // theirs is a per-1/60 displacement, while everything else is per-1/30. Each therefore
 // gets its own share of its own interval.
 void PreviewPass(float worldAlpha, float playerAlpha) {
+    EnsureInterpolationScope();
+    if (NativeGamePaused19715()) playerAlpha = 0.0f;
     g_playerRenderDelta[0] = g_playerRenderDelta[1] = 0.0f;   // no player found -> camera holds
     g_playerEnt = 0;                                          // re-stashed below if he exists
     ForEachEntity([&](uintptr_t e) {
@@ -551,6 +630,7 @@ void PreviewPass(float worldAlpha, float playerAlpha) {
 // applied. Today's position becomes the far end of the next interval; yesterday's becomes
 // the near end.
 void SampleTracks() {
+    EnsureInterpolationScope();
     ++g_trackStamp;
     ForEachEntity([](uintptr_t e) {
         Track* t = FindTrack(e, true);
@@ -722,14 +802,111 @@ uint32_t EntityCount() {
     return list >= 0x10000 ? *reinterpret_cast<uint32_t*>(list + 0x1264) : 0;
 }
 
-int __cdecl HookedUpdateWrapper() {
-    if (!g_gameThreadId) g_gameThreadId = GetCurrentThreadId();
+bool g_presentConfigured = false;
+bool g_presentVsync = false;
+int g_displayHz = 0;
 
-    // Closes the render window from the other side. If the composite hook never fires —
-    // a present path we did not anticipate — this keeps update-phase Lua from being
-    // redirected into a layer that nothing would ever draw to the screen.
-    g_inRenderPhase = 0;
+void ConfigurePresentation() {
+    static double nextCheck = 0.0;
+    if (g_presentConfigured && Now() < nextCheck) return;
+    nextCheck = Now() + 1.0;
+    const bool oldVsync = g_presentVsync;
+    const int oldHz = g_displayHz;
+    HMODULE gl = GetModuleHandleA("opengl32.dll");
+    if (!gl) return;
+    using ContextFn = HGLRC(WINAPI*)();
+    using ProcFn = PROC(WINAPI*)(LPCSTR);
+    using SwapFn = BOOL(WINAPI*)(int);
+    using GetSwapFn = int(WINAPI*)();
+    const auto context = reinterpret_cast<ContextFn>(GetProcAddress(gl, "wglGetCurrentContext"));
+    const auto proc = reinterpret_cast<ProcFn>(GetProcAddress(gl, "wglGetProcAddress"));
+    if (!context || !context() || !proc) return;
+    const auto swap = reinterpret_cast<SwapFn>(proc("wglSwapIntervalEXT"));
+    const auto get = reinterpret_cast<GetSwapFn>(proc("wglGetSwapIntervalEXT"));
+    if (!swap || !get || reinterpret_cast<uintptr_t>(swap) <= 3 ||
+        reinterpret_cast<uintptr_t>(swap) == uintptr_t(-1) ||
+        reinterpret_cast<uintptr_t>(get) <= 3 || reinterpret_cast<uintptr_t>(get) == uintptr_t(-1)) return;
+    if (g_cfg.vsync >= 0 && !swap(g_cfg.vsync ? 1 : 0)) {
+        Log("[present] could not set swap interval; using engine interval");
+    }
+    g_presentVsync = get() > 0;
+    HMODULE user = GetModuleHandleA("user32.dll");
+    using ModeFn = BOOL(WINAPI*)(LPCSTR, DWORD, DEVMODEA*);
+    const auto mode = user ? reinterpret_cast<ModeFn>(GetProcAddress(user, "EnumDisplaySettingsA")) : nullptr;
+    DEVMODEA dm = {}; dm.dmSize = sizeof dm;
+    if (mode && mode(nullptr, ENUM_CURRENT_SETTINGS, &dm)) g_displayHz = int(dm.dmDisplayFrequency);
+    if (!g_presentConfigured || oldVsync != g_presentVsync || oldHz != g_displayHz) {
+        g_nextPresent = 0.0;
+        Log("[present] actual swap interval=%d, display=%d Hz, requested render cap=%d", get(), g_displayHz, g_cfg.maxFps);
+    }
+    g_presentConfigured = true;
+}
 
+bool g_endPacingActive = false;
+bool g_hiddenFixedRender = false;
+bool g_separateNativeFrames = false;
+bool OverlayPipelineReady();
+#ifdef HIGHFPS_BUILD_19715
+highfps_entity_probe::Runtime* g_entityRenderCache = nullptr;
+highfps_shader_params::Runtime* g_shaderParamsCache = nullptr;
+bool InNativeRender() { return g_inRenderPhase != 0; }
+uintptr_t ResolveCacheAddress(uintptr_t address) { return reinterpret_cast<uintptr_t>(Addr(address)); }
+void CacheLog(const char* message) { Log("%s", message); }
+void EnsureFixedRenderPipeline() {
+    static bool attempted = false;
+    // The overlay trampoline is published before its detour is written. It is
+    // not an Init-completion signal: installing here while Init still patches
+    // would race the shared suspend/write/resume state. Poll thread termination
+    // without blocking the game, including Init's CRT/loader teardown.
+    if (attempted || !g_presentConfigured || !InitThreadExited()) return;
+    attempted = true;
+    if (!OverlayPipelineReady()) {
+        if (g_cfg.maxFps == 0 || g_cfg.maxFps > 60) g_cfg.maxFps = 60;
+        g_cfg.luaOverlay = false;
+        Log("[warn] fixed render prerequisites unavailable; direct Lua drawing and 60 FPS cap retained");
+        return;
+    }
+    const double installStarted = Now();
+    if (g_cfg.diag) Log("[pipeline] installing fixed render hooks after Init thread exit");
+    highfps_entity_probe::Host host;
+    host.address = &ResolveCacheAddress; host.expect = &Expect; host.poke = &Poke;
+    host.writeJump = &WriteRel32Jmp; host.log = &CacheLog; host.insideRender = &InNativeRender;
+    g_entityRenderCache = new highfps_entity_probe::Runtime(host);
+    highfps_shader_params::Host shaderHost;
+    shaderHost.address = &ResolveCacheAddress; shaderHost.expect = &Expect; shaderHost.poke = &Poke;
+    shaderHost.writeJump = &WriteRel32Jmp; shaderHost.log = &CacheLog; shaderHost.insideRender = &InNativeRender;
+    g_shaderParamsCache = new highfps_shader_params::Runtime(shaderHost);
+    if (g_entityRenderCache->Install() && g_shaderParamsCache->Install() &&
+        highfps::native_ui_replay::InstallNativeUiReplay19715(&g_luaFrameIntermediate)) {
+        g_separateNativeFrames = true;
+        if (g_cfg.diag) Log("[pipeline] installation completed in %.2f ms", (Now() - installStarted) * 1000.0);
+        Log("[pipeline] fixed Update -> native Render -> GC; presentation replays entity Lua drawing");
+    } else {
+        g_shaderParamsCache->Shutdown();
+        g_entityRenderCache->Shutdown();
+        if (g_cfg.maxFps == 0 || g_cfg.maxFps > 60) g_cfg.maxFps = 60;
+        g_cfg.luaOverlay = false;
+        Log("[FATAL] fixed render pipeline unavailable; high-refresh disabled, direct Lua drawing and 60 FPS cap retained");
+    }
+}
+void BeginNativeRender(bool canonical) {
+    if (g_separateNativeFrames) {
+        highfps::native_ui_replay::BeginNativeUiRender19715(g_lifecycleEpoch, canonical);
+        g_entityRenderCache->BeginRender(g_lifecycleEpoch, canonical);
+        g_shaderParamsCache->BeginRender(g_lifecycleEpoch, canonical);
+    }
+}
+#else
+void EnsureFixedRenderPipeline() {}
+void BeginNativeRender(bool) {}
+#endif
+void __cdecl GarbageCollect19715();
+using SwapBuffersFn = BOOL(WINAPI*)(HDC);
+SwapBuffersFn g_realSwapBuffers = nullptr;
+double g_lastPresent = 0.0;
+uint32_t g_presentDiagLines = 0;
+
+void PacePresentation() {
     // Pacing. Normally we want the display's full rate — that is the whole point — but
     // there are two reasons to hold back.
     //
@@ -739,8 +916,12 @@ int __cdecl HookedUpdateWrapper() {
     // (a load, a menu, a long cutscene) there is nothing new to show anyway, so we drop
     // to 60. The delay before it kicks in keeps short room-slide transitions at full rate.
     int targetFps = g_cfg.maxFps;
-    if (!g_worldAdvancing && g_frozenSince > 0.0 && Now() - g_frozenSince > 0.25)
-        if (targetFps == 0 || targetFps > 60) targetFps = 60;
+    // With display synchronization, a second independent CPU timer at the same
+    // rate causes missed vblanks. Let presentation pace us when its rate wins.
+    if (g_presentVsync && (g_displayHz <= 1 || targetFps == 0 || targetFps >= g_displayHz))
+        targetFps = 0;
+    if (g_cfg.idleFps > 0 && !g_worldAdvancing && g_frozenSince > 0.0 && Now() - g_frozenSince > 0.25)
+        if (targetFps == 0 || targetFps > g_cfg.idleFps) targetFps = g_cfg.idleFps;
 
     if (targetFps > 0) {
         const double period = 1.0 / targetFps;
@@ -752,10 +933,190 @@ int __cdecl HookedUpdateWrapper() {
             now = Now();
         }
         g_nextPresent += period;
-        if (now - g_nextPresent > 0.25) g_nextPresent = now + period;
+        // Missed images have no simulation obligations: never burst to repay them.
+        if (g_nextPresent <= now) g_nextPresent = now + period;
     }
 
-    const double now = Now();
+}
+
+BOOL WINAPI HookedSwapBuffers(HDC dc) {
+    // A catch-up tick completes its native render/callback lifecycle, but the
+    // obsolete image has no display deadline and must not update the sample clock.
+    if (g_hiddenFixedRender && GetCurrentThreadId() == g_gameThreadId) return TRUE;
+    // Only this game's main rendering thread is paced. Loading helpers and
+    // another GL context must not consume its presentation deadlines.
+    const bool ours = g_gameThreadId && GetCurrentThreadId() == g_gameThreadId;
+    if (ours) PacePresentation();
+    const BOOL result = g_realSwapBuffers(dc);
+    if (ours) {
+        const double presented = Now();
+        if (g_cfg.diag && g_presentDiagLines++ < 12000)
+            Log("[present-frame] t=%.6f dt=%.6f gf=%u", presented,
+                g_lastPresent > 0 ? presented-g_lastPresent : 0, GameFrame());
+        g_lastPresent = presented;
+        g_presentAnchorValid = true;
+    }
+    return result;
+}
+
+unsigned g_renderPassesDue = 0;
+
+// Union of nested Level::Init / Level::ChangeRoom calls. Ordinary rendering,
+// slow Lua updates and SwapBuffers waits never enter this accounting domain.
+#ifdef HIGHFPS_BUILD_19715
+unsigned g_loadDepth = 0;
+double g_loadStarted = 0.0;
+const char* g_loadKind = "unknown";
+using ChangeRoomFn = void(__fastcall*)(void*, void*, int, int);
+using InitLevelFn = void(__fastcall*)(void*, void*, bool);
+ChangeRoomFn g_changeRoomOriginal = nullptr;
+InitLevelFn g_initLevelOriginal = nullptr;
+void BeginLifecycleLoad(const char* kind) {
+    if (g_loadDepth++ == 0) { g_loadStarted = Now(); g_loadKind = kind; }
+}
+void EndLifecycleLoad() {
+    if (--g_loadDepth != 0) return;
+    const double end = Now(), elapsed = end - g_loadStarted;
+    g_excludedLoadSeconds += elapsed;
+    ++g_lifecycleEpoch;
+    g_presentAnchorValid = false;
+    Log("[lifecycle] epoch=%llu begin=%.6f end=%.6f excluded=%.6f room=%u dimension=%u kind=%s",
+        g_lifecycleEpoch, g_loadStarted, end, elapsed,
+        RoomIdentity(0x18304), RoomIdentity(0x1830C), g_loadKind);
+}
+void __fastcall HookedChangeRoom(void* self, void*, int room, int dimension) {
+    BeginLifecycleLoad("room-load");
+    __try { g_changeRoomOriginal(self, nullptr, room, dimension); }
+    __finally { EndLifecycleLoad(); }
+}
+void __fastcall HookedInitLevel(void* self, void*, bool resetPortal) {
+    BeginLifecycleLoad("level-load");
+    __try { g_initLevelOriginal(self, nullptr, resetPortal); }
+    __finally { EndLifecycleLoad(); }
+}
+// Transition setup can synchronously load versus-screen/portrait assets before
+// Level::ChangeRoom. Account for that interval too; it is not animation time.
+using StartRoomFn = void(__fastcall*)(void*, void*, int, int, int, void*, int);
+using StartStageFn = void(__fastcall*)(void*, void*, bool, int, void*);
+StartRoomFn g_startRoomOriginal = nullptr;
+StartStageFn g_startStageOriginal = nullptr;
+void __fastcall HookedStartRoom(void* self, void*, int room, int direction, int animation, void* player, int dimension) {
+    BeginLifecycleLoad("room-prepare");
+    __try { g_startRoomOriginal(self, nullptr, room, direction, animation, player, dimension); }
+    __finally { EndLifecycleLoad(); }
+}
+void __fastcall HookedStartStage(void* self, void*, bool sameStage, int animation, void* player) {
+    BeginLifecycleLoad("stage-prepare");
+    __try { g_startStageOriginal(self, nullptr, sameStage, animation, player); }
+    __finally { EndLifecycleLoad(); }
+}
+using RestoreStateFn = void(__fastcall*)(void*, void*, void*, bool);
+using RerunStateFn = void(__fastcall*)(void*, void*, void*);
+RestoreStateFn g_restoreStateOriginal = nullptr;
+RerunStateFn g_rerunStateOriginal = nullptr;
+void __fastcall HookedRestoreState(void* self, void*, void* state, bool startGame) {
+    BeginLifecycleLoad("restore-state");
+    __try { g_restoreStateOriginal(self, nullptr, state, startGame); }
+    __finally { EndLifecycleLoad(); }
+}
+void __fastcall HookedRerunState(void* self, void*, void* state) {
+    BeginLifecycleLoad("rerun-state");
+    __try { g_rerunStateOriginal(self, nullptr, state); }
+    __finally { EndLifecycleLoad(); }
+}
+struct LifecycleHookSite {
+    uintptr_t address;
+    uint8_t bytes[6];
+    size_t length;
+    const void* detour;
+    const char* name;
+};
+const LifecycleHookSite kLifecycleSites[] = {
+    {0x740FF0, {0x55,0x8B,0xEC,0x6A,0xFF}, 5, reinterpret_cast<void*>(&HookedChangeRoom), "Level::ChangeRoom"},
+    {0x745D40, {0x53,0x8B,0xDC,0x83,0xEC,0x08}, 6, reinterpret_cast<void*>(&HookedInitLevel), "Level::Init"},
+    {0x6FE970, {0x55,0x8B,0xEC,0x83,0xE4,0xF8}, 6, reinterpret_cast<void*>(&HookedStartRoom), "Game::StartRoomTransition"},
+    {0x6FEDB0, {0x55,0x8B,0xEC,0x6A,0xFF}, 5, reinterpret_cast<void*>(&HookedStartStage), "Game::StartStageTransition"},
+    {0x6F92E0, {0x55,0x8B,0xEC,0x6A,0xFF}, 5, reinterpret_cast<void*>(&HookedRestoreState), "Game::RestoreState"},
+    {0x6F8590, {0x55,0x8B,0xEC,0x6A,0xFF}, 5, reinterpret_cast<void*>(&HookedRerunState), "Game::StartFromRerunState"}
+};
+constexpr unsigned kLifecycleHookCount = sizeof kLifecycleSites / sizeof kLifecycleSites[0];
+bool ValidateLifecycleSites() {
+    for (const auto& site : kLifecycleSites)
+        if (!Expect(site.address, site.bytes, site.length, site.name)) return false;
+    return true;
+}
+bool InstallLifecycleHooks() {
+    if (!ValidateLifecycleSites()) return false;
+    auto* code = static_cast<uint8_t*>(VirtualAlloc(nullptr, 32*kLifecycleHookCount, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+    if (!code) return false;
+    for (unsigned i = 0; i < kLifecycleHookCount; ++i) {
+        const auto& site = kLifecycleSites[i];
+        memcpy(code + 32*i, Addr(site.address), site.length);
+        WriteRel32Jmp(code + 32*i + site.length, Addr(site.address) + site.length);
+    }
+    FlushInstructionCache(GetCurrentProcess(), code, 32*kLifecycleHookCount);
+    g_changeRoomOriginal = reinterpret_cast<ChangeRoomFn>(code);
+    g_initLevelOriginal = reinterpret_cast<InitLevelFn>(code + 32);
+    g_startRoomOriginal = reinterpret_cast<StartRoomFn>(code + 64);
+    g_startStageOriginal = reinterpret_cast<StartStageFn>(code + 96);
+    g_restoreStateOriginal = reinterpret_cast<RestoreStateFn>(code + 128);
+    g_rerunStateOriginal = reinterpret_cast<RerunStateFn>(code + 160);
+    for (unsigned i = 0; i < kLifecycleHookCount; ++i) {
+        const auto& site = kLifecycleSites[i];
+        uint8_t patch[6] = {0xE9, 0, 0, 0, 0, 0x90};
+        *reinterpret_cast<int32_t*>(patch + 1) = int32_t(reinterpret_cast<uintptr_t>(site.detour) - (reinterpret_cast<uintptr_t>(Addr(site.address)) + 5));
+        if (!Poke(site.address, patch, site.length)) {
+            while (i) {
+                const auto& prior = kLifecycleSites[--i];
+                if (!Poke(prior.address, prior.bytes, prior.length)) Log("[FATAL] lifecycle rollback failed: %s", prior.name);
+            }
+            return false;
+        }
+    }
+    return true;
+}
+
+#endif
+double ApplyLifecycleTime() {
+    const double excluded = g_excludedLoadSeconds - g_appliedLoadSeconds;
+    if (excluded <= 0) return 0;
+    g_appliedLoadSeconds = g_excludedLoadSeconds;
+    g_simClock.ExcludeBlocking(excluded);
+    g_lastWrapperTime += excluded;
+    g_lastTickTime += excluded;
+    g_nextPresent = 0;
+    g_presentAnchorValid = false;
+    return excluded;
+}
+
+
+int __cdecl HookedUpdateWrapper() {
+    g_renderPassesDue = 0;
+    ConfigurePresentation();
+    if (!g_gameThreadId) g_gameThreadId = GetCurrentThreadId();
+    EnsureFixedRenderPipeline();
+
+    // Closes the render window from the other side. If the composite hook never fires —
+    // a present path we did not anticipate — this keeps update-phase Lua from being
+    // redirected into a layer that nothing would ever draw to the screen.
+    g_inRenderPhase = 0;
+
+    if (!g_endPacingActive) PacePresentation();
+
+    ApplyLifecycleTime();
+    const double wallNow = Now();
+    static bool firstWrapper = true;
+    if (firstWrapper) {
+        firstWrapper = false;
+        g_simClock.next = wallNow;
+        g_lastWrapperTime = g_lastTickTime = wallNow;
+    }
+    // Lua GC and renderer cleanup can run AFTER SwapBuffers. Their variable
+    // cost must not move the sampled render timeline by a millisecond or two
+    // on alternating frames. Anchor this frame to the previous presentation.
+    // Simulation consumes only deadlines at or before that timestamp.
+    double now = g_endPacingActive && g_presentAnchorValid && g_lastPresent > 0.0 && wallNow - g_lastPresent < 0.25
+        ? g_lastPresent : wallNow;
     ++g_loopFrames;
 
     if (g_prevEntry > 0.0) {
@@ -773,6 +1134,9 @@ int __cdecl HookedUpdateWrapper() {
     g_prevEntry = now;
 
     if (now >= g_statWindow + 1.0) {
+#ifdef HIGHFPS_BUILD_19715
+        if (g_cfg.diag && g_separateNativeFrames) highfps::native_ui_replay::LogNativeUiReplayDiagnostics19715();
+#endif
         // EnableInterpolation is logged here rather than at init: options.ini is parsed
         // some time after g_Manager exists, so an init-time read reports a zero that
         // means "not loaded yet", not "disabled".
@@ -805,7 +1169,7 @@ int __cdecl HookedUpdateWrapper() {
         // on the loop is pinned to the refresh rate no matter what we patched. When it is on,
         // loop/s IS the refresh rate, which is the other half of the same diagnosis.
         #ifdef HIGHFPS_BUILD_19715
-        const bool vsync = *Addr(0x00BD5795) != 0;
+        const bool vsync = g_presentConfigured ? g_presentVsync : *Addr(0x00BD5795) != 0;
 #else
         const bool vsync = (*reinterpret_cast<uint32_t*>(Addr(isaac::kGWindowFlags)) & 0x200) != 0;
 #endif
@@ -823,7 +1187,7 @@ int __cdecl HookedUpdateWrapper() {
 
         // Hand the measured rate to Lua. Mods cannot count frames for themselves any more,
         // because the callback they would count is exactly the one we pin to 60.
-        g_pushRate = LONG(g_loopFrames);
+        g_pushRate = LONG(double(g_loopFrames) / (now - g_statWindow) + 0.5);
 
         g_loopFrames = g_wrapperCalls = 0;
         g_prof = Profile{};
@@ -838,7 +1202,7 @@ int __cdecl HookedUpdateWrapper() {
         }
     }
 
-    if (now < g_nextWrapper) {
+    if (!g_simClock.Due(now)) {
         // The render following this return shows a frame vanilla never drew, so the
         // Lua gate swallows every engine->Lua dispatch in it.
         g_luaFrameIntermediate = 1;
@@ -848,8 +1212,7 @@ int __cdecl HookedUpdateWrapper() {
             // Never extrapolate past the tick we are waiting for. A late tick would
             // otherwise send everything shooting ahead of where it is about to be.
             auto frac = [](double elapsed, double period) {
-                const double a = elapsed / period;
-                return float(a < 0.0 ? 0.0 : (a > 1.0 ? 1.0 : a));
+                return highfps::RenderAlpha(elapsed, 0, period);
             };
             // No rollback needed here: the preview recomputes from the backup, which
             // still holds the authoritative position.
@@ -872,8 +1235,7 @@ int __cdecl HookedUpdateWrapper() {
         }
         if (g_cfg.diag) {
             auto frac = [](double e, double p) {
-                const double a = e / p;
-                return float(a < 0.0 ? 0.0 : (a > 1.0 ? 1.0 : a));
+                return highfps::RenderAlpha(e, 0, p);
             };
             DiagDump(false, frac(now - g_lastTickTime, kTickPeriod),
                      frac(now - g_lastWrapperTime, kWrapperPeriod));
@@ -881,6 +1243,7 @@ int __cdecl HookedUpdateWrapper() {
         // The render that follows shows the mod layer from the last real frame. Nothing
         // to clear and nothing for Lua to add, so the flag only matters to the compositor.
         g_inRenderPhase = 1;
+        BeginNativeRender(false);
         return 0;
     }
 
@@ -889,111 +1252,235 @@ int __cdecl HookedUpdateWrapper() {
     // 60 Hz cadence, so Lua must run.
     g_luaFrameIntermediate = 0;
 
-    g_nextWrapper += kWrapperPeriod;
-    // After a stall (loading, alt-tab) do not try to replay the missed ticks.
-    if (now - g_nextWrapper > 0.25) g_nextWrapper = now + kWrapperPeriod;
+    int result = 0;
+    unsigned catchupSteps = 0;
+    bool crossedLifecycle = false;
+    do {
+        const double scheduledWrapper = g_simClock.Consume(now);
 
-    // Hand the engine authoritative positions, always. It only rolls previews back on
-    // the logic phase (0x9551D8); on the interpolation phase it goes straight to the
-    // half-step. So if our preview were still applied here, two things would break:
-    // the engine's own preview would overwrite the backup with an already-displaced
-    // position (drift baked in every tick - enemies run away), and the player's real
-    // second integrator pass would be built on top of a preview and then undone by the
-    // next rollback (his actual movement thrown away - he crawls).
-    if (g_previewEnabled) {
-        __try {
-            RollbackPreviews();
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            g_previewEnabled = false;
-            Log("[warn] rollback faulted - intermediate frames disabled");
+        // Hand the engine authoritative positions, always. It only rolls previews back on
+        // the logic phase (0x9551D8); on the interpolation phase it goes straight to the
+        // half-step. So if our preview were still applied here, two things would break:
+        // the engine's own preview would overwrite the backup with an already-displaced
+        // position (drift baked in every tick - enemies run away), and the player's real
+        // second integrator pass would be built on top of a preview and then undone by the
+        // next rollback (his actual movement thrown away - he crawls).
+        if (g_previewEnabled) {
+            __try {
+                RollbackPreviews();
+            } __except (EXCEPTION_EXECUTE_HANDLER) {
+                g_previewEnabled = false;
+                Log("[warn] rollback faulted - intermediate frames disabled");
+            }
         }
-    }
 
-    g_lastWrapperTime = now;
+        g_lastWrapperTime = scheduledWrapper;
 
-    // An authoritative tick is every second wrapper call: the one that rolls previews
-    // back and runs the real 30 Hz logic. Only there does it make sense to ask whether
-    // the world actually moved, since the gameplay clock ticks once per logic pass.
-    const uint32_t counter = FrameCounter();
-    const bool logicPhase = (counter & 1) != 0;     // this call lands on even -> logic
-    if (logicPhase) {
-        g_lastTickTime = now;
-        const uint32_t gameFrame = GameFrame();
-        g_worldAdvancing = (gameFrame != g_lastGameFrame);
-        g_lastGameFrame = gameFrame;
-        if (g_worldAdvancing) g_frozenSince = 0.0;
-        else if (g_frozenSince == 0.0) g_frozenSince = now;
-    }
+        // An authoritative tick is every second wrapper call: the one that rolls previews
+        // back and runs the real 30 Hz logic. Only there does it make sense to ask whether
+        // the world actually moved, since the gameplay clock ticks once per logic pass.
+        const uint32_t counter = FrameCounter();
+    #ifdef HIGHFPS_BUILD_19715
+        // J374 increments at the END of Manager::Update: even on entry is the full tick.
+        const bool logicPhase = highfps::FullTick19715(counter);
+    #else
+        const bool logicPhase = (counter & 1) != 0;
+    #endif
+        if (logicPhase) {
+            g_lastTickTime = scheduledWrapper;
 
-    ++g_wrapperCalls;
-    const uint32_t ents = EntityCount();
-    if (ents > g_prof.entPeak && ents < 8192) g_prof.entPeak = ents;
-
-    const double updStart = Now();
-    if (g_cfg.profile) InterlockedExchange(&g_inUpdate, 1);
-    const int result = g_wrapperTrampoline();
-    if (g_cfg.profile) InterlockedExchange(&g_inUpdate, 0);
-    const double upd = Now() - updStart;
-    if (g_cfg.profile && upd > kLongFrame) DumpSamples(upd * 1000.0);
-    g_prof.updSum += upd;
-    ++g_prof.updates;
-    if (upd > g_prof.updMax) g_prof.updMax = upd;
-
-    const double oursStart = Now();
-
-    if (g_previewEnabled) {
-        __try {
-            // Positions are authoritative only here: right after the logic pass, before
-            // anything previews them again. Sampled unconditionally — during a cutscene
-            // or transition the gameplay clock stands still while sprites and entities
-            // may well keep moving, and skipping the sample would freeze them solid.
-            if (logicPhase) SampleTracks();
-            // The engine refreshes the scroll offset on every real frame (60 Hz), not only
-            // the logic phase, so it is sampled here unconditionally - a 30 Hz sample would
-            // miss half its motion.
-            SampleCamera();
-
-            // This frame gets rendered too, so it has to follow the same rule as the
-            // intermediate ones. Left alone it would show the engine's own half-step
-            // extrapolation - one frame in three drawn by a different rule, which reads
-            // as a hitch twice per tick.
-            const double a = (now - g_lastTickTime) / kTickPeriod;
-            PreviewPass(float(a < 0.0 ? 0.0 : (a > 1.0 ? 1.0 : a)), 0.0f);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            g_previewEnabled = false;
-            Log("[warn] track sampling faulted - intermediate frames disabled");
         }
-        const double ours = Now() - oursStart;
-        g_prof.ourSum += ours;
-        if (ours > g_prof.ourMax) g_prof.ourMax = ours;
-    }
 
-    if (g_cfg.diag) {
+        ++g_wrapperCalls;
+        const uint32_t ents = EntityCount();
+        if (ents > g_prof.entPeak && ents < 8192) g_prof.entPeak = ents;
+
+        const uintptr_t gameBefore = GameObj();
+        const uint64_t epochBefore = g_lifecycleEpoch;
+        const uint32_t gameFrameBefore = GameFrame();
+        const double updStart = Now();
+        if (g_cfg.profile) InterlockedExchange(&g_inUpdate, 1);
+        result = g_wrapperTrampoline();
+        ++g_renderPassesDue;
+        if (logicPhase) {
+            g_lastGameFrame = GameFrame();
+            g_worldAdvancing = GameObj() == gameBefore && g_lifecycleEpoch == epochBefore &&
+                               g_lastGameFrame > gameFrameBefore;
+            if (g_worldAdvancing) g_frozenSince = 0.0;
+            else if (g_frozenSince == 0.0) g_frozenSince = now;
+        }
+        if (NativeGamePaused19715()) g_worldAdvancing = false;
+        if (g_cfg.profile) InterlockedExchange(&g_inUpdate, 0);
+        const double updateFinished = Now();
+        const double upd = updateFinished - updStart;
+        if (ApplyLifecycleTime() > 0) {
+            now = updateFinished;
+            crossedLifecycle = true;
+            EnsureInterpolationScope();
+        }
+        if (g_cfg.profile && upd > kLongFrame) DumpSamples(upd * 1000.0);
+        g_prof.updSum += upd;
+        ++g_prof.updates;
+        if (upd > g_prof.updMax) g_prof.updMax = upd;
+
+        // Complete every skipped display frame in native U -> R -> GC order.
+        // Merely replaying Lua after U1,U2 would expose state2 to both callbacks.
+        const bool renderHidden = g_separateNativeFrames || (!crossedLifecycle && catchupSteps + 1 < 16 && g_simClock.Due(now));
+#ifdef HIGHFPS_BUILD_19715
+        if (renderHidden) {
+            PrepareOverlay();
+            g_luaFrameIntermediate = 0;
+            g_inRenderPhase = 1;
+            g_hiddenFixedRender = true;
+            BeginNativeRender(true);
+            __try {
+                reinterpret_cast<void(__cdecl*)()>(Addr(0x94D340))();
+            } __finally {
+                g_hiddenFixedRender = false;
+                g_inRenderPhase = 0;
+            }
+            GarbageCollect19715();
+            if (ApplyLifecycleTime() > 0) {
+                now = Now();
+                crossedLifecycle = true;
+            }
+        }
+#endif
+        const double oursStart = Now();
+
+        if (g_previewEnabled) {
+            __try {
+                // Positions are authoritative only here: right after the logic pass, before
+                // anything previews them again. Sampled unconditionally — during a cutscene
+                // or transition the gameplay clock stands still while sprites and entities
+                // may well keep moving, and skipping the sample would freeze them solid.
+                if (logicPhase) SampleTracks();
+                // The engine refreshes the scroll offset on every real frame (60 Hz), not only
+                // the logic phase, so it is sampled here unconditionally - a 30 Hz sample would
+                // miss half its motion.
+                SampleCamera();
+
+                // This frame gets rendered too, so it has to follow the same rule as the
+                // intermediate ones. Left alone it would show the engine's own half-step
+                // extrapolation - one frame in three drawn by a different rule, which reads
+                // as a hitch twice per tick.
+                const double a = (now - g_lastTickTime) / kTickPeriod;
+                const double playerA = (now - g_lastWrapperTime) / kWrapperPeriod;
+                if (!renderHidden) PreviewPass(float(a < 0.0 ? 0.0 : (a > 1.0 ? 1.0 : a)),
+                            g_worldAdvancing ? float(playerA < 0.0 ? 0.0 : (playerA > 1.0 ? 1.0 : playerA)) : 0.0f);
+            } __except (EXCEPTION_EXECUTE_HANDLER) {
+                g_previewEnabled = false;
+                Log("[warn] track sampling faulted - intermediate frames disabled");
+            }
+            const double ours = Now() - oursStart;
+            g_prof.ourSum += ours;
+            if (ours > g_prof.ourMax) g_prof.ourMax = ours;
+        }
+
+        // Keep 60 simulation steps per second even when rendering temporarily falls
+        // below 60. Each step restores previews before entering authoritative code.
+    } while (!crossedLifecycle && ++catchupSteps < 16 && g_simClock.Due(now));
+
+    if (g_cfg.diag && !g_separateNativeFrames) {
         const double a = (now - g_lastTickTime) / kTickPeriod;
-        DiagDump(true, float(a < 0.0 ? 0.0 : (a > 1.0 ? 1.0 : a)), 0.0f);
+        const double playerA = (now - g_lastWrapperTime) / kWrapperPeriod;
+        DiagDump(true, float(a < 0.0 ? 0.0 : (a > 1.0 ? 1.0 : a)),
+                 float(playerA < 0.0 ? 0.0 : (playerA > 1.0 ? 1.0 : playerA)));
     }
 
     // A real frame: the render that follows is the one Lua is allowed to draw in, so the
     // layer it draws into has to exist by the time we get there.
     PrepareOverlay();
+    if (g_separateNativeFrames) {
+        // Canonical native renders saw exactly the poses produced by the engine,
+        // and all their Lua writes survived. Only the presentation below previews.
+        g_luaFrameIntermediate = 1;
+        if (g_previewEnabled) {
+            __try {
+                PreviewPass(highfps::RenderAlpha(now, g_lastTickTime, kTickPeriod),
+                    g_worldAdvancing ? highfps::RenderAlpha(now, g_lastWrapperTime, kWrapperPeriod) : 0.0f);
+            } __except (EXCEPTION_EXECUTE_HANDLER) {
+                g_previewEnabled = false;
+                Log("[warn] presentation preview faulted");
+            }
+        }
+        if (g_cfg.diag) {
+            DiagDump(true, highfps::RenderAlpha(now, g_lastTickTime, kTickPeriod),
+                g_worldAdvancing ? highfps::RenderAlpha(now, g_lastWrapperTime, kWrapperPeriod) : 0.0f);
+        }
+    }
     g_inRenderPhase = 1;
+    BeginNativeRender(!g_separateNativeFrames);
     return result;
 }
 
 #ifdef HIGHFPS_BUILD_19715
+unsigned g_pendingGcTicks = 0;
+void __cdecl GarbageCollect19715() {
+    if (!GameObj()) { g_pendingGcTicks = 0; return; }
+    using Fn = void(__cdecl*)();
+    while (g_pendingGcTicks) {
+        --g_pendingGcTicks;
+        reinterpret_cast<Fn>(Addr(0x00865540))();
+    }
+}
+
 // J374 calls stdcall Manager::Update(bool) directly, unlike J460's cdecl wrapper.
 int __cdecl Update19715() {
+    // The outer KAGE/input update consumes edge-triggered input. Running it on
+    // intermediate render frames loses presses before the next logic tick.
+    using InputUpdateFn = void(__fastcall*)(bool);
+    reinterpret_cast<InputUpdateFn>(Addr(0x00A4F9F0))(false);
     using UpdateFn = void(__stdcall*)(bool);
     reinterpret_cast<UpdateFn>(Addr(isaac::kPhaseMachine))(true);
+    highfps::native_render_clock::NativeRenderFixedTick19715();
+    if (GameObj()) ++g_pendingGcTicks;
+    else g_pendingGcTicks = 0;
     return 0;
 }
 
+uint64_t PureGameplayHash19715() {
+    uint64_t h = 1469598103934665603ull;
+    auto mix = [&](uint32_t v) { h = (h ^ v) * 1099511628211ull; };
+    mix(FrameCounter());
+    const uintptr_t game = GameObj(); mix(uint32_t(game));
+    if (game >= 0x10000) {
+        mix(*reinterpret_cast<uint32_t*>(game + 0x264F8));
+        mix(*reinterpret_cast<uint32_t*>(game + 0x264FC));
+        mix(RoomIdentity(0x18304)); mix(RoomIdentity(0x1830C));
+    }
+    ForEachEntity([&](uintptr_t e) {
+        mix(uint32_t(e)); mix(Fingerprint(e));
+        for (unsigned offset : {0x33Cu,0x340u,0x344u,0x348u,0x360u,0x364u,0x36Cu,0x39Cu})
+            mix(*reinterpret_cast<uint32_t*>(e + offset));
+        mix(*reinterpret_cast<uint8_t*>(e + isaac::kEntPreviewFlag));
+    });
+    return h;
+}
+void __cdecl Render19715() {
+    uint64_t before = 0;
+    const bool audit = g_cfg.diag && g_separateNativeFrames;
+    if (audit) before = PureGameplayHash19715();
+    __try { reinterpret_cast<void(__cdecl*)()>(Addr(0x94D340))(); }
+    __finally { g_inRenderPhase = 0; g_luaFrameIntermediate = 0; }
+    if (audit && before != PureGameplayHash19715()) {
+        static unsigned reported = 0;
+        if (reported++ < 32) Log("[pure-state] gameplay fields changed during presentation at manager=%u game=%u", FrameCounter(), GameFrame());
+    }
+}
 bool Validate19715Sites() {
-    static const uint8_t call[] = {0x6A,0x01,0xE8,0xF3,0x34,0x02,0x00};
+    static const uint8_t call[] = {0x32,0xC9,0xE8,0x1A,0x64,0x12,0x00,0x6A,0x01,0xE8,0xF3,0x34,0x02,0x00};
+    static const uint8_t render[] = {0xE8,0x5E,0x3D,0x02,0x00};
+    static const uint8_t gc[] = {0xE8,0x50,0xBF,0xF3,0xFF};
     static const uint8_t limiter[] = {0x84,0xDB,0x75,0x0C};
     static const uint8_t branch[] = {0x0F,0x85,0xF3,0xFE,0xFF,0xFF};
     static const uint8_t update[] = {0x55,0x8B,0xEC,0x83,0xE4,0xF0,0x81,0xEC,0x68,0x04,0x00,0x00};
-    return Expect(0x9295D6,call,sizeof call,"J374 update call") &&
+    uint8_t paused[] = {0x8B,0xD1,0x56,0x8B,0x35,0,0,0,0};
+    *reinterpret_cast<uint32_t*>(paused + 5) = uint32_t(reinterpret_cast<uintptr_t>(Addr(0xC0C09C)));
+    return Expect(0x6FE500,paused,sizeof paused,"J374 read-only Game::IsPaused") &&
+           Expect(0x9295CF,call,sizeof call,"J374 input + update calls") &&
+           Expect(0x9295DD,render,sizeof render,"J374 Manager render call") &&
+           Expect(0x9295EB,gc,sizeof gc,"J374 Lua GC call") &&
            Expect(0x929611,limiter,sizeof limiter,"J374 limiter") &&
            Expect(0x92961B,branch,sizeof branch,"J374 loop branch") &&
            Expect(0x94CAD0,update,sizeof update,"J374 Manager::Update");
@@ -1002,11 +1489,19 @@ bool Validate19715Sites() {
 bool InstallWrapperHook() {
     if (!Validate19715Sites()) return false;
     g_wrapperTrampoline = &Update19715;
-    uint8_t patch[7] = {0xE8,0,0,0,0,0x90,0x90};
+    uint8_t renderPatch[5] = {0xE8};
+    *reinterpret_cast<int32_t*>(renderPatch + 1) = int32_t(reinterpret_cast<uintptr_t>(&Render19715) - (reinterpret_cast<uintptr_t>(Addr(0x9295DD)) + 5));
+    if (!Poke(0x9295DD, renderPatch, sizeof renderPatch)) return false;
+    uint8_t patch[14]; memset(patch, 0x90, sizeof patch); patch[0] = 0xE8;
     *reinterpret_cast<int32_t*>(patch+1) = static_cast<int32_t>(
         reinterpret_cast<uintptr_t>(&HookedUpdateWrapper) -
-        (reinterpret_cast<uintptr_t>(Addr(0x9295D6))+5));
-    return Poke(0x9295D6,patch,sizeof patch);
+        (reinterpret_cast<uintptr_t>(Addr(0x9295CF))+5));
+    if (!Poke(0x9295CF,patch,sizeof patch)) return false;
+    uint8_t gcPatch[5] = {0xE8};
+    *reinterpret_cast<int32_t*>(gcPatch+1) = static_cast<int32_t>(
+        reinterpret_cast<uintptr_t>(&GarbageCollect19715) -
+        (reinterpret_cast<uintptr_t>(Addr(0x9295EB))+5));
+    return Poke(0x9295EB,gcPatch,sizeof gcPatch);
 }
 
 bool RemoveFrameLimiter() {
@@ -1572,6 +2067,23 @@ SmartImage g_overlayRef = {};      // held for the process lifetime, deliberatel
 uint32_t  g_overlayW = 0, g_overlayH = 0;
 
 inline void* Mgr() { return Addr(isaac::kGraphicsManager); }
+#ifdef HIGHFPS_BUILD_19715
+// J374 has a 48-byte stdcall argument frame. Its trailing color is BY VALUE;
+// J460's 20-byte pointer-only call corrupts the stack on this build.
+SmartImage* __stdcall CreateRt19715(SmartImage* out, uint32_t w, uint32_t h,
+                                   const char* name, KColor* color) {
+    using Fn = SmartImage*(__stdcall*)(SmartImage*, uint32_t, uint32_t,
+                                      KColor*, const char*, uint32_t, uint32_t, KColor);
+    return reinterpret_cast<Fn>(Addr(isaac::kCreateRenderTgt))
+        (out, w, h, color, name, 0, 0, *color);
+}
+// J374's flush is thiscall with NO stack arguments (J460 takes an extra int).
+void __fastcall Flush19715(void* mgr, void*, int) {
+    using Fn = void(__fastcall*)(void*, void*);
+    reinterpret_cast<Fn>(Addr(isaac::kFlushBatches))(mgr, nullptr);
+}
+#endif
+
 
 // A fault in here is a wrong address or a wrong assumption about engine state, and the
 // only useful thing to know is which of the two and where. Naming the faulting
@@ -1687,6 +2199,7 @@ private:
 // is only legal on the thread that owns the GL context. Doing it here, once per real
 // frame from the game thread, keeps that guarantee without any work in the steady state.
 void PrepareOverlay() {
+    if (g_separateNativeFrames) return;
     if (!g_cfg.luaOverlay || g_overlayFailed || g_overlay) return;
     __try {
         EnsureOverlay();
@@ -1718,7 +2231,12 @@ void BlitOverlay() {
     GraphicsState st; st.Save();
     auto* blend = reinterpret_cast<uint32_t*>(Addr(isaac::kGraphicsManager + isaac::kMgrBlendState));
     blend[0] = 0;
+#ifdef HIGHFPS_BUILD_19715
+    // Rendering over transparent black has already multiplied RGB by alpha.
+    blend[1] = 1;
+#else
     blend[1] = (*reinterpret_cast<uint32_t*>(Addr(isaac::kGWindowFlags)) & 4) ? 1u : 6u;
+#endif
     blend[2] = 7;
     blend[3] = 1;
     blend[4] = 7;
@@ -1754,6 +2272,10 @@ void BlitOverlay() {
 // graphics are on all 180 frames while their Lua ran 60 times.
 using LuaPostRenderFn = int(__cdecl*)();
 LuaPostRenderFn g_luaPostRenderTramp = nullptr;
+bool g_postRenderHookInstalled = false;
+bool OverlayPipelineReady() {
+    return g_cfg.luaVanillaCadence && g_cfg.luaOverlay && g_postRenderHookInstalled;
+}
 
 void CompositeOverlay() {
     if (!g_cfg.luaOverlay || g_overlayFailed || !g_overlay) return;
@@ -1763,21 +2285,41 @@ void CompositeOverlay() {
 }
 
 int __cdecl HookedLuaPostRender() {
-    int result;
-    {
-        OverlayScope draws;                 // inactive on intermediate frames
-        g_inModRenderPass = 1;              // the gate only bites inside this pass
-        result = g_luaPostRenderTramp();
-        g_inModRenderPass = 0;
+#ifdef HIGHFPS_BUILD_19715
+    if (g_separateNativeFrames) {
+        int result = 0;
+        g_inModRenderPass = 1;
+        __try { result = g_entityRenderCache->MainPostRender(g_luaPostRenderTramp); }
+        __finally { g_inModRenderPass = 0; }
+        return result;
     }
+#endif
+    // Fixed ticks now each complete their native render before the next update.
+    // There is never a deferred batch of callbacks against the final state.
+    int result = 0;
+    {
+        OverlayScope draws;
+        g_inModRenderPass = 1;
+        __try { result = g_luaPostRenderTramp(); }
+        __finally { g_inModRenderPass = 0; }
+    }
+    g_renderPassesDue = 0;
     CompositeOverlay();
     return result;
 }
 
-bool InstallOverlay() {
+bool ValidateOverlaySites() {
     // We call these rather than patch them, but calling the wrong address is worse than
     // patching it, so each one has to identify itself first. Only the leading bytes are
     // compared: anything further in tends to be an absolute address the loader rebases.
+#ifdef HIGHFPS_BUILD_19715
+    static const uint8_t kPush[] = {0x8B,0x15};
+    static const uint8_t kPop[] = {0x51,0x83,0x3D};
+    static const uint8_t kSetRt[] = {0x55,0x8B,0xEC,0x51,0x8A,0x45,0x0C};
+    static const uint8_t kClear[] = {0x56,0x8B,0xF1,0x57,0x83,0x7E,0x1C,0x00};
+    static const uint8_t kFlush[] = {0x56,0x8B,0xF1,0xC7,0x46,0x18,0,0,0,0};
+    static const uint8_t kCreate[] = {0x55,0x8B,0xEC,0x6A,0xFF};
+#else
     static const uint8_t kPush[]   = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x08};
     static const uint8_t kPop[]    = {0x51, 0x83, 0x3D};
     static const uint8_t kSetRt[]  = {0x55, 0x8B, 0xEC, 0x83, 0xE4, 0xF8, 0x56};
@@ -1785,6 +2327,7 @@ bool InstallOverlay() {
     static const uint8_t kClear[]  = {0x56, 0x8B, 0xF1, 0x83, 0x7E, 0x68, 0x00, 0x74};
     static const uint8_t kFlush[]  = {0x53, 0x8B, 0xDC, 0x83, 0xEC, 0x08, 0x83, 0xE4};
     static const uint8_t kCreate[] = {0x55, 0x8B, 0xEC, 0x6A, 0xFF};
+#endif
     if (!Expect(isaac::kPushRenderTarget, kPush,  sizeof kPush,  "PushRenderTarget")  ||
         !Expect(isaac::kPopRenderTarget,  kPop,   sizeof kPop,   "PopRenderTarget")   ||
         !Expect(isaac::kSetRenderTarget,  kSetRt, sizeof kSetRt, "SetRenderTarget")   ||
@@ -1793,12 +2336,25 @@ bool InstallOverlay() {
         !Expect(isaac::kCreateRenderTgt,  kCreate,sizeof kCreate,"CreateRenderTarget"))
         return false;
 
+    static const uint8_t kPostRender[] = {0x55, 0x8B, 0xEC, 0x6A, 0xFF};
+    if (!Expect(isaac::kLuaPostRender, kPostRender, sizeof kPostRender, "LuaEngine::PostRender"))
+        return false;
+    return true;
+}
+
+bool InstallOverlay() {
+    if (!ValidateOverlaySites()) return false;
     g_pushRt   = reinterpret_cast<PushRtFn  >(Addr(isaac::kPushRenderTarget));
     g_popRt    = reinterpret_cast<PopRtFn   >(Addr(isaac::kPopRenderTarget));
     g_setRt    = reinterpret_cast<SetRtFn   >(Addr(isaac::kSetRenderTarget));
     g_clearRt  = reinterpret_cast<ClearFn   >(Addr(isaac::kClearTarget));
+#ifdef HIGHFPS_BUILD_19715
+    g_flushRt = &Flush19715;
+    g_createRt = &CreateRt19715;
+#else
     g_flushRt  = reinterpret_cast<FlushFn   >(Addr(isaac::kFlushBatches));
     g_createRt = reinterpret_cast<CreateRtFn>(Addr(isaac::kCreateRenderTgt));
+#endif
 
     // Detour LuaEngine::PostRender for the composite. Its prologue is push ebp / mov ebp,
     // esp / push -1, which is exactly five bytes and ends on an instruction boundary.
@@ -1817,7 +2373,8 @@ bool InstallOverlay() {
     uint8_t patch[5] = {0xE9};
     *reinterpret_cast<int32_t*>(patch + 1) = static_cast<int32_t>(
         reinterpret_cast<uintptr_t>(&HookedLuaPostRender) - (reinterpret_cast<uintptr_t>(site) + 5));
-    return Poke(isaac::kLuaPostRender, patch, sizeof patch);
+    g_postRenderHookInstalled = Poke(isaac::kLuaPostRender, patch, sizeof patch);
+    return g_postRenderHookInstalled;
 }
 
 // -------------------------------------------------------------- lua gate
@@ -1876,8 +2433,8 @@ LuaCallkFn   g_realCallk  = nullptr;
 // actually live. If the overlay is off or has faulted, letting Lua run on every frame
 // costs performance but shows the right picture, and that is the better failure.
 bool SuppressLuaNow() {
-    return g_luaFrameIntermediate && g_inModRenderPass &&
-           g_cfg.luaOverlay && !g_overlayFailed && g_overlay != nullptr &&
+    return g_inRenderPhase && g_luaFrameIntermediate && g_inModRenderPass &&
+           (g_separateNativeFrames || (g_cfg.luaOverlay && !g_overlayFailed && g_overlay != nullptr)) &&
            GetCurrentThreadId() == g_gameThreadId;
 }
 
@@ -1930,12 +2487,20 @@ void PublishPresence(void* L) {
 }
 
 int __cdecl HookedPcallk(void* L, int nargs, int nresults, int msgh, intptr_t ctx, void* k) {
+    if (g_cfg.diag && g_separateNativeFrames && g_luaFrameIntermediate && g_inRenderPhase && !g_inModRenderPass) {
+        static unsigned reported = 0;
+        if (reported++ < 64) Log("[pure-lua] pcall caller=%p args=%d results=%d", _ReturnAddress(), nargs, nresults);
+    }
     if (SuppressLuaNow()) { EmulateLuaCall(L, nargs, nresults); return 0; /* LUA_OK */ }
     PublishPresence(L);
     return g_realPcallk(L, nargs, nresults, msgh, ctx, k);
 }
 
 void __cdecl HookedCallk(void* L, int nargs, int nresults, intptr_t ctx, void* k) {
+    if (g_cfg.diag && g_separateNativeFrames && g_luaFrameIntermediate && g_inRenderPhase && !g_inModRenderPass) {
+        static unsigned reported = 0;
+        if (reported++ < 64) Log("[pure-lua] call caller=%p args=%d results=%d", _ReturnAddress(), nargs, nresults);
+    }
     if (SuppressLuaNow()) { EmulateLuaCall(L, nargs, nresults); return; }
     PublishPresence(L);
     g_realCallk(L, nargs, nresults, ctx, k);
@@ -2009,14 +2574,12 @@ DWORD WINAPI Init(LPVOID) {
 #ifdef HIGHFPS_BUILD_19715
     const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(g_base);
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(g_base + dos->e_lfanew);
-    if (nt->FileHeader.TimeDateStamp != 0x68D45723 ||
-        nt->OptionalHeader.SizeOfImage != 0x8B6000) {
+    if (nt->FileHeader.TimeDateStamp != isaac::kPeTimestamp ||
+        nt->OptionalHeader.SizeOfImage != isaac::kPeImageSize) {
         Log("[FATAL] unsupported executable: this DLL requires 1.9.7.15.J374");
         return 0;
     }
-    // J374's KAGE ABI differs (including vtable slots). Never call J460 graphics.
-    g_cfg.luaOverlay = false;
-    Log("1.9.7.15.J374 port: entity/camera interpolation enabled; Lua overlay unavailable");
+    Log("1.9.7.15.J374: scheduled interpolation and version-specific KAGE adapters");
 #endif
     LARGE_INTEGER f;
     QueryPerformanceFrequency(&f);
@@ -2047,14 +2610,46 @@ DWORD WINAPI Init(LPVOID) {
     g_nextWrapper = Now();
     g_statWindow = Now();
 
+    if (g_cfg.luaVanillaCadence && g_cfg.luaOverlay && !ValidateOverlaySites()) {
+        Log("[FATAL] Lua overlay ABI check failed - leaving the game untouched");
+        return 0;
+    }
+
+#ifdef HIGHFPS_BUILD_19715
+    if (!Validate19715Sites() || !ValidateLifecycleSites() || !InstallLifecycleHooks()) {
+        Log("[FATAL] lifecycle clock hooks unavailable - retaining vanilla limiter");
+        return 0;
+    }
+#endif
+
     // Order matters: the hook is what keeps gameplay at its normal speed, so it goes in
     // first. Removing the limiter without it leaves the game running at display rate,
     // i.e. several times too fast.
     if (!InstallWrapperHook()) { Log("wrapper hook FAILED - leaving the game untouched"); return 0; }
     Log("wrapper hook installed, logic cadence pinned to %.2f Hz", 1.0 / kWrapperPeriod);
+#ifdef HIGHFPS_BUILD_19715
+    // The replacement native tick is live BEFORE removing the original menu
+    // render increments. A later failure must never leave those scalars frozen.
+    if (!highfps::native_render_clock::InstallNativeRenderClock19715(&g_luaFrameIntermediate)) {
+        Log("[FATAL] native menu clock unavailable; retaining vanilla limiter");
+        return 0;
+    }
+#endif
 
     if (!RemoveFrameLimiter()) { Log("limiter patch FAILED - hook is live, game stays at 60"); return 0; }
     Log("limiter removed - render loop now free-running");
+
+    if (HMODULE gdi = GetModuleHandleA("gdi32.dll"))
+        g_realSwapBuffers = reinterpret_cast<SwapBuffersFn>(GetProcAddress(gdi, "SwapBuffers"));
+    void* previousSwap = g_realSwapBuffers
+        ? HookImport("gdi32.dll", "SwapBuffers", reinterpret_cast<void*>(&HookedSwapBuffers)) : nullptr;
+    if (previousSwap) {
+        g_realSwapBuffers = reinterpret_cast<SwapBuffersFn>(previousSwap);
+        g_endPacingActive = true;
+        Log("[present] frame cap paced at SwapBuffers, after simulation/render work");
+    } else {
+        Log("[warn] presentation hook unavailable; using update-entry pacing");
+    }
 
     if (g_cfg.profile) {
         CreateThread(nullptr, 0, SamplerThread, nullptr, 0, nullptr);
@@ -2102,7 +2697,7 @@ BOOL APIENTRY DllMain(HMODULE mod, DWORD reason, LPVOID) {
         // Everything real happens on its own thread: DllMain runs under the loader lock,
         // and the game's own entry point (the Steam DRM stub that decrypts .text) has not
         // even run yet.
-        CreateThread(nullptr, 0, Init, nullptr, 0, nullptr);
+        g_initThread = CreateThread(nullptr, 0, Init, nullptr, 0, nullptr);
     }
     return TRUE;
 }
