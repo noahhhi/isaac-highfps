@@ -1,6 +1,6 @@
 {
   "schema": "isaac-attack-work-progress-v1",
-  "status": "experimental-fixed-budget; not final adaptive-pressure acceptance",
+  "status": "experimental fixed and adaptive work budgets; startup reliability and final acceptance pending",
   "cases": [
     {
       "case": "stacked-three-native-ce128-r11ref",
@@ -847,6 +847,1249 @@
         "[extra-split-budget]": "[extra-split-budget] cumulative=1 budgeted=4962 boneAdmit=114 boneDeny=106 lachryAdmit=242 lachryDeny=690 haemoAdmit=1289 haemoDeny=2521 unsupported=0 exceptions=0",
         "[poof-budget]": "[poof-budget] cumulative=1 budgeted=1611 admit=468 deny=1143 unsupported=6 exceptions=0"
       }
+    },
+    {
+      "case": "combat-three-native-ce128-v2",
+      "config": {
+        "enabled": false,
+        "target_hz": 90,
+        "main_thread_cpu": -1,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 360,
+        "native_timing_probe": true,
+        "extra": "all",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": false,
+        "spawn_children": 6,
+        "spawn_searches": 4,
+        "spawn_tris": 4,
+        "poof_work_budget": false,
+        "spawn_poofs": 4,
+        "tear_limit": 128,
+        "laser_limit": 32,
+        "poof_limit": 96,
+        "overload_fallback": true,
+        "rolling_recovery": false,
+        "extra_split_budget": false,
+        "observe_aim": true,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true,
+        "combat": true
+      },
+      "dll_sha256": "adfa356bdedf4a89abc50be9c80479f50e949c20e02c085becd9cc4aaf05a875",
+      "actual_presentation": {
+        "completed_swap_records": 720,
+        "measured_seconds": 25.324776999999997,
+        "completed_swap_hz": 28.391168064382168,
+        "interval_ms": {
+          "count": 719,
+          "min": 12.25300000000118,
+          "mean": 35.222221140472875,
+          "p50": 34.569000000004735,
+          "p95": 48.0751000000005,
+          "p99": 53.036099999999216,
+          "max": 56.00600000000355
+        },
+        "over_16_7_ms": 718,
+        "over_33_ms": 366,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 96.14699999999999,
+          "measured_dt_ms": 96.14700000000198,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 15800,
+          "previous_gf": 15799,
+          "logged_dt_ms": 56.882000000000005,
+          "measured_dt_ms": 56.88200000000165,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 15950,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 1198,
+          "measured_seconds": 39.136396,
+          "completed_swap_hz": 30.585340561251478,
+          "interval_ms": {
+            "count": 1197,
+            "min": 2.983000000000402,
+            "mean": 32.69540183792815,
+            "p50": 29.18299999998908,
+            "p95": 48.164199999999376,
+            "p99": 53.66575999999838,
+            "max": 96.14700000000198
+          },
+          "over_16_7_ms": 1104,
+          "over_33_ms": 517,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 54.68,
+            "measured_dt_ms": 54.68000000000117,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 15950,
+            "previous_gf": 15949,
+            "logged_dt_ms": 49.599,
+            "measured_dt_ms": 49.599000000000615,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 14.191106906338696,
+        "r_hz": 28.382213812677392,
+        "ui_hz": 28.382213812677392,
+        "gf_hz": 14.191106906338696
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      },
+      "synthetic_combat": {
+        "events_logged": 64,
+        "player_health": {
+          "bone": 0,
+          "hearts": 6,
+          "soul": 0
+        },
+        "wall_ms": 65783897,
+        "events_suppressed": 5993,
+        "requested_damage": 8166.5470944792,
+        "scope": "four seeded frozen high-HP Gapers; genuine native hurt/collision, synthetic stationary combat",
+        "all_targets_alive": true,
+        "elapsed_ms": 41867,
+        "ui": 1670,
+        "base_status": "complete",
+        "tick": 600,
+        "gf": 15950,
+        "cleanup_removed": 4,
+        "kind": "done",
+        "fixture_version": 2,
+        "cleanup_skipped_identity": 0,
+        "player_damage_callbacks": 0,
+        "status": "complete",
+        "targets": [
+          {
+            "alive": true,
+            "max_hp": 1000000.0,
+            "id": 1,
+            "hp_loss": 3985.9375,
+            "collision_damage": 0.0,
+            "owned_identity": true,
+            "total_drift": 634.94409179688,
+            "max_drift": 1.4400024414063,
+            "anchor": [
+              280,
+              280
+            ],
+            "seed": 19370001,
+            "position": [
+              278.99200439453,
+              280.0
+            ],
+            "index": 20,
+            "hp": 996014.0625
+          },
+          {
+            "alive": true,
+            "max_hp": 1000000.0,
+            "id": 2,
+            "hp_loss": 2078.8125,
+            "collision_damage": 0.0,
+            "owned_identity": true,
+            "total_drift": 526.08337402344,
+            "max_drift": 1.2000122070313,
+            "anchor": [
+              340,
+              280
+            ],
+            "seed": 19370002,
+            "position": [
+              339.16000366211,
+              280.0
+            ],
+            "index": 21,
+            "hp": 997921.1875
+          },
+          {
+            "alive": true,
+            "max_hp": 1000000.0,
+            "id": 3,
+            "hp_loss": 1352.375,
+            "collision_damage": 0.0,
+            "owned_identity": true,
+            "total_drift": 519.60333251953,
+            "max_drift": 1.2000122070313,
+            "anchor": [
+              400,
+              280
+            ],
+            "seed": 19370003,
+            "position": [
+              400.0,
+              279.16000366211
+            ],
+            "index": 22,
+            "hp": 998647.625
+          },
+          {
+            "alive": true,
+            "max_hp": 1000000.0,
+            "id": 4,
+            "hp_loss": 738.25,
+            "collision_damage": 0.0,
+            "owned_identity": true,
+            "total_drift": 528.12338256836,
+            "max_drift": 1.2000122070313,
+            "anchor": [
+              460,
+              280
+            ],
+            "seed": 19370004,
+            "position": [
+              459.16000366211,
+              280.0
+            ],
+            "index": 23,
+            "hp": 999261.75
+          }
+        ],
+        "source_counts": {
+          "1:0:0": 4642,
+          "2:0:0": 1252,
+          "2:1:0": 163
+        },
+        "pose_correction": {
+          "drift_samples": 2100,
+          "events": 16,
+          "max_speed_before_correction": 1.4400000572205,
+          "total_drift": 2208.7541809082,
+          "max_drift": 1.4400024414063,
+          "suppressed": 1931,
+          "velocity_writes": 2100,
+          "position_writes": 2100
+        },
+        "actual_hp_loss": 8155.375,
+        "player_health_unchanged": true,
+        "categories": {
+          "laser": 4642,
+          "tear": 1415
+        },
+        "source_requested_damage": {
+          "1:0:0": 6848.4742848575,
+          "2:0:0": 1007.565611288,
+          "2:1:0": 310.50719833374
+        },
+        "damage_callbacks": 6057
+      }
+    },
+    {
+      "case": "combat-three-r12-fixed-v2",
+      "config": {
+        "enabled": true,
+        "target_hz": 90,
+        "main_thread_cpu": 6,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 360,
+        "native_timing_probe": false,
+        "extra": "all",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": true,
+        "spawn_children": 6,
+        "spawn_searches": 1,
+        "spawn_tris": 1,
+        "poof_work_budget": true,
+        "spawn_poofs": 1,
+        "tear_limit": 128,
+        "laser_limit": 8,
+        "poof_limit": 32,
+        "overload_fallback": true,
+        "rolling_recovery": true,
+        "extra_split_budget": true,
+        "observe_aim": true,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true,
+        "combat": true
+      },
+      "dll_sha256": "adfa356bdedf4a89abc50be9c80479f50e949c20e02c085becd9cc4aaf05a875",
+      "actual_presentation": {
+        "completed_swap_records": 1071,
+        "measured_seconds": 11.926948000000003,
+        "completed_swap_hz": 89.7128083395685,
+        "interval_ms": {
+          "count": 1070,
+          "min": 6.477000000003841,
+          "mean": 11.146680373831778,
+          "p50": 11.109999999998621,
+          "p95": 11.489199999997624,
+          "p99": 14.64913000000059,
+          "max": 20.76900000000137
+        },
+        "over_16_7_ms": 4,
+        "over_33_ms": 0,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 73.071,
+          "measured_dt_ms": 73.07199999999625,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 15800,
+          "previous_gf": 15799,
+          "logged_dt_ms": 11.908999999999999,
+          "measured_dt_ms": 11.909000000002834,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": false,
+          "over_33_ms": false,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 15950,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 1784,
+          "measured_seconds": 19.925916000000004,
+          "completed_swap_hz": 89.48145721381138,
+          "interval_ms": {
+            "count": 1783,
+            "min": 5.062000000002342,
+            "mean": 11.175499719573754,
+            "p50": 11.110999999999649,
+            "p95": 11.394199999999435,
+            "p99": 14.642979999999717,
+            "max": 73.07199999999625
+          },
+          "over_16_7_ms": 7,
+          "over_33_ms": 1,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 40.763,
+            "measured_dt_ms": 40.76299999999833,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 15950,
+            "previous_gf": 15949,
+            "logged_dt_ms": 12.093,
+            "measured_dt_ms": 12.093000000000131,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": false,
+            "over_33_ms": false,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 30.15327916910964,
+        "r_hz": 60.30655833821928,
+        "ui_hz": 60.30655833821928,
+        "gf_hz": 30.15327916910964
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      },
+      "synthetic_combat": {
+        "tick": 600,
+        "pose_correction": {
+          "max_drift": 1.4400024414063,
+          "suppressed": 1927,
+          "drift_samples": 2100,
+          "position_writes": 2100,
+          "events": 16,
+          "max_speed_before_correction": 1.4400000572205,
+          "total_drift": 2204.3141479492,
+          "velocity_writes": 2100
+        },
+        "scope": "four seeded frozen high-HP Gapers; genuine native hurt/collision, synthetic stationary combat",
+        "events_logged": 64,
+        "all_targets_alive": true,
+        "events_suppressed": 993,
+        "requested_damage": 2470.1786604822,
+        "actual_hp_loss": 2463.1875,
+        "status": "complete",
+        "gf": 15950,
+        "player_damage_callbacks": 0,
+        "source_requested_damage": {
+          "2:1:0": 648.1420416832,
+          "2:0:0": 805.65140774846,
+          "1:0:0": 1016.3852110505
+        },
+        "wall_ms": 65664334,
+        "source_counts": {
+          "2:1:0": 205,
+          "2:0:0": 381,
+          "1:0:0": 471
+        },
+        "ui": 1726,
+        "elapsed_ms": 22588,
+        "kind": "done",
+        "player_health_unchanged": true,
+        "base_status": "complete",
+        "targets": [
+          {
+            "index": 20,
+            "hp_loss": 1687.625,
+            "seed": 19370001,
+            "owned_identity": true,
+            "alive": true,
+            "max_drift": 1.4400024414063,
+            "anchor": [
+              280,
+              280
+            ],
+            "total_drift": 634.94409179688,
+            "id": 1,
+            "collision_damage": 0.0,
+            "hp": 998312.375,
+            "max_hp": 1000000.0,
+            "position": [
+              278.99200439453,
+              280.0
+            ]
+          },
+          {
+            "index": 21,
+            "hp_loss": 303.1875,
+            "seed": 19370002,
+            "owned_identity": true,
+            "alive": true,
+            "max_drift": 1.2000122070313,
+            "anchor": [
+              340,
+              280
+            ],
+            "total_drift": 524.88336181641,
+            "id": 2,
+            "collision_damage": 0.0,
+            "hp": 999696.8125,
+            "max_hp": 1000000.0,
+            "position": [
+              339.16000366211,
+              280.0
+            ]
+          },
+          {
+            "index": 22,
+            "hp_loss": 277.625,
+            "seed": 19370003,
+            "owned_identity": true,
+            "alive": true,
+            "max_drift": 1.2000122070313,
+            "anchor": [
+              400,
+              280
+            ],
+            "total_drift": 524.88336181641,
+            "id": 3,
+            "collision_damage": 0.0,
+            "hp": 999722.375,
+            "max_hp": 1000000.0,
+            "position": [
+              400.0,
+              279.16000366211
+            ]
+          },
+          {
+            "index": 23,
+            "hp_loss": 194.75,
+            "seed": 19370004,
+            "owned_identity": true,
+            "alive": true,
+            "max_drift": 1.2000122070313,
+            "anchor": [
+              460,
+              280
+            ],
+            "total_drift": 519.60333251953,
+            "id": 4,
+            "collision_damage": 0.0,
+            "hp": 999805.25,
+            "max_hp": 1000000.0,
+            "position": [
+              459.16000366211,
+              280.0
+            ]
+          }
+        ],
+        "cleanup_skipped_identity": 0,
+        "player_health": {
+          "bone": 0,
+          "soul": 0,
+          "hearts": 6
+        },
+        "cleanup_removed": 4,
+        "fixture_version": 2,
+        "categories": {
+          "tear": 586,
+          "laser": 471
+        },
+        "damage_callbacks": 1057
+      }
+    },
+    {
+      "case": "stacked-three-r12-80hz",
+      "config": {
+        "enabled": true,
+        "target_hz": 80,
+        "main_thread_cpu": 6,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 360,
+        "native_timing_probe": false,
+        "extra": "all",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": true,
+        "spawn_children": 6,
+        "spawn_searches": 1,
+        "spawn_tris": 1,
+        "poof_work_budget": true,
+        "spawn_poofs": 1,
+        "tear_limit": 128,
+        "laser_limit": 8,
+        "poof_limit": 32,
+        "overload_fallback": true,
+        "rolling_recovery": true,
+        "extra_split_budget": true,
+        "observe_aim": true,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true
+      },
+      "dll_sha256": "adfa356bdedf4a89abc50be9c80479f50e949c20e02c085becd9cc4aaf05a875",
+      "actual_presentation": {
+        "completed_swap_records": 955,
+        "measured_seconds": 11.92897,
+        "completed_swap_hz": 79.97337573990043,
+        "interval_ms": {
+          "count": 954,
+          "min": 7.669999999997401,
+          "mean": 12.50416142557652,
+          "p50": 12.506500000000642,
+          "p95": 12.60699999999808,
+          "p99": 12.886259999999584,
+          "max": 20.091999999998222
+        },
+        "over_16_7_ms": 1,
+        "over_33_ms": 0,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 71.01599999999999,
+          "measured_dt_ms": 71.01500000000271,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 15800,
+          "previous_gf": 15799,
+          "logged_dt_ms": 12.494,
+          "measured_dt_ms": 12.493999999996674,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": false,
+          "over_33_ms": false,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 15950,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 1589,
+          "measured_seconds": 19.918359000000002,
+          "completed_swap_hz": 79.7254432456007,
+          "interval_ms": {
+            "count": 1588,
+            "min": 5.378999999997802,
+            "mean": 12.543047229219145,
+            "p50": 12.50800000000396,
+            "p95": 12.609299999996892,
+            "p99": 12.995350000002523,
+            "max": 71.01500000000271
+          },
+          "over_16_7_ms": 5,
+          "over_33_ms": 1,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 44.206,
+            "measured_dt_ms": 44.20599999999908,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 15950,
+            "previous_gf": 15949,
+            "logged_dt_ms": 12.418999999999999,
+            "measured_dt_ms": 12.41900000000129,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": false,
+            "over_33_ms": false,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 30.15327916910964,
+        "r_hz": 60.30655833821928,
+        "ui_hz": 60.30655833821928,
+        "gf_hz": 30.15327916910964
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      }
+    },
+    {
+      "case": "stacked-three-r13-adaptive-soak",
+      "config": {
+        "enabled": true,
+        "target_hz": 90,
+        "main_thread_cpu": 6,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 1560,
+        "native_timing_probe": false,
+        "extra": "all",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": true,
+        "spawn_children": 6,
+        "spawn_searches": 1,
+        "spawn_tris": 1,
+        "poof_work_budget": true,
+        "spawn_poofs": 1,
+        "tear_limit": 128,
+        "laser_limit": 8,
+        "poof_limit": 32,
+        "overload_fallback": true,
+        "rolling_recovery": true,
+        "extra_split_budget": true,
+        "adaptive_work_budget": true,
+        "observe_aim": true,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true,
+        "combat": false
+      },
+      "dll_sha256": "cabe30ab44835c1f5c4eb473a0147fd2bc96893cbb425ed975dbbfdbd9df5c75",
+      "actual_presentation": {
+        "completed_swap_records": 4663,
+        "measured_seconds": 51.909803,
+        "completed_swap_hz": 89.80962613169618,
+        "interval_ms": {
+          "count": 4662,
+          "min": 6.408999999997889,
+          "mean": 11.134663878163877,
+          "p50": 11.11200000000423,
+          "p95": 11.230899999995358,
+          "p99": 13.012970000004536,
+          "max": 36.63099999999986
+        },
+        "over_16_7_ms": 11,
+        "over_33_ms": 1,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 90.223,
+          "measured_dt_ms": 90.22300000000172,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 17000,
+          "previous_gf": 16999,
+          "logged_dt_ms": 11.603,
+          "measured_dt_ms": 11.604000000005499,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": false,
+          "over_33_ms": false,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 17150,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 5377,
+          "measured_seconds": 59.922523,
+          "completed_swap_hz": 89.71584858000722,
+          "interval_ms": {
+            "count": 5376,
+            "min": 4.013999999997964,
+            "mean": 11.146302641369047,
+            "p50": 11.112000000011335,
+            "p95": 11.220999999999037,
+            "p99": 13.044750000005934,
+            "max": 90.22300000000172
+          },
+          "over_16_7_ms": 13,
+          "over_33_ms": 2,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 44.125,
+            "measured_dt_ms": 44.12499999999753,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 17150,
+            "previous_gf": 17149,
+            "logged_dt_ms": 12.161999999999999,
+            "measured_dt_ms": 12.162000000003559,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": false,
+            "over_33_ms": false,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 30.038703714401247,
+        "r_hz": 60.077407428802495,
+        "ui_hz": 60.077407428802495,
+        "gf_hz": 30.038703714401247
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      }
+    },
+    {
+      "case": "stacked-three-r13-recovery",
+      "config": {
+        "enabled": true,
+        "target_hz": 90,
+        "main_thread_cpu": 6,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 360,
+        "native_timing_probe": false,
+        "extra": "all",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": true,
+        "spawn_children": 6,
+        "spawn_searches": 1,
+        "spawn_tris": 1,
+        "poof_work_budget": true,
+        "spawn_poofs": 1,
+        "tear_limit": 128,
+        "laser_limit": 8,
+        "poof_limit": 32,
+        "overload_fallback": true,
+        "rolling_recovery": true,
+        "extra_split_budget": true,
+        "adaptive_work_budget": true,
+        "observe_aim": false,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true,
+        "combat": false
+      },
+      "dll_sha256": "cabe30ab44835c1f5c4eb473a0147fd2bc96893cbb425ed975dbbfdbd9df5c75",
+      "actual_presentation": {
+        "completed_swap_records": 1063,
+        "measured_seconds": 11.912800000000004,
+        "completed_swap_hz": 89.14780740044318,
+        "interval_ms": {
+          "count": 1062,
+          "min": 4.919999999998481,
+          "mean": 11.217325800376653,
+          "p50": 11.113000000001705,
+          "p95": 11.233000000003912,
+          "p99": 14.81456999999957,
+          "max": 38.82399999999819
+        },
+        "over_16_7_ms": 9,
+        "over_33_ms": 1,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 87.25,
+          "measured_dt_ms": 87.24899999999991,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 15800,
+          "previous_gf": 15799,
+          "logged_dt_ms": 11.344,
+          "measured_dt_ms": 11.343999999994026,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": false,
+          "over_33_ms": false,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 16250,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 2677,
+          "measured_seconds": 29.923711,
+          "completed_swap_hz": 89.42741092506876,
+          "interval_ms": {
+            "count": 2676,
+            "min": 4.604999999997972,
+            "mean": 11.182253736920778,
+            "p50": 11.11200000000423,
+            "p95": 11.212250000001589,
+            "p99": 12.168249999996661,
+            "max": 87.24899999999991
+          },
+          "over_16_7_ms": 11,
+          "over_33_ms": 2,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 42.937999999999995,
+            "measured_dt_ms": 42.93699999999845,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 16250,
+            "previous_gf": 16249,
+            "logged_dt_ms": 11.102,
+            "measured_dt_ms": 11.102000000001055,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": false,
+            "over_33_ms": false,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 30.1659125188537,
+        "r_hz": 60.3318250377074,
+        "ui_hz": 60.3318250377074,
+        "gf_hz": 30.1659125188537
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      }
+    },
+    {
+      "case": "light-three-r13-soak",
+      "config": {
+        "enabled": true,
+        "target_hz": 90,
+        "main_thread_cpu": 6,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 1560,
+        "native_timing_probe": false,
+        "extra": "all",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": true,
+        "spawn_children": 6,
+        "spawn_searches": 1,
+        "spawn_tris": 1,
+        "poof_work_budget": true,
+        "spawn_poofs": 1,
+        "tear_limit": 128,
+        "laser_limit": 8,
+        "poof_limit": 32,
+        "overload_fallback": true,
+        "rolling_recovery": true,
+        "extra_split_budget": true,
+        "adaptive_work_budget": true,
+        "observe_aim": false,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true,
+        "combat": false
+      },
+      "dll_sha256": "cabe30ab44835c1f5c4eb473a0147fd2bc96893cbb425ed975dbbfdbd9df5c75",
+      "actual_presentation": {
+        "completed_swap_records": 4666,
+        "measured_seconds": 51.91902399999999,
+        "completed_swap_hz": 89.85145791646625,
+        "interval_ms": {
+          "count": 4665,
+          "min": 6.38600000000622,
+          "mean": 11.129479957127543,
+          "p50": 11.111999999997124,
+          "p95": 11.186000000002139,
+          "p99": 11.464840000002702,
+          "max": 35.3020000000015
+        },
+        "over_16_7_ms": 7,
+        "over_33_ms": 1,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 80.995,
+          "measured_dt_ms": 80.99500000000148,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 17000,
+          "previous_gf": 16999,
+          "logged_dt_ms": 11.126999999999999,
+          "measured_dt_ms": 11.12600000000441,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": false,
+          "over_33_ms": false,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 17150,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 5381,
+          "measured_seconds": 59.929908000000005,
+          "completed_swap_hz": 89.77153777709786,
+          "interval_ms": {
+            "count": 5380,
+            "min": 5.106000000001387,
+            "mean": 11.13938810408922,
+            "p50": 11.110999999999649,
+            "p95": 11.186999999999614,
+            "p99": 11.46199000000351,
+            "max": 80.99500000000148
+          },
+          "over_16_7_ms": 8,
+          "over_33_ms": 2,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 36.776,
+            "measured_dt_ms": 36.7759999999997,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 17150,
+            "previous_gf": 17149,
+            "logged_dt_ms": 11.644,
+            "measured_dt_ms": 11.643999999989774,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": false,
+            "over_33_ms": false,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 30.036968576709796,
+        "r_hz": 60.07393715341959,
+        "ui_hz": 60.07393715341959,
+        "gf_hz": 30.036968576709796
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      }
+    },
+    {
+      "case": "light-three-native-soak-retry",
+      "config": {
+        "enabled": false,
+        "target_hz": 90,
+        "main_thread_cpu": -1,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 1560,
+        "native_timing_probe": true,
+        "extra": "all",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": false,
+        "spawn_children": 6,
+        "spawn_searches": 4,
+        "spawn_tris": 4,
+        "poof_work_budget": false,
+        "spawn_poofs": 4,
+        "tear_limit": 128,
+        "laser_limit": 32,
+        "poof_limit": 96,
+        "overload_fallback": true,
+        "rolling_recovery": false,
+        "extra_split_budget": false,
+        "adaptive_work_budget": false,
+        "observe_aim": false,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true,
+        "combat": false
+      },
+      "dll_sha256": "cabe30ab44835c1f5c4eb473a0147fd2bc96893cbb425ed975dbbfdbd9df5c75",
+      "actual_presentation": {
+        "completed_swap_records": 3120,
+        "measured_seconds": 103.94293400000001,
+        "completed_swap_hz": 30.00684972005889,
+        "interval_ms": {
+          "count": 3119,
+          "min": 11.056000000003507,
+          "mean": 33.32572427059956,
+          "p50": 31.46499999999719,
+          "p95": 43.737600000000754,
+          "p99": 45.795580000003326,
+          "max": 55.672000000001276
+        },
+        "over_16_7_ms": 3118,
+        "over_33_ms": 1533,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 90.407,
+          "measured_dt_ms": 90.40699999999902,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 17000,
+          "previous_gf": 16999,
+          "logged_dt_ms": 37.333,
+          "measured_dt_ms": 37.332999999989624,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 17150,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 3598,
+          "measured_seconds": 117.20905300000001,
+          "completed_swap_hz": 30.688755756775883,
+          "interval_ms": {
+            "count": 3597,
+            "min": 2.523000000000053,
+            "mean": 32.58522463163748,
+            "p50": 29.812999999990097,
+            "p95": 43.73300000000455,
+            "p99": 45.82756000000245,
+            "max": 90.40699999999902
+          },
+          "over_16_7_ms": 3508,
+          "over_33_ms": 1684,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 52.220000000000006,
+            "measured_dt_ms": 52.22099999999941,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 17150,
+            "previous_gf": 17149,
+            "logged_dt_ms": 42.385,
+            "measured_dt_ms": 42.3849999999959,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 15.004616805170821,
+        "r_hz": 30.009233610341642,
+        "ui_hz": 30.009233610341642,
+        "gf_hz": 15.004616805170821
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      }
     }
   ],
   "notes": [
@@ -856,7 +2099,9 @@
     "Successful SwapBuffers cadence does not by itself prove distinct images or physical scanout.",
     "Budget-enabled runs deliberately change player split/laser/cosmetic output. No gameplay-damage equivalence is asserted.",
     "First-shot intervals and whole-run hitches remain included in metrics, separately from sustained fire.",
-    "One R11 startup attempt timed out before fixture execution; retry completed. Startup failure is not counted as a performance pass."
+    "One R11 startup attempt timed out before fixture execution; retry completed. Startup failure is not counted as a performance pass.",
+    "Combat uses four seeded high-HP Gapers whose positions/velocities are restored each native world update in both arms. Original freeze-only fixture drifted and changed room; that incomplete attempt is excluded. Native damage callbacks and HP loss remain real, but this is synthetic stationary collision stress, not normal enemy AI.",
+    "R13 also had a pre-fixture startup timeout in the marked-target control case; startup reliability remains under investigation. An unrelated native light-profile run was interrupted by a runner scheduling mistake and explicitly invalidated; an exclusive prefix lease now rejects concurrent runners."
   ],
   "r12_load": {
     "main_thread": {
@@ -899,5 +2144,429 @@
       }
     }
   },
-  "r12_load_scope": "Isolated DRM client counters may be shared with another holder of the same client; systemwide sysfs also includes other programs. Main thread measured on one-core scale."
+  "r12_load_scope": "Isolated DRM client counters may be shared with another holder of the same client; systemwide sysfs also includes other programs. Main thread measured on one-core scale.",
+  "r12_capture": {
+    "schema": "isaac-capture-distinctness-v1",
+    "status": "analyzed",
+    "read_only": true,
+    "source_binding": {
+      "node_id": 103,
+      "serial": 9031,
+      "client_id": 115,
+      "gamescope_pid": 132065,
+      "gamescope_starttime": "21372669",
+      "display": ":2"
+    },
+    "source_identity_sha256": "ad732a44a7257ddd7d3969bdd4dde160391abfd01e4848f719c2a6569a89ba13",
+    "gst_log_sha256": "d5abbace40c5eb6bac17ddad103364a3c7d6a0858c0e087277dfa962de589f8c",
+    "size": [
+      1280,
+      800
+    ],
+    "roi": [
+      220,
+      200,
+      1000,
+      650
+    ],
+    "roi_coordinate_rule": "half-open [left,right) x [top,bottom)",
+    "roi_selection_note": "Explicit room interior ROI; caller must visually verify it excludes HUD for this scene.",
+    "algorithm": {
+      "gray": "Pillow decoded JPEG RGB->L",
+      "gray_threshold_strictly_greater_than": 2,
+      "minimum_changed_pixels": 32,
+      "pair_rule": "every consecutive index i->i+1, both timestamps retained; no index/FPS reconstruction",
+      "threshold_purpose": "reduces small intensity/few-pixel noise; does not establish optical flow or exclude all compression/lighting changes"
+    },
+    "frames": 360,
+    "adjacent_pairs": 359,
+    "capture_first_to_last_seconds": 3.987806627,
+    "capture_timestamp_hz": 90.02442534934882,
+    "capture_interval_ms": {
+      "count": 359,
+      "mean": 11.108096454038996,
+      "p50": 11.256618,
+      "p95": 12.808616,
+      "p99": 14.1810542,
+      "max": 14.78275,
+      "min": 6.120045
+    },
+    "capture_intervals_over_ms": {
+      "16.7": 0,
+      "33": 0,
+      "100": 0
+    },
+    "distinct_adjacent_pairs": 359,
+    "below_threshold_repeat_pairs": 0,
+    "below_threshold_repeat_fraction": 0.0,
+    "exact_equal_gray_pairs": 0,
+    "unique_roi_gray_hashes": 360,
+    "distinct_change_events_per_capture_second": 90.02442534934882,
+    "longest_below_threshold_run": {
+      "frames": 1,
+      "first_index": 0,
+      "last_index": 0,
+      "adjacent_repeat_pairs": 0,
+      "first_to_last_timestamp_ms": 0.0
+    },
+    "longest_exact_equal_run": {
+      "frames": 1,
+      "first_index": 0,
+      "last_index": 0,
+      "adjacent_repeat_pairs": 0,
+      "first_to_last_timestamp_ms": 0.0
+    },
+    "changed_pixels": {
+      "count": 359,
+      "mean": 82277.52646239554,
+      "p50": 80662.0,
+      "p95": 108631.29999999997,
+      "p99": 124130.70000000013,
+      "max": 151188,
+      "min": 53033
+    },
+    "limits": [
+      "Offline source metadata matches the case launcher; this does not freshly authenticate an ended PipeWire source.",
+      "Capture clock is PipeWire/GStreamer buffer timestamps. Capture latency, dropped/unobserved game frames and physical scanout timing are unknown.",
+      "Distinct captured room images do not prove every native presentation was captured, interpolation correctness or a physical refresh rate.",
+      "No timestamp join with native QPC or fixture wall clock is attempted without a shared-clock proof."
+    ],
+    "full_private_report_sha256": "bf48061377b07a4ffe6c27cf9743996a384094cc1fed7d03b992f5b8ad973eb8"
+  },
+  "r13_recovery": {
+    "severity_changes_one_second_observations": [
+      {
+        "world": "15350",
+        "severity": "0",
+        "attack": "0",
+        "cosmetic": "0",
+        "targetHz": "90.00",
+        "fixedKnown": "0",
+        "pureKnown": "0",
+        "fixedMs": "0.000",
+        "pureMs": "0.000",
+        "demand": "0.000",
+        "predictedTears": "0",
+        "predictedLasers": "0",
+        "predictedPoofs": "0",
+        "searches": "0"
+      },
+      {
+        "world": "15455",
+        "severity": "3",
+        "attack": "1",
+        "cosmetic": "1",
+        "targetHz": "90.00",
+        "fixedKnown": "1",
+        "pureKnown": "1",
+        "fixedMs": "8.179",
+        "pureMs": "4.565",
+        "demand": "0.902",
+        "predictedTears": "151",
+        "predictedLasers": "58",
+        "predictedPoofs": "33",
+        "searches": "149"
+      },
+      {
+        "world": "15939",
+        "severity": "2",
+        "attack": "1",
+        "cosmetic": "1",
+        "targetHz": "90.00",
+        "fixedKnown": "1",
+        "pureKnown": "1",
+        "fixedMs": "2.413",
+        "pureMs": "0.884",
+        "demand": "0.224",
+        "predictedTears": "0",
+        "predictedLasers": "0",
+        "predictedPoofs": "0",
+        "searches": "0"
+      },
+      {
+        "world": "16000",
+        "severity": "1",
+        "attack": "0",
+        "cosmetic": "1",
+        "targetHz": "90.00",
+        "fixedKnown": "1",
+        "pureKnown": "1",
+        "fixedMs": "2.385",
+        "pureMs": "0.881",
+        "demand": "0.222",
+        "predictedTears": "0",
+        "predictedLasers": "0",
+        "predictedPoofs": "0",
+        "searches": "0"
+      },
+      {
+        "world": "16060",
+        "severity": "0",
+        "attack": "0",
+        "cosmetic": "0",
+        "targetHz": "90.00",
+        "fixedKnown": "1",
+        "pureKnown": "1",
+        "fixedMs": "2.383",
+        "pureMs": "0.863",
+        "demand": "0.221",
+        "predictedTears": "0",
+        "predictedLasers": "0",
+        "predictedPoofs": "0",
+        "searches": "0"
+      }
+    ],
+    "command_events": [
+      {
+        "done_tick": 900,
+        "shoot_last": 449,
+        "cancel_deadline": 461,
+        "profile": "three-item-recovery",
+        "drop_tick": 451,
+        "u": 1,
+        "gf": 15351,
+        "tick": 1,
+        "elapsed_ms": 2651,
+        "r": 156,
+        "ui": 552,
+        "retained_base_phase_is_window_not_continuous_input": true,
+        "shoot_start": 90,
+        "wall_ms": 66733965,
+        "kind": "command_schedule"
+      },
+      {
+        "kind": "command_phase",
+        "drop_queries": [],
+        "shot_births": 114,
+        "elapsed_ms": 5647,
+        "command_phase": "shooting",
+        "read_only": true,
+        "aim": [
+          1.0,
+          0.0
+        ],
+        "tick": 90,
+        "r": 334,
+        "ui": 730,
+        "wall_ms": 66736961,
+        "u": 90,
+        "targets": [
+          {
+            "seed": 373581337,
+            "ptr": 217803197,
+            "index": 20,
+            "age": 0,
+            "protected": true
+          }
+        ],
+        "gf": 15440
+      },
+      {
+        "kind": "command_phase",
+        "drop_queries": [],
+        "shot_births": 3052,
+        "elapsed_ms": 17581,
+        "command_phase": "await_drop",
+        "read_only": true,
+        "aim": [
+          1.0,
+          0.0
+        ],
+        "tick": 450,
+        "r": 1054,
+        "ui": 1450,
+        "wall_ms": 66748895,
+        "u": 450,
+        "targets": [
+          {
+            "seed": 373581337,
+            "ptr": 217803197,
+            "index": 20,
+            "age": 360,
+            "protected": true
+          }
+        ],
+        "gf": 15800
+      },
+      {
+        "kind": "command_drop_pulse",
+        "drop_queries": [],
+        "shot_births": 3052,
+        "first_hook": 1,
+        "drop_ui": 1452,
+        "tick": 451,
+        "read_only": true,
+        "aim": [
+          1.0,
+          0.0
+        ],
+        "wall_ms": 66748926,
+        "r": 1056,
+        "ui": 1452,
+        "elapsed_ms": 17612,
+        "u": 450,
+        "targets": [
+          {
+            "seed": 373581337,
+            "ptr": 217803197,
+            "index": 20,
+            "age": 361,
+            "protected": true
+          }
+        ],
+        "gf": 15801
+      },
+      {
+        "kind": "command_phase",
+        "drop_queries": {
+          "0": 2,
+          "1": 2
+        },
+        "shot_births": 3141,
+        "elapsed_ms": 17948,
+        "drop_ui": 1452,
+        "gf": 15811,
+        "read_only": true,
+        "command_phase": "post_cancel_observation",
+        "tick": 461,
+        "r": 1076,
+        "ui": 1472,
+        "wall_ms": 66749262,
+        "u": 461,
+        "targets": [],
+        "aim": [
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "kind": "command_cancel_verified",
+        "drop_queries": {
+          "0": 2,
+          "1": 2
+        },
+        "shot_births": 3141,
+        "elapsed_ms": 17948,
+        "drop_ui": 1452,
+        "gf": 15811,
+        "read_only": true,
+        "command_phase": "post_cancel_observation",
+        "tick": 461,
+        "r": 1076,
+        "ui": 1472,
+        "wall_ms": 66749262,
+        "u": 461,
+        "targets": [],
+        "aim": [
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "kind": "command_phase",
+        "drop_queries": {
+          "0": 2,
+          "1": 2
+        },
+        "shot_births": 3396,
+        "elapsed_ms": 23613,
+        "drop_ui": 1452,
+        "gf": 15981,
+        "read_only": true,
+        "command_phase": "post_cancel_observation",
+        "tick": 631,
+        "r": 1416,
+        "ui": 1812,
+        "wall_ms": 66754927,
+        "u": 631,
+        "targets": [],
+        "aim": [
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "kind": "command_phase",
+        "drop_queries": {
+          "0": 2,
+          "1": 2
+        },
+        "shot_births": 3396,
+        "elapsed_ms": 32546,
+        "drop_ui": 1452,
+        "gf": 16249,
+        "read_only": true,
+        "command_phase": "post_cancel_observation",
+        "tick": 899,
+        "r": 1952,
+        "ui": 2348,
+        "wall_ms": 66763860,
+        "u": 899,
+        "targets": [],
+        "aim": [
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    "normal_shutdown": {
+      "saved": true,
+      "manager": 1,
+      "page": 3,
+      "pause_exit_selection": 3,
+      "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+      "game_exited": true,
+      "native_shutdown_marker": true
+    }
+  },
+  "r13_low_load_diagnostic": {
+    "scope": "Diagnostic removes only three Twisted Pair copies; not original-combination performance baseline",
+    "severity_always_none": true,
+    "haemo_admissions": 45,
+    "haemo_denials": 0,
+    "all_attack_and_poof_denials_zero": true,
+    "events": [
+      {
+        "r": 158,
+        "u": 1,
+        "wall_ms": 67443139,
+        "requested_removals": 3,
+        "elapsed_ms": 2644,
+        "tick": 1,
+        "id": 698,
+        "cricket_after": 1,
+        "conjoined": false,
+        "ui": 542,
+        "cricket_before": 1,
+        "kind": "diagnostic_inventory_change",
+        "after_count": 0,
+        "before_count": 3,
+        "scope": "698x3 removal only; native transformation/familiar lifecycle retained; not user-combo performance baseline",
+        "gf": 15351
+      },
+      {
+        "r": 360,
+        "read_only": true,
+        "elapsed_ms": 6010,
+        "tick": 102,
+        "targets": [],
+        "u": 102,
+        "wall_ms": 67446505,
+        "aim": [
+          0.0,
+          0.0
+        ],
+        "ui": 744,
+        "drop_ui": 724,
+        "command_phase": "post_cancel_observation",
+        "drop_queries": {
+          "1": 2,
+          "0": 2
+        },
+        "shot_births": 1,
+        "kind": "command_cancel_verified",
+        "gf": 15452
+      }
+    ]
+  }
 }

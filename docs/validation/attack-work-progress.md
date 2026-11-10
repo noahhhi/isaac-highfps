@@ -1,7 +1,7 @@
 # Attack-work budgeting: experimental results
 
-These are opt-in fixed-budget experiments, not the final adaptive-pressure
-release. Exact DLLs, configuration, sustained-fire intervals, first-shot
+These are opt-in work-budget experiments, not final release acceptance.
+R11/R12 use fixed limits; R13 adds pressure-triggered activation. Exact DLLs, configuration, sustained-fire intervals, first-shot
 boundaries and callback cadence are recorded in [the evidence](attack-work-progress.json).
 
 The archived base combination includes Cricket's Body, Marked, Lead Pencil and
@@ -17,6 +17,9 @@ and seven enabled mods, with Character Enhance 1.28's reticle protection enabled
 | Triple items, R12, 52-second soak including image capture | 89.97 FPS | 12.27 ms | 20.01 ms |
 | Five split items, instrumented native reference | 52.61 FPS | 40.50 ms | 48.43 ms |
 | Five split items, R12 | 89.84 FPS | 13.21 ms | 28.60 ms |
+| Triple items against four controlled targets, native | 28.39 FPS | 53.04 ms | see JSON |
+| Same controlled targets, R12 | 89.71 FPS | 14.65 ms | 20.77 ms |
+| Triple items, R12 at 80 Hz | 79.97 FPS | 12.89 ms | 20.09 ms |
 
 The longer triple-item soaks are not a matched-duration native comparison.
 R11's first-shot boundary still took 69.61 ms. Successful swaps alone do not
@@ -25,6 +28,20 @@ Cricket's Body, Compound Fracture, Lachryphagy and Haemolacria; Cricket's Body
 was already present and receives one additional copy. This is not a claim that
 its second copy stacks. All three newly covered native branches admitted real
 work, and their guarded adapters reported no exceptions in the R12 case.
+
+A four-second R12 PipeWire capture contains 360 unique decoded room images at
+90.02 capture timestamps per second. All 359 adjacent pairs differ, using a
+central room region excluding HUD, intensity threshold 2 and at least 32 changed
+pixels; the observed minimum was 53,033 changed pixels. Capture latency is
+unknown, and this does not certify physical scanout or every frame of the soak.
+
+The controlled-target test retained real tear/laser damage and unchanged player
+health. Total target HP loss fell from 8,155.375 native to 2,463.1875 under the
+aggressive budget (approximately 30%). This is a substantial damage tradeoff,
+not damage-equivalent optimization. The four high-HP targets are anchored each
+world update in both arms; this measures synthetic collision/hurt work rather
+than ordinary enemy AI. A preceding freeze-only fixture drifted into a room
+change and was rejected, not counted as a pass.
 
 ## What is limited
 
@@ -51,8 +68,30 @@ The tested reduced-effect settings are `SpawnChildrenPerTick=6`,
 `TechZeroSearchesPerTick=1`, `TrisagionCreatesPerTick=1`, `PoofsPerTick=1`,
 `TearSoftLimit=128`, `LaserSoftLimit=8`, `PoofSoftLimit=32`. These deliberately
 reduce player attack output and damage opportunities. In this experimental
-implementation they apply whenever enabled, including ordinary low-load bursts.
-Pressure-triggered activation and recovery are still being developed.
+R11/R12 implementation they apply whenever enabled, including ordinary low-load
+bursts. R13's additional `AdaptiveWorkBudget=1` applies these limits only when
+its world-tick decision indicates pressure.
+
+R13 combines bounded fixed/presentation work samples with existing populations
+and the previous world's attempted work. Denied requests still count as demand;
+otherwise successful limiting would immediately disable itself and provoke
+another flood. Search attempts are distinct from predicted laser creation.
+The estimate scales presentation work to the configured cap/display rate and
+does not label renderer wall time as GPU utilization. Loading, invalid samples,
+room/run changes and backwards world stamps invalidate the appropriate evidence.
+The first unobserved burst can precede activation by one world tick.
+
+A detailed 52-second R13 triple-item soak measured 89.81 FPS with p99 13.01 ms.
+A separately matched light-counter fixture measured native 30.01 FPS versus
+R13 89.85 FPS, with p99 45.80 versus 11.46 ms. This profile removes repeated
+entity censuses and detailed effect/removal observers, and explicitly reports
+those metrics as unmeasured; it still contains minimal validation hooks.
+An explicit native DROP test verified target removal and zero aim, followed by
+pressure levels 3 → 2 → 1 → 0 without repeated activation. A separate functional
+diagnostic removed only the three Twisted Pair copies before one Haemolacria
+volley: all 45 observed Haemolacria child requests passed, all attack/poof denial
+counts were zero, and pressure remained off. That altered inventory is not used
+as a performance comparison for the original combination.
 
 ## CPU, GPU and threading
 
@@ -73,8 +112,7 @@ workers by these gates.
 
 ## Remaining validation
 
-Adaptive pressure activation, actual damage/collision stress against enemies,
-first-shot stalls, low-load fidelity, distinct-image analysis, physical VRR and
+Broader natural-combat behavior, first-shot stalls, additional low-load coverage, physical VRR and
 the final combined regression run remain outstanding. One R11 launch timed out
 before fixture execution; that failed attempt is retained separately and is
 not counted as a pass. The completed runs saved through the native pause menu

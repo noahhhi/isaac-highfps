@@ -28,6 +28,23 @@ def distribution(values):
         return values[lo]+(values[hi]-values[lo])*(x-lo)
     return {'count':len(values),'min':values[0],'mean':statistics.mean(values),'p50':percentile(.5),'p95':percentile(.95),'p99':percentile(.99),'max':values[-1]}
 
+
+def census_mode(row):
+    census=row.get('census')
+    if not isinstance(census,dict):return 'invalid'
+    if census.get('measured') is False:
+        reason=census.get('reason')
+        if not isinstance(reason,str) or not reason.strip():return 'invalid'
+        if any(key in census for key in ('entities','effects')):return 'invalid'
+        return 'not_measured'
+    if 'measured' in census and census['measured'] is not True:return 'invalid'
+    for key in ('entities','effects'):
+        value=census.get(key)
+        if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or value<0:
+            return 'invalid'
+    return 'measured'
+
+
 def kv(text):
     return {k:float(v) for k,v in re.findall(r'(\w+)=('+NUM+r')',text)}
 
@@ -179,6 +196,14 @@ def analyze_case(case,phase='fire',min_seconds=5):
     if errors:rejections.append('runtime errors present')
     if any(w.get('dropped',0)!=0 or w.get('truncated',0)!=0 for w in workers):rejections.append('async log dropped or truncated records')
     all_windows=[r for r in fixture if r.get('kind')=='window']
+    census_modes=[census_mode(r) for r in all_windows]
+    if 'invalid' in census_modes:rejections.append('malformed census: numeric entities/effects or explicit measured=false with reason required')
+    measured_windows=[r for r in all_windows if census_mode(r)=='measured']
+    omitted_windows=[r for r in all_windows if census_mode(r)=='not_measured']
+    census_coverage={'measured_windows':len(measured_windows),'unmeasured_windows':len(omitted_windows),
+        'status':'mixed' if measured_windows and omitted_windows else 'measured' if measured_windows else 'not_measured' if omitted_windows else 'no_valid_census',
+        'omission_reasons':sorted({r['census']['reason'] for r in omitted_windows})}
+
     marked=bool(start and any(p.get('marked') for p in start.get('players',[])))
     public_phase=[]
     for name in ('settle','fire','drain'):
@@ -202,19 +227,19 @@ def analyze_case(case,phase='fire',min_seconds=5):
         if not workers:rejections.append('missing native probe worker loss accounting')
     elif native and (presents or '[native-measure]' in native_text):
         rejections.append('stray presentation or probe records in unprobed Enabled0 case')
-    public={'case':case.name,'config':config,'measurement_mode':measurement_mode,'native_runtime_verification':probe_proof,'phase':phase,'fixture_status':done.get('status') if done else None,'errors':errors,'rejections':rejections,'dll_sha256':manifest.get('game/winmm.dll') if manifest else None,
+    public={'case':case.name,'config':config,'measurement_mode':measurement_mode,'native_runtime_verification':probe_proof,'phase':phase,'fixture_status':done.get('status') if done else None,'census_coverage':census_coverage,'errors':errors,'rejections':rejections,'dll_sha256':manifest.get('game/winmm.dll') if manifest else None,
             'log_worker':{'samples':len(workers),'max_dropped':max((w.get('dropped',0) for w in workers),default=None),'max_truncated':max((w.get('truncated',0) for w in workers),default=None),'peak_accepted_minus_written':max((w.get('accepted',0)-w.get('written',0) for w in workers),default=None)},
             'actual_presentation':None,'whole_active_presentation':None,'render_cost_windows':None,'canonical_callback_cadence':None,
             'ready_state':ready,'original_start_positions':[p.get('position') for p in start.get('players',[])] if start else None,
             'phases':public_phase,'marked_present':marked,'workload_note':'Phase names denote commanded input only. Marked can continue shooting after release; drain is not a no-load recovery segment.',
-            'whole_run':{'shot_births':done.get('shot_births') if done else None,'peak_census_entities':max((r.get('census',{}).get('entities',0) for r in all_windows),default=None)}}
+            'whole_run':{'shot_births':done.get('shot_births') if done else None,'peak_census_entities':max((r['census']['entities'] for r in measured_windows),default=None)}}
     if not begin or not end:rejections.append('missing phase boundaries');return public,manifest,start
     wall_seconds=(end['wall_ms']-begin['wall_ms'])/1000
     if wall_seconds<min_seconds:rejections.append('phase too short')
     public['segment']={'start_gf':begin['gf'],'end_gf_exclusive':end['gf'],'simulation_ticks':end['tick']-begin['tick'],'wall_seconds':wall_seconds}
     public['canonical_callback_cadence']={f'{key}_hz':(end[key]-begin[key])/wall_seconds for key in ('u','r','ui','gf') if key in begin and key in end and wall_seconds>0}
     windows=[r for r in fixture if r.get('kind')=='window' and begin['wall_ms']<=r['wall_ms']-r.get('window_ms',0) and r['wall_ms']<=end['wall_ms']]
-    public['fixture_windows']={'count':len(windows),'entities':distribution([r['census']['entities'] for r in windows]),'effects':distribution([r['census']['effects'] for r in windows]),'shot_births_end':max((r.get('shot_births_total',0) for r in windows),default=None),'native_interval_brackets':[r.get('init_brackets') for r in windows]}
+    public['fixture_windows']={'count':len(windows),'entities':distribution([r['census']['entities'] for r in windows if census_mode(r)=='measured']),'effects':distribution([r['census']['effects'] for r in windows if census_mode(r)=='measured']),'shot_births_end':max((r.get('shot_births_total',0) for r in windows),default=None),'native_interval_brackets':[r.get('init_brackets') for r in windows]}
     if not use_present:
         public['actual_presentation_limitation']='No validated native probe timestamps are accepted. Unprobed Enabled0 only provides MC_POST_RENDER callback cadence, not display FPS. A requested probe must pass markers and independent original-byte proof before its presentation data is used.'
     else:

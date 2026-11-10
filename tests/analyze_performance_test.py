@@ -133,4 +133,34 @@ class EvidenceTest(unittest.TestCase):
   with tempfile.TemporaryDirectory() as d:
    root=self.case(Path(d));path=root/'native.log';path.write_text(path.read_text()+'\n[present-error] SwapBuffers failed\n')
    p,_,_=m.analyze_case(root,min_seconds=.1);self.assertIn('runtime errors present',p['rejections'])
+ def with_windows(self,root,census):
+  path=root/'game.log';rows=[json.loads(l.split('[HFPERF] ',1)[1])for l in path.read_text().splitlines()]
+  for gf,wall,births in [(100,1010000,10),(115,1010500,30),(130,1011000,50)]:
+   rows.append({'kind':'window','gf':gf,'wall_ms':wall,'window_ms':500,'census':census,'shot_births_total':births})
+  rows.sort(key=lambda r:r['wall_ms']);path.write_text('\n'.join('[HFPERF] '+json.dumps(r)for r in rows))
+ def test_full_census_values_unchanged(self):
+  with tempfile.TemporaryDirectory()as d:
+   root=self.case(Path(d));self.with_windows(root,{'entities':123,'effects':45})
+   p,_,_=m.analyze_case(root,min_seconds=.1)
+   self.assertFalse(p['rejections']);self.assertEqual(p['whole_run']['peak_census_entities'],123)
+   self.assertEqual(p['fixture_windows']['entities']['mean'],123)
+   self.assertEqual(p['fixture_windows']['effects']['mean'],45)
+   self.assertEqual(p['census_coverage']['status'],'measured')
+ def test_light_census_null_not_fake_zero_and_births_retained(self):
+  with tempfile.TemporaryDirectory()as d:
+   root=self.case(Path(d));self.with_windows(root,{'measured':False,'reason':'light_counter_profile_no_entity_census'})
+   p,_,_=m.analyze_case(root,min_seconds=.1)
+   self.assertFalse(p['rejections']);self.assertIsNone(p['whole_run']['peak_census_entities'])
+   self.assertIsNone(p['fixture_windows']['entities']);self.assertIsNone(p['fixture_windows']['effects'])
+   self.assertEqual(p['fixture_windows']['shot_births_end'],50)
+   self.assertEqual(p['phases'][0]['observed_shot_births'],40)
+   self.assertEqual(p['census_coverage']['status'],'not_measured')
+ def test_malformed_census_never_silently_accepted(self):
+  for census in ({},{'measured':False},{'measured':False,'reason':''},{'entities':2},
+                 {'entities':False,'effects':0},{'entities':'2','effects':0},
+                 {'measured':False,'reason':'light','entities':0,'effects':0}):
+   with tempfile.TemporaryDirectory()as d:
+    root=self.case(Path(d));self.with_windows(root,census)
+    p,_,_=m.analyze_case(root,min_seconds=.1)
+    self.assertTrue(any('malformed census' in r for r in p['rejections']),str(census))
 if __name__=='__main__':unittest.main()

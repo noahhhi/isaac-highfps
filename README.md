@@ -70,6 +70,7 @@ To disable the mod, set `Enabled=0` and restart. To remove it, exit the game, re
 | `SpawnWorkBudget` | `0` | Experimental player Parasite/Cricket's Body, Technology Zero and Trisagion admission limits; changes attack output. |
 | `ExtraSplitWorkBudget` | `0` | Experimental Compound Fracture, Lachryphagy and plain-tear Haemolacria child limits; shares the child budget. |
 | `PoofWorkBudget` | `0` | Experimental admission limit for known player tear poofs; separate from attack work. |
+| `AdaptiveWorkBudget` | `0` | With the budget options enabled, apply their limits only while measured work or forecast entity demand indicates pressure; restore unrestricted work after sustained quiet. |
 | `SpawnChildrenPerTick` | `6` | Shared admitted child count per full world tick; pairs cost 2 and quads cost 4. |
 | `TechZeroSearchesPerTick` / `TrisagionCreatesPerTick` / `PoofsPerTick` | `4` each | Separate work quotas per full world tick. |
 | `TearSoftLimit` / `LaserSoftLimit` / `PoofSoftLimit` | `128` / `32` / `96` | Conservative population admission thresholds, not global hard caps. |

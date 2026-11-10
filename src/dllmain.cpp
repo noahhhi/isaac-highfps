@@ -26,6 +26,7 @@
 #include "render_timing.h"
 #include "overload_policy.h"
 #include "frame_work_budget.h"
+#include "work_pressure_policy.h"
 #include "camera_presentation.h"
 #include "menu_presentation.h"
 #include "carousel_presentation.h"
@@ -102,6 +103,7 @@ struct Config {
     bool spawnWorkBudget = false;
     bool poofWorkBudget = false;
     bool extraSplitWorkBudget = false;
+    bool adaptiveWorkBudget = false;
     highfps::work_budget::Config workBudget;
     unsigned cacheEntries=16384,cacheMiB=64;
 } g_cfg;
@@ -134,6 +136,7 @@ void LoadConfig() {
     g_cfg.spawnWorkBudget = GetPrivateProfileIntA("highfps","SpawnWorkBudget",0,path)!=0;
     g_cfg.poofWorkBudget = GetPrivateProfileIntA("highfps","PoofWorkBudget",0,path)!=0;
     g_cfg.extraSplitWorkBudget = GetPrivateProfileIntA("highfps","ExtraSplitWorkBudget",0,path)!=0;
+    g_cfg.adaptiveWorkBudget = GetPrivateProfileIntA("highfps","AdaptiveWorkBudget",0,path)!=0;
     auto budgetSetting=[&](const char*name,unsigned&value,unsigned maximum){
         const int read=int(GetPrivateProfileIntA("highfps",name,value,path));
         if(read>=0&&unsigned(read)<=maximum)value=unsigned(read);
@@ -986,6 +989,16 @@ struct BudgetScope {BudgetScopeKey key;bool active=false;};
 BudgetScope g_budgetScope;
 BudgetScopeKey g_populationKey;
 bool g_populationAttempted=false,g_populationReadable=false;
+highfps::pressure::Policy g_workPressure;
+highfps::pressure::RequestLedger g_workRequests;
+highfps::pressure::Decision g_workDecision;
+uint64_t g_pressureNativeAttacks=0,g_pressureNativePoofs=0;
+bool PressureEnabled(){return g_cfg.adaptiveWorkBudget && g_frameWorkBudget;}
+double PressureTargetHz(){
+    double hz=g_cfg.maxFps>0?g_cfg.maxFps:(g_displayHz>=30?g_displayHz:90);
+    if(g_presentVsync&&g_displayHz>=30&&hz>g_displayHz)hz=g_displayHz;
+    return hz>=30&&hz<=360?hz:90;
+}
 // Separate calls keep every dereference inside the caller's SEH boundary under
 // clang-cl /O2. This collector never calls an engine/Lua/GL function.
 __declspec(noinline) uint32_t BudgetRead32(uintptr_t address){return *reinterpret_cast<const volatile uint32_t*>(address);}
@@ -1021,10 +1034,26 @@ bool ReadBudgetRoom(BudgetScopeKey&key) {
         return key.room>=0x10000;
     }__except(EXCEPTION_EXECUTE_HANDLER){++g_budgetSnapshotFailures;return false;}
 }
+bool BudgetIdentityMatches(const BudgetScopeKey&key) {
+    if(!key.game||!key.room||key.epoch!=g_lifecycleEpoch||g_loadDepth)return false;
+    __try {
+        return BudgetRead32(reinterpret_cast<uintptr_t>(Addr(isaac::kGGamePtr)))==key.game&&
+            BudgetRead32(key.game+0x18300)==key.room;
+    }__except(EXCEPTION_EXECUTE_HANDLER){return false;}
+}
 void BeginWorkBudgetScope(BudgetScopeKey key,bool eligible) {
     g_budgetScope={key,false};
     if(!eligible||!g_frameWorkBudget)return;
     if(!g_populationAttempted||!g_populationKey.Same(key)) {
+        const bool priorIdentity=g_populationAttempted&&g_populationKey.game==key.game&&
+            g_populationKey.room==key.room&&g_populationKey.epoch==key.epoch&&key.world>g_populationKey.world;
+        const bool priorRequestsKnown=priorIdentity&&g_populationReadable;
+        const auto priorRequests=priorRequestsKnown?g_workRequests.Snapshot():highfps::pressure::Demand{};
+        if(PressureEnabled()) {
+            if(!priorIdentity){g_workPressure.Reset();g_workRequests.Reset();g_workDecision={};}
+            // Consume the previous world's attempted work BEFORE clearing its ledger.
+            g_workRequests.Begin(key.epoch,key.world,key.room);
+        }
         g_populationAttempted=true;g_populationKey=key;g_populationReadable=false;
         g_frameWorkBudget->Reset();highfps::work_budget::Population population{};
         ++g_budgetSnapshots;
@@ -1032,6 +1061,17 @@ void BeginWorkBudgetScope(BudgetScopeKey key,bool eligible) {
             g_frameWorkBudget->Begin(key.epoch,key.world,key.room,population);
             g_populationReadable=true;
         } else ++g_budgetSnapshotFailures;
+        if(PressureEnabled()) {
+            highfps::pressure::Context context;
+            context.epoch=key.epoch;context.world=key.world;context.room=key.room;
+            context.now=Now();context.targetHz=PressureTargetHz();
+            context.population={population.tears,population.lasers,population.poofs,population.effects};
+            context.populationValid=g_populationReadable;
+            // A fresh lifecycle starts with known empty demand; an unreadable
+            // prior scope cannot supply positive evidence for quiet recovery.
+            context.priorRequests=priorRequests;context.requestsValid=!priorIdentity||priorRequestsKnown;
+            g_workDecision=g_workPressure.Evaluate(context);
+        }
     }
     // A failed snapshot stays invalid for this key; no per-admission retry/refill.
     g_budgetScope.active=g_populationReadable;
@@ -1048,17 +1088,29 @@ bool AdmitSpawnWork(highfps::spawn_budget19715::Kind kind,void*tear,unsigned cos
     if(!WorkBudgetScopeReady())return true;
     const unsigned k=unsigned(kind);if(k>3 || cost!=(k==0?2u:k==2?4u:1u))return true;
     ++g_spawnBudgetedCalls;
+    if(PressureEnabled()) {
+        g_workRequests.Observe(static_cast<highfps::pressure::RequestKind>(k),cost);
+        if(!g_workDecision.valid||!g_workDecision.budgetAttacks){++g_pressureNativeAttacks;return true;}
+    }
     return g_frameWorkBudget->Admit(static_cast<highfps::work_budget::Kind>(k),BudgetRead32(reinterpret_cast<uintptr_t>(tear)+0x3ec));
 }
 bool AdmitExtraSplitWork(highfps::extra_split19715::Kind kind,void*tear,unsigned cost) {
     if(!WorkBudgetScopeReady())return true;
     const unsigned k=unsigned(kind);if(k>2 || cost!=(k==0?2u:1u))return true;
     ++g_extraSplitBudgetedCalls;
+    if(PressureEnabled()) {
+        g_workRequests.Observe(static_cast<highfps::pressure::RequestKind>(5+k),cost);
+        if(!g_workDecision.valid||!g_workDecision.budgetAttacks){++g_pressureNativeAttacks;return true;}
+    }
     return g_frameWorkBudget->Admit(static_cast<highfps::work_budget::Kind>(5+k),BudgetRead32(reinterpret_cast<uintptr_t>(tear)+0x3ec));
 }
 bool AdmitPoofWork(void*tear,unsigned,unsigned) {
     if(!WorkBudgetScopeReady())return true;
     ++g_poofBudgetedCalls;
+    if(PressureEnabled()) {
+        g_workRequests.Observe(highfps::pressure::RequestKind::Poof,1);
+        if(!g_workDecision.valid||!g_workDecision.budgetCosmetics){++g_pressureNativePoofs;return true;}
+    }
     return g_frameWorkBudget->Admit(highfps::work_budget::Kind::Poof,BudgetRead32(reinterpret_cast<uintptr_t>(tear)+0x3ec));
 }
 
@@ -1526,6 +1578,18 @@ int __cdecl HookedUpdateWrapper() {
                 stats.reasons[5][3],stats.reasons[6][3],stats.reasons[7][3],stats.reasons[5][4],stats.reasons[6][4],stats.reasons[7][4]);
         }
 #endif
+#ifdef HIGHFPS_BUILD_19715
+        if(PressureEnabled()) {
+            const auto& d=g_workDecision;const auto requests=g_workRequests.Snapshot();const auto& stats=g_workPressure.Stats();
+            Log("[work-pressure] world=%u severity=%u attack=%u cosmetic=%u targetHz=%.2f fixedKnown=%u pureKnown=%u fixedMs=%.3f pureMs=%.3f demand=%.3f predictedTears=%llu predictedLasers=%llu predictedPoofs=%llu searches=%llu",
+                g_populationKey.world,unsigned(d.severity),unsigned(d.budgetAttacks),unsigned(d.budgetCosmetics),d.targetHz,
+                unsigned(d.fixedKnown),unsigned(d.pureKnown),d.fixedWorkSeconds*1000,d.pureRenderWorkSeconds*1000,d.estimatedWorkDemand,
+                d.projectedTears,d.projectedLasers,d.projectedPoofs,d.searchRequests);
+            Log("[work-pressure-counts] requestedChildren=%llu requestedSearches=%llu requestedTris=%llu requestedPoofs=%llu nativeAttacks=%llu nativePoofs=%llu raised=%llu recovered=%llu invalid=%llu",
+                requests.children,requests.techSearches,requests.trisCreates,requests.poofs,g_pressureNativeAttacks,g_pressureNativePoofs,
+                stats.raised,stats.recovered,stats.invalidInputs);
+        }
+#endif
         if(auto* worker=g_asyncLog.load())Log("[log-worker] accepted=%ld written=%ld dropped=%ld truncated=%ld",
             worker->Accepted(),worker->Written(),worker->Dropped(),worker->Truncated());
 
@@ -1613,6 +1677,7 @@ int __cdecl HookedUpdateWrapper() {
     do {
         const double fixedStarted=Now(),fixedSwapBefore=g_prof.swapSum;
         const double fixedLoadBefore=g_excludedLoadSeconds;
+        const double fixedRenderBefore=g_prof.hiddenSum+g_prof.nativeVisibleSum;
         if(useOverloadPolicy && !g_overloadPolicy.BeginFixedStep(fixedStarted))break;
         const double scheduledWrapper = g_simClock.Consume(now);
 
@@ -1670,6 +1735,8 @@ int __cdecl HookedUpdateWrapper() {
         // quota partway through the same call. Extra presentations never enter.
         BudgetScopeKey budgetKey{gameBefore,0,epochBefore,gameFrameBefore};
         if(budgetEligible)budgetEligible=ReadBudgetRoom(budgetKey);
+        // Half-step costs also belong in the 60-Hz fixed-work estimate.
+        if(PressureEnabled()&&!budgetKey.room)ReadBudgetRoom(budgetKey);
         BeginWorkBudgetScope(budgetKey,budgetEligible);++g_nativeUpdateScopeDepth;
         __try {result = g_wrapperTrampoline();}
         __finally {--g_nativeUpdateScopeDepth;g_budgetScope=previousBudgetScope;if(g_entityRenderCache)g_entityRenderCache->EndUpdateQueries();}
@@ -1767,10 +1834,21 @@ int __cdecl HookedUpdateWrapper() {
             if (ours > g_prof.ourMax) g_prof.ourMax = ours;
         }
 
-        if(useOverloadPolicy) {
-            double work=Now()-fixedStarted-(g_prof.swapSum-fixedSwapBefore)-(g_excludedLoadSeconds-fixedLoadBefore);
+        bool measurePressure=false;
+#ifdef HIGHFPS_BUILD_19715
+        measurePressure=PressureEnabled();
+#endif
+        if(useOverloadPolicy || measurePressure) {
+            const double finished=Now();
+            double work=finished-fixedStarted-(g_prof.swapSum-fixedSwapBefore)-(g_excludedLoadSeconds-fixedLoadBefore);
             if(work<0)work=0;
-            g_overloadPolicy.ObserveFixedCost(work,!crossedLifecycle && epochBefore==g_lifecycleEpoch);
+            const bool eligible=!crossedLifecycle&&epochBefore==g_lifecycleEpoch;
+            if(useOverloadPolicy)g_overloadPolicy.ObserveFixedCost(work,eligible);
+#ifdef HIGHFPS_BUILD_19715
+            if(PressureEnabled())g_workPressure.ObserveFixed(budgetKey.epoch,budgetKey.room,finished,work,
+                eligible&&g_worldAdvancing&&BudgetIdentityMatches(budgetKey),upd,
+                g_prof.hiddenSum+g_prof.nativeVisibleSum-fixedRenderBefore);
+#endif
         }
         // Keep ordinary debt, but never knowingly spend multiple heavy native
         // frames before returning to presentation/input. Mode changes take effect
@@ -1885,6 +1963,12 @@ void __cdecl Render19715() {
     const auto presentationEpoch=g_lifecycleEpoch;
     const auto presentationSerialBefore=g_presentSerial;
     const double presentationLoadBefore=g_excludedLoadSeconds;
+    BudgetScopeKey pressureKey{};
+    if(PressureEnabled()) {
+        pressureKey.epoch=presentationEpoch;
+        __try {pressureKey.game=BudgetRead32(reinterpret_cast<uintptr_t>(Addr(isaac::kGGamePtr)));ReadBudgetRoom(pressureKey);}
+        __except(EXCEPTION_EXECUTE_HANDLER){pressureKey={};}
+    }
     const bool audit = g_cfg.diag && g_separateNativeFrames;
     if (audit) before = PureGameplayHash19715();
     highfps::menu_presentation::Scope menuScope;
@@ -1954,12 +2038,13 @@ void __cdecl Render19715() {
         const double elapsed=Now()-presentationStarted-(g_prof.swapSum-swapBefore);
         g_prof.presentWorkSum+=elapsed;++g_prof.presentCalls;
         if(elapsed>g_prof.presentWorkMax)g_prof.presentWorkMax=elapsed;
-        if(g_cfg.overloadFallback && g_separateNativeFrames && !g_overloadPolicy.ShouldNative()) {
-            const double load=g_excludedLoadSeconds-presentationLoadBefore;
-            const double work=elapsed>load?elapsed-load:0;
-            g_overloadPolicy.ObservePureCost(work,Now(),g_simClock,
-                presentationEpoch==g_lifecycleEpoch && load==0 && g_presentSerial!=presentationSerialBefore);
-        }
+        const double load=g_excludedLoadSeconds-presentationLoadBefore;
+        const double work=elapsed>load?elapsed-load:0;
+        const bool eligible=presentationEpoch==g_lifecycleEpoch&&load==0&&g_presentSerial!=presentationSerialBefore;
+        if(g_cfg.overloadFallback && g_separateNativeFrames && !g_overloadPolicy.ShouldNative())
+            g_overloadPolicy.ObservePureCost(work,Now(),g_simClock,eligible);
+        if(PressureEnabled()&&g_separateNativeFrames)g_workPressure.ObservePure(pressureKey.epoch,pressureKey.room,Now(),work,
+            eligible&&g_worldAdvancing&&BudgetIdentityMatches(pressureKey));
     }
     if (audit && before != PureGameplayHash19715()) {
         static unsigned reported = 0;
