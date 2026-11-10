@@ -1,0 +1,876 @@
+{
+  "schema": 1,
+  "date": "2026-11-10",
+  "scope": "Main-menu page 3 <-> 5 scrolling, four round trips per run, plus separate unchanged arrow-selection observations.",
+  "method": {
+    "pixel_repeat": "SHA256-equal complete JPEG bytes. Deterministic identical JPEGs prove identical captured frames; unequal files are not proof of meaningful visual motion.",
+    "windows": "For each input, select capture timestamp in [event.t+0.05,event.t+0.5], then compare adjacent selected frames. Input wall clock and capture stream start have pipeline startup uncertainty; no exact input-to-photon latency is claimed.",
+    "index_algorithm": "Parse integer index and nanosecond timestamp from each GstMultiFileSink message, convert timestamp/1e9 to seconds, keep frames satisfying the inclusive time window, then zip(selected_frames, selected_frames[1:]). Both members must be inside the window. No floor(time*nominalHz) index estimate is used. Capture index gaps are counted explicitly.",
+    "canonical": "Align each observed 3-to-5 or 5-to-3 page change to relative manager tick 0; compare x/y at matching ticks 0..60. Observer samples with multiple values at one tick are excluded. Candidate menu-fixed is authoritative and avoids temporary presentation writes.",
+    "precision": "Native observer stores exact binary32 values; menu-fixed prints six decimals. Equality tolerance is 0.000001 native viewport units.",
+    "interpolation": "Check logged xy=prev+alpha*(cur-prev), alpha range, endpoint bounds, cur matches same-tick fixed state and prev matches prior same-page fixed state. Six-decimal alpha plus float math creates bounded rounding residual.",
+    "scope": "Only completed isolated menu recordings are read. No game/input operations. Eight main-page transitions do not cover every menu animation. Arrow selection has no canonical selection stream if selection_observed is null; duplicate statistics alone cannot prove its native logic unchanged."
+  },
+  "cases": [
+    {
+      "case": "mainpages-native60-20261110",
+      "dll_sha256": null,
+      "ini_sha256": "10720cb1d15e0aff47c90b4f2cddbc9197439a81b846e7a609a01c132e37b9b0",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "input_count": 8,
+      "duplicate_jpeg_pairs": 0,
+      "all_adjacent_pairs": 208,
+      "duplicate_ratio": 0.0,
+      "per_window": [
+        {
+          "ordinal": 0,
+          "key": "space",
+          "frames": 27,
+          "first_capture_index": 49,
+          "last_capture_index": 75,
+          "adjacent_pairs": 26,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 1,
+          "key": "Escape",
+          "frames": 27,
+          "first_capture_index": 124,
+          "last_capture_index": 150,
+          "adjacent_pairs": 26,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 2,
+          "key": "space",
+          "frames": 27,
+          "first_capture_index": 198,
+          "last_capture_index": 224,
+          "adjacent_pairs": 26,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 3,
+          "key": "Escape",
+          "frames": 27,
+          "first_capture_index": 273,
+          "last_capture_index": 299,
+          "adjacent_pairs": 26,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 4,
+          "key": "space",
+          "frames": 27,
+          "first_capture_index": 347,
+          "last_capture_index": 373,
+          "adjacent_pairs": 26,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 5,
+          "key": "Escape",
+          "frames": 27,
+          "first_capture_index": 421,
+          "last_capture_index": 447,
+          "adjacent_pairs": 26,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 6,
+          "key": "space",
+          "frames": 27,
+          "first_capture_index": 496,
+          "last_capture_index": 522,
+          "adjacent_pairs": 26,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 7,
+          "key": "Escape",
+          "frames": 27,
+          "first_capture_index": 571,
+          "last_capture_index": 597,
+          "adjacent_pairs": 26,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        }
+      ],
+      "actual_present_median_hz": null,
+      "actual_present_dt_ms": null,
+      "capture_dt_ms": {
+        "count": 749,
+        "min": 14.349029999999985,
+        "median": 16.6856510000013,
+        "p95": 18.29166200000021,
+        "max": 18.991242999998548
+      },
+      "manager_tick_hz_regression": 59.99760853633599,
+      "interpolation": {
+        "present_records": 0,
+        "moving_present_records": 0,
+        "max_lerp_residual": null,
+        "max_endpoint_overshoot": null,
+        "max_cur_vs_fixed_error": null,
+        "max_prev_vs_prior_same_page_fixed_error": null,
+        "missing_current_fixed_records": 0,
+        "alpha_outside_unit_interval": 0
+      },
+      "menu_restore_warning_count": 0,
+      "fatal_or_fallback_count": 0
+    },
+    {
+      "case": "mainpages-current90-20261110",
+      "dll_sha256": "8b9c9d87fd55407d04a42a4eac88a3478c15d8d42fd1ac8ceb1d22b07ba9b372",
+      "ini_sha256": "54c999029e57b90c486303653bda60c81f006f726d615b1afc155d2df1b18849",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "input_count": 8,
+      "duplicate_jpeg_pairs": 109,
+      "all_adjacent_pairs": 316,
+      "duplicate_ratio": 0.3449367088607595,
+      "per_window": [
+        {
+          "ordinal": 0,
+          "key": "space",
+          "frames": 40,
+          "first_capture_index": 75,
+          "last_capture_index": 114,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 13,
+          "repeat_pair_start_offsets_seconds": [
+            0.05525488699909531,
+            0.08911703099909529,
+            0.12237932399909535,
+            0.15524024599909536,
+            0.18909164999909533,
+            0.22228405299909526,
+            0.2552742359990954,
+            0.2890946289990952,
+            0.3223659719990952,
+            0.3552834949990953,
+            0.3892278079990954,
+            0.4223113209990954,
+            0.45520988399909523
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 1,
+          "key": "Escape",
+          "frames": 40,
+          "first_capture_index": 189,
+          "last_capture_index": 228,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 14,
+          "repeat_pair_start_offsets_seconds": [
+            0.05909388999927678,
+            0.06924465699927707,
+            0.09190327299927681,
+            0.1261236369992771,
+            0.159091588999277,
+            0.1920003119992768,
+            0.22596152599927688,
+            0.2590483589992769,
+            0.291995090999277,
+            0.3259825149992768,
+            0.359076257999277,
+            0.39282338099927694,
+            0.4259635839992768,
+            0.459120316999277
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 2,
+          "key": "space",
+          "frames": 41,
+          "first_capture_index": 302,
+          "last_capture_index": 342,
+          "adjacent_pairs": 40,
+          "identical_jpeg_pairs": 15,
+          "repeat_pair_start_offsets_seconds": [
+            0.05191035500028374,
+            0.06355618300028354,
+            0.07333012000028383,
+            0.09674293600028383,
+            0.12967074900028353,
+            0.16370348200028362,
+            0.19677109500028367,
+            0.2305441890002835,
+            0.26372424200028366,
+            0.2969489450002838,
+            0.33049596800028347,
+            0.36362262100028353,
+            0.39681294400028344,
+            0.4305452870002835,
+            0.46284369900028377
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 3,
+          "key": "Escape",
+          "frames": 41,
+          "first_capture_index": 416,
+          "last_capture_index": 456,
+          "adjacent_pairs": 40,
+          "identical_jpeg_pairs": 13,
+          "repeat_pair_start_offsets_seconds": [
+            0.06630842499976897,
+            0.09934850799976847,
+            0.13259374099976906,
+            0.16650189399976867,
+            0.199512466999769,
+            0.23267901999976903,
+            0.2663298829997691,
+            0.29947896599976875,
+            0.3325508689997685,
+            0.36639472299976905,
+            0.3993489949997686,
+            0.43256763799976916,
+            0.4663213619997686
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 4,
+          "key": "space",
+          "frames": 40,
+          "first_capture_index": 530,
+          "last_capture_index": 569,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 13,
+          "repeat_pair_start_offsets_seconds": [
+            0.06968540799893219,
+            0.10343421099893213,
+            0.13663244399893237,
+            0.1696218269989327,
+            0.20344713999893216,
+            0.2357038919989325,
+            0.26970663599893285,
+            0.3034557289989328,
+            0.3366178419989323,
+            0.36972179499893265,
+            0.40341688799893216,
+            0.4365726309989322,
+            0.46976569399893275
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 5,
+          "key": "Escape",
+          "frames": 40,
+          "first_capture_index": 644,
+          "last_capture_index": 683,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 13,
+          "repeat_pair_start_offsets_seconds": [
+            0.06994020799900369,
+            0.10344829099900377,
+            0.13694908399900374,
+            0.1704444869990036,
+            0.20347055999900387,
+            0.23671220299900408,
+            0.27011267599900357,
+            0.3034781289990036,
+            0.33677090199900395,
+            0.37150071599900336,
+            0.40319045799900355,
+            0.4366084209990033,
+            0.46993126399900387
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 6,
+          "key": "space",
+          "frames": 41,
+          "first_capture_index": 757,
+          "last_capture_index": 797,
+          "adjacent_pairs": 40,
+          "identical_jpeg_pairs": 14,
+          "repeat_pair_start_offsets_seconds": [
+            0.0531925160004576,
+            0.07539832100045807,
+            0.11209717700045907,
+            0.14233922800045917,
+            0.1754627710004577,
+            0.2086512840004584,
+            0.24197802700045834,
+            0.2792934720004592,
+            0.30873166300045796,
+            0.3420331960004592,
+            0.3754033090004576,
+            0.40867112200045774,
+            0.442009045000459,
+            0.47530350800045795
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 7,
+          "key": "Escape",
+          "frames": 41,
+          "first_capture_index": 871,
+          "last_capture_index": 911,
+          "adjacent_pairs": 40,
+          "identical_jpeg_pairs": 14,
+          "repeat_pair_start_offsets_seconds": [
+            0.05258009599993052,
+            0.07490965099992941,
+            0.10824634399993016,
+            0.14172081699993022,
+            0.17495400999992938,
+            0.20817138299993054,
+            0.24149908599992997,
+            0.27505443999992885,
+            0.30816440299993,
+            0.3414239259999299,
+            0.37506501899992983,
+            0.4098727829999298,
+            0.442879885999929,
+            0.4760756889999289
+          ],
+          "capture_frame_gaps": 0
+        }
+      ],
+      "actual_present_median_hz": 90.0009000090001,
+      "actual_present_dt_ms": {
+        "count": 1113,
+        "min": 9.883,
+        "median": 11.110999999999999,
+        "p95": 11.186,
+        "max": 12.349
+      },
+      "capture_dt_ms": {
+        "count": 1124,
+        "min": 7.542954999999907,
+        "median": 11.1113570000001,
+        "p95": 12.702129000000006,
+        "max": 13.639829999999797
+      },
+      "manager_tick_hz_regression": null,
+      "interpolation": {
+        "present_records": 0,
+        "moving_present_records": 0,
+        "max_lerp_residual": null,
+        "max_endpoint_overshoot": null,
+        "max_cur_vs_fixed_error": null,
+        "max_prev_vs_prior_same_page_fixed_error": null,
+        "missing_current_fixed_records": 0,
+        "alpha_outside_unit_interval": 0
+      },
+      "menu_restore_warning_count": 0,
+      "fatal_or_fallback_count": 0
+    },
+    {
+      "case": "mainpages-fixed90-20261110",
+      "dll_sha256": "b6ccf758f8f787be32a4880e7353480058c2f5ccf7d6bc1f7961ac032ab52fac",
+      "ini_sha256": "54c999029e57b90c486303653bda60c81f006f726d615b1afc155d2df1b18849",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "input_count": 8,
+      "duplicate_jpeg_pairs": 2,
+      "all_adjacent_pairs": 315,
+      "duplicate_ratio": 0.006349206349206349,
+      "per_window": [
+        {
+          "ordinal": 0,
+          "key": "space",
+          "frames": 41,
+          "first_capture_index": 74,
+          "last_capture_index": 114,
+          "adjacent_pairs": 40,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 1,
+          "key": "Escape",
+          "frames": 40,
+          "first_capture_index": 187,
+          "last_capture_index": 226,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 2,
+          "key": "space",
+          "frames": 40,
+          "first_capture_index": 299,
+          "last_capture_index": 338,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 1,
+          "repeat_pair_start_offsets_seconds": [
+            0.05969618100007379
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 3,
+          "key": "Escape",
+          "frames": 40,
+          "first_capture_index": 411,
+          "last_capture_index": 450,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 4,
+          "key": "space",
+          "frames": 40,
+          "first_capture_index": 523,
+          "last_capture_index": 562,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 5,
+          "key": "Escape",
+          "frames": 41,
+          "first_capture_index": 635,
+          "last_capture_index": 675,
+          "adjacent_pairs": 40,
+          "identical_jpeg_pairs": 1,
+          "repeat_pair_start_offsets_seconds": [
+            0.051779315000384685
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 6,
+          "key": "space",
+          "frames": 40,
+          "first_capture_index": 748,
+          "last_capture_index": 787,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 7,
+          "key": "Escape",
+          "frames": 41,
+          "first_capture_index": 859,
+          "last_capture_index": 899,
+          "adjacent_pairs": 40,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        }
+      ],
+      "actual_present_median_hz": 90.00900090009002,
+      "actual_present_dt_ms": {
+        "count": 1115,
+        "min": 10.923,
+        "median": 11.11,
+        "p95": 11.177,
+        "max": 11.381
+      },
+      "capture_dt_ms": {
+        "count": 1125,
+        "min": 8.241144999999506,
+        "median": 11.0905369999994,
+        "p95": 12.6437880000001,
+        "max": 13.297720000000623
+      },
+      "manager_tick_hz_regression": 59.99986743297449,
+      "interpolation": {
+        "present_records": 1497,
+        "moving_present_records": 585,
+        "max_lerp_residual": 3.0511411978295655e-05,
+        "max_endpoint_overshoot": 0.0,
+        "max_cur_vs_fixed_error": 0.0,
+        "max_prev_vs_prior_same_page_fixed_error": 0.0,
+        "missing_current_fixed_records": 0,
+        "alpha_outside_unit_interval": 0
+      },
+      "menu_restore_warning_count": 0,
+      "fatal_or_fallback_count": 0
+    },
+    {
+      "case": "mainpages-final90-20261110",
+      "dll_sha256": "4119e933accfafc8f156b511f84916655825607947a9ff345bac32653bbfe9ec",
+      "ini_sha256": "54c999029e57b90c486303653bda60c81f006f726d615b1afc155d2df1b18849",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "input_count": 8,
+      "duplicate_jpeg_pairs": 5,
+      "all_adjacent_pairs": 316,
+      "duplicate_ratio": 0.015822784810126583,
+      "per_window": [
+        {
+          "ordinal": 0,
+          "key": "space",
+          "frames": 41,
+          "first_capture_index": 74,
+          "last_capture_index": 114,
+          "adjacent_pairs": 40,
+          "identical_jpeg_pairs": 2,
+          "repeat_pair_start_offsets_seconds": [
+            0.05015756499915436,
+            0.06182639299915438
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 1,
+          "key": "Escape",
+          "frames": 41,
+          "first_capture_index": 189,
+          "last_capture_index": 229,
+          "adjacent_pairs": 40,
+          "identical_jpeg_pairs": 1,
+          "repeat_pair_start_offsets_seconds": [
+            0.05118816599949927
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 2,
+          "key": "space",
+          "frames": 40,
+          "first_capture_index": 305,
+          "last_capture_index": 344,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 2,
+          "repeat_pair_start_offsets_seconds": [
+            0.05929978099904121,
+            0.07026465799904091
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 3,
+          "key": "Escape",
+          "frames": 41,
+          "first_capture_index": 416,
+          "last_capture_index": 456,
+          "adjacent_pairs": 40,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 4,
+          "key": "space",
+          "frames": 40,
+          "first_capture_index": 529,
+          "last_capture_index": 568,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 5,
+          "key": "Escape",
+          "frames": 40,
+          "first_capture_index": 645,
+          "last_capture_index": 684,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 6,
+          "key": "space",
+          "frames": 41,
+          "first_capture_index": 755,
+          "last_capture_index": 795,
+          "adjacent_pairs": 40,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 7,
+          "key": "Escape",
+          "frames": 40,
+          "first_capture_index": 868,
+          "last_capture_index": 907,
+          "adjacent_pairs": 39,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        }
+      ],
+      "actual_present_median_hz": 90.0009000090001,
+      "actual_present_dt_ms": {
+        "count": 1115,
+        "min": 9.558,
+        "median": 11.110999999999999,
+        "p95": 11.178,
+        "max": 12.639
+      },
+      "capture_dt_ms": {
+        "count": 1124,
+        "min": 8.704865999999978,
+        "median": 11.06971300000037,
+        "p95": 12.631137999999709,
+        "max": 13.412089000000016
+      },
+      "manager_tick_hz_regression": 59.99981780274601,
+      "interpolation": {
+        "present_records": 1494,
+        "moving_present_records": 570,
+        "max_lerp_residual": 3.0723008080713043e-05,
+        "max_endpoint_overshoot": 0.0,
+        "max_cur_vs_fixed_error": 0.0,
+        "max_prev_vs_prior_same_page_fixed_error": 0.0,
+        "missing_current_fixed_records": 0,
+        "alpha_outside_unit_interval": 0
+      },
+      "menu_restore_warning_count": 0,
+      "fatal_or_fallback_count": 0
+    },
+    {
+      "case": "mainpages-final80-20261110",
+      "dll_sha256": "4119e933accfafc8f156b511f84916655825607947a9ff345bac32653bbfe9ec",
+      "ini_sha256": "54c999029e57b90c486303653bda60c81f006f726d615b1afc155d2df1b18849",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "input_count": 8,
+      "duplicate_jpeg_pairs": 3,
+      "all_adjacent_pairs": 280,
+      "duplicate_ratio": 0.010714285714285714,
+      "per_window": [
+        {
+          "ordinal": 0,
+          "key": "space",
+          "frames": 36,
+          "first_capture_index": 68,
+          "last_capture_index": 103,
+          "adjacent_pairs": 35,
+          "identical_jpeg_pairs": 1,
+          "repeat_pair_start_offsets_seconds": [
+            0.057754109999643255
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 1,
+          "key": "Escape",
+          "frames": 36,
+          "first_capture_index": 169,
+          "last_capture_index": 204,
+          "adjacent_pairs": 35,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 2,
+          "key": "space",
+          "frames": 36,
+          "first_capture_index": 270,
+          "last_capture_index": 305,
+          "adjacent_pairs": 35,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 3,
+          "key": "Escape",
+          "frames": 36,
+          "first_capture_index": 372,
+          "last_capture_index": 407,
+          "adjacent_pairs": 35,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 4,
+          "key": "space",
+          "frames": 36,
+          "first_capture_index": 473,
+          "last_capture_index": 508,
+          "adjacent_pairs": 35,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 5,
+          "key": "Escape",
+          "frames": 36,
+          "first_capture_index": 575,
+          "last_capture_index": 610,
+          "adjacent_pairs": 35,
+          "identical_jpeg_pairs": 1,
+          "repeat_pair_start_offsets_seconds": [
+            0.060546960999899646
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 6,
+          "key": "space",
+          "frames": 36,
+          "first_capture_index": 676,
+          "last_capture_index": 711,
+          "adjacent_pairs": 35,
+          "identical_jpeg_pairs": 1,
+          "repeat_pair_start_offsets_seconds": [
+            0.05497249800064985
+          ],
+          "capture_frame_gaps": 0
+        },
+        {
+          "ordinal": 7,
+          "key": "Escape",
+          "frames": 36,
+          "first_capture_index": 777,
+          "last_capture_index": 812,
+          "adjacent_pairs": 35,
+          "identical_jpeg_pairs": 0,
+          "repeat_pair_start_offsets_seconds": [],
+          "capture_frame_gaps": 0
+        }
+      ],
+      "actual_present_median_hz": 79.98720204767238,
+      "actual_present_dt_ms": {
+        "count": 993,
+        "min": 11.710999999999999,
+        "median": 12.501999999999999,
+        "p95": 12.567,
+        "max": 13.349
+      },
+      "capture_dt_ms": {
+        "count": 999,
+        "min": 9.93749699999924,
+        "median": 12.591438999999482,
+        "p95": 13.959020000001487,
+        "max": 14.747879999999824
+      },
+      "manager_tick_hz_regression": 59.99980176943111,
+      "interpolation": {
+        "present_records": 1333,
+        "moving_present_records": 515,
+        "max_lerp_residual": 3.0999999921732524e-05,
+        "max_endpoint_overshoot": 0.0,
+        "max_cur_vs_fixed_error": 0.0,
+        "max_prev_vs_prior_same_page_fixed_error": 0.0,
+        "missing_current_fixed_records": 0,
+        "alpha_outside_unit_interval": 0
+      },
+      "menu_restore_warning_count": 0,
+      "fatal_or_fallback_count": 0
+    }
+  ],
+  "canonical_comparisons": [
+    {
+      "trial": "mainpages-current90-20261110",
+      "baseline": "mainpages-native60-20261110",
+      "transition_count": 0,
+      "all_directions_match": null,
+      "common_relative_tick_count": 0,
+      "max_xy_error": null,
+      "errors_above_0_000001": null,
+      "missing_relative_tick_count": null
+    },
+    {
+      "trial": "mainpages-fixed90-20261110",
+      "baseline": "mainpages-native60-20261110",
+      "transition_count": 8,
+      "all_directions_match": true,
+      "common_relative_tick_count": 488,
+      "max_xy_error": 4.765624908031896e-07,
+      "errors_above_0_000001": 0,
+      "missing_relative_tick_count": 0
+    },
+    {
+      "trial": "mainpages-final90-20261110",
+      "baseline": "mainpages-native60-20261110",
+      "transition_count": 8,
+      "all_directions_match": true,
+      "common_relative_tick_count": 488,
+      "max_xy_error": 4.765624908031896e-07,
+      "errors_above_0_000001": 0,
+      "missing_relative_tick_count": 0
+    },
+    {
+      "trial": "mainpages-final80-20261110",
+      "baseline": "mainpages-native60-20261110",
+      "transition_count": 8,
+      "all_directions_match": true,
+      "common_relative_tick_count": 488,
+      "max_xy_error": 4.765624908031896e-07,
+      "errors_above_0_000001": 0,
+      "missing_relative_tick_count": 0
+    }
+  ],
+  "limits": [
+    "Eight page transitions do not establish every menu animation or runtime variable refresh behavior.",
+    "Canonical comparison covers page-change direction and x/y at relative manager ticks 0..60; measured manager rate independently checks wall-clock speed.",
+    "No modset manifest was recorded for these menu cases. The shared game executable is fingerprinted; complete mod-resource equivalence is not asserted.",
+    "The old90 and arrow observer builds lack viewport or selection columns respectively, so those missing canonical streams cannot be reconstructed from screenshots.",
+    "Candidate no-restore-warning plus unchanged subsequent canonical states support restoration for these runs, not a universal guarantee.",
+    "Input dispatch is external and asynchronous. Identical frames close to the beginning of the requested window can precede movement; all are retained in primary totals.",
+    "Arrow-selection windows are mostly static even in native60 and do not demonstrate scrolling animation smoothness."
+  ],
+  "arrow_observations": [
+    {
+      "case": "mainmenu-native60-20261110",
+      "inputs": [
+        "Down",
+        "Down",
+        "Down",
+        "Down",
+        "Down",
+        "Up",
+        "Up",
+        "Up",
+        "Up",
+        "Up"
+      ],
+      "duplicate_jpeg_pairs": 260,
+      "all_adjacent_pairs": 260,
+      "canonical_selection_stream_available": false
+    },
+    {
+      "case": "mainmenu-current90-20261110",
+      "inputs": [
+        "Down",
+        "Down",
+        "Down",
+        "Down",
+        "Down",
+        "Up",
+        "Up",
+        "Up",
+        "Up",
+        "Up"
+      ],
+      "duplicate_jpeg_pairs": 391,
+      "all_adjacent_pairs": 394,
+      "canonical_selection_stream_available": false
+    }
+  ],
+  "version": "0.13.0-j374.4",
+  "source_commit": "4c552f04f793e7b976356574906cffce2d80fa09"
+}

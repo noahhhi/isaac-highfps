@@ -91,3 +91,13 @@ The previous screen-lock algorithm assumed camera translation mirrored player mo
 The replacement uses the two engine-produced scroll samples as endpoints. Stop/reverse/clamp and scope-reset tests cover the interpolation math; 80/90 Hz Greed cases verify the actual preview fields, callback sequence and canonical state. See the separate camera/state reports in validation. The initial new-candidate 90-second startup timeout occurred during hook installation, before the fixture; its cause remains unclassified and it is excluded from successful camera cases.
 
 The engine's 30 Hz full-world phase, 60 Hz main phase and output cadence are distinct. Their scheduling is decoupled on the engine thread; output at 90 Hz does not request 90 logic updates. A separate rendering thread would additionally require immutable snapshots and an audit of native/Lua rendering mutations. This patch does not claim thread-level asynchronous rendering.
+
+## Menu-page presentation
+
+J374 MenuManager updates viewport coordinates at +0x44/+0x48 once per 60 Hz main tick. The output loop can present at 90 Hz while otherwise repeating these page positions on roughly one-third of the display frames. The correction samples authoritative coordinates after every hidden canonical render and temporarily interpolates only these two floats during an actual pure presentation. It uses the same previous-SwapBuffers time anchor as the rest of the output, independently of GameFrame or player movement. A finally scope restores native coordinates before input/update/canonical rendering can observe them.
+
+Page ID changes deliberately retain history because they start the slide. Object/epoch/state or display-size changes invalidate history; finite-value and unexpected-write guards reject stale samples. Native immediate positioning outside an active slide stays immediate. The menu has its own failure switch, so an entity-preview fault cannot disable menu interpolation. Interpolate=0 still disables the feature. Like camera interpolation, this adds one main tick of display-history delay without increasing update or animation counts.
+
+The main-menu arrow uses six native Cursor-layer frames marked non-interpolated; it remains a discrete selection. Main-menu ANM2 art/Continue preview animation is separate from viewport motion and retains its native timing. The tests do not establish the performance of selecting an available Continue preview or every other menu path.
+
+See validation/menu-presentation.json for frame-window definitions and canonical comparison. A 720-tick Greed regression on the same final DLL also matched all 2,175 recorded events from the camera release after wall-time/UI-origin normalization; no menu-restore or pure-state warnings appeared.

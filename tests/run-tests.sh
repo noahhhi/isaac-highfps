@@ -59,7 +59,7 @@ run_windows() {
 }
 run_core() {
   local name source
-  for name in render_timing_test camera_presentation_test clock_lifecycle_test native_render_clock_test native_ui_replay_test entity_draw_cache_probe_test; do
+  for name in render_timing_test camera_presentation_test menu_presentation_test clock_lifecycle_test native_render_clock_test native_ui_replay_test entity_draw_cache_probe_test; do
     source="$repo_dir/tests/$name.cpp"
     printf '\n[core] %s (%s)\n' "$name" "$backend"
     if [[ "$backend" == native ]]; then

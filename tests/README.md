@@ -6,7 +6,7 @@ These tests do not start Isaac, read process memory or open game saves. They com
 bash tests/run-tests.sh core
 ```
 
-`core` covers scheduler/lifecycle debt, camera presentation, menu scalar timing, native UI snapshot/replay ownership, and mock draw-command capture/replay. It uses a normal native C++17 compiler when available. If native standard-library headers are unavailable, automatic selection falls back to the x86 MSVC build and requires `XWIN_ROOT` plus WSL Windows interop or Wine.
+`core` covers scheduler/lifecycle debt, camera and menu viewport presentation, menu scalar timing, native UI snapshot/replay ownership, and mock draw-command capture/replay. It uses a normal native C++17 compiler when available. If native standard-library headers are unavailable, automatic selection falls back to the x86 MSVC build and requires `XWIN_ROOT` plus WSL Windows interop or Wine.
 
 ```sh
 XWIN_ROOT=/path/to/x86-msvc-sysroot TEST_BACKEND=msvc \
@@ -33,6 +33,10 @@ The existing `render_timing_test.cpp` is included in the core run without changi
 
 `camera_presentation_test.cpp` checks the production camera helper independently of player prediction: monotone native-camera easing at 45/60/80/90/100/144 FPS, continuous stops/reversals/clamps, camera motion while world updates are frozen, stationary pause, room/epoch discontinuities, variable 48–144 Hz sample intervals and invalid-time guards. It checks sampled camera mathematics; it does not replace live large-room captures or physical VRR validation.
 
+`menu_presentation_test.cpp` checks the production menu viewport helper: independent 60 Hz interpolation, first-sample and resize/lifetime resets, canonical-state preservation, exact scoped restoration, low-output-rate catch-up samples, invalid values, and preserving unexpected native writes. Page ID is excluded from identity so navigation retains slide history. This test does not change the native discrete selection cursor or replace live page-transition captures.
+
 Do not commit generated executables, object files, DLL inputs, prefixes, proprietary game files or saves. Unit success does not establish live-game timing, pixel output, physical VRR or arbitrary mod compatibility; those have separate validation reports under `docs/validation/`.
 
 Live-game fixtures are documented in [fixtures/README.md](fixtures/README.md). They are never deployed by this runner.
+
+Live tests must use a separate game/profile and silent output: set MusicVolume=0, SFXVolume=0 and OnlinePlayerVolume=0 before every test launch, including after profile copies. Keep MusicEnabled and animation/voice-mode logic intact, and leave the normal game's volume alone. Menu capture analysis is read-only: `python tests/analyze_main_menu.py BASE_CASE TRIAL_CASE... --output REPORT.json`. The recorded page sequence is main menu → character page → main menu, four times with settled input intervals; it never confirms from character selection into a run.

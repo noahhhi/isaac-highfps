@@ -23,3 +23,7 @@ The standalone test report does not validate startup patch installation or the f
 ## Camera correction (0.13.0-j374.3)
 
 [camera-presentation.json](camera-presentation.json) checks the actual per-presentation camera fields against native bounds and the sampled endpoint interval. [greed-canonical.json](greed-canonical.json) independently compares native60, old90, new90 and new80 canonical events. Source is `1444261`; neither report is a physical VRR test or a universal pixel-level smoothness claim. The fixture is [large-room-greed-fixture.lua](../../tests/fixtures/large-room-greed-fixture.lua). The failed first candidate startup is retained as an unclassified installation-stage timeout, not a camera test pass.
+
+## Menu presentation (0.13.0-j374.4)
+
+[menu-presentation.json](menu-presentation.json) compares eight main-menu/character-page transitions, preserving capture timestamps and complete input windows. [menu-game-regression.json](menu-game-regression.json) checks the final DLL in the established Greed fixture. The analysis script is [analyze_main_menu.py](../../tests/analyze_main_menu.py); it only reads recorded data and never accesses a live game or input device. Recordings include native.log (when enabled), menu-clock.json, input-events.json, and timestamped capture/frame-NNNN.jpg plus capture/gst.log. Capture and event startup timing is approximate, so no input-to-photon latency claim is made. Arrow-only recordings and page-slide recordings are kept separate.
