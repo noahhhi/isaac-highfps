@@ -23,6 +23,7 @@
 #include "version.h"
 #include "render_timing.h"
 #include "camera_presentation.h"
+#include "menu_presentation.h"
 #ifdef HIGHFPS_BUILD_19715
 #include "entity_draw_cache_j374_runtime.h"
 #include "shader_params_cache_j374.h"
@@ -762,7 +763,46 @@ bool g_endPacingActive = false;
 bool g_hiddenFixedRender = false;
 bool g_separateNativeFrames = false;
 bool OverlayPipelineReady();
+double g_menuPresentationTime = 0;
 #ifdef HIGHFPS_BUILD_19715
+highfps::menu_presentation::History g_menuHistory;
+bool g_menuPresentationEnabled = true;
+bool g_menuWasSliding = false;
+unsigned g_menuSampleLines = 0, g_menuPresentLines = 0;
+highfps::menu_presentation::Context MenuPresentationContext() {
+    highfps::menu_presentation::Context c;
+    const uintptr_t manager=*reinterpret_cast<uintptr_t*>(Addr(isaac::kGManagerPtr));
+    if(manager<0x10000) return c;
+    c.managerState=*reinterpret_cast<int*>(manager+8);
+    if(c.managerState!=1) return c;
+    c.menu=*reinterpret_cast<uintptr_t*>(Addr(0xC0D018));
+    c.epoch=g_lifecycleEpoch;
+    c.width=*reinterpret_cast<float*>(Addr(isaac::kOrthoWidth));
+    c.height=*reinterpret_cast<float*>(Addr(isaac::kOrthoHeight));
+    return c;
+}
+void SampleMenuPresentation() {
+    if(!g_separateNativeFrames || !g_menuPresentationEnabled) return;
+    __try {
+        const auto c=MenuPresentationContext();
+        if(!highfps::menu_presentation::Active(c)) {g_menuHistory.Invalidate();g_menuWasSliding=false;return;}
+        const auto* viewport=reinterpret_cast<const float*>(c.menu+0x44);
+        const highfps::menu_presentation::Point point{viewport[0],viewport[1]};
+        const bool sliding=*reinterpret_cast<uint8_t*>(c.menu+0x0c)!=0;
+        // A native immediate placement outside a slide must remain immediate.
+        // Page-ID changes alone are intentionally not a discontinuity.
+        const bool hardSnap=g_menuHistory.Matches(c) && !sliding && !g_menuWasSliding &&
+            !highfps::menu_presentation::Equal(point,g_menuHistory.current);
+        g_menuHistory.Sample(c,point,hardSnap);
+        g_menuWasSliding=sliding;
+        if(g_cfg.diag && g_menuSampleLines++<10000)
+            Log("[menu-fixed] tick=%u page=%d sliding=%d xy=(%.6f,%.6f)",FrameCounter(),
+                *reinterpret_cast<int*>(c.menu+0x40),sliding,point.x,point.y);
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        g_menuHistory.Invalidate();g_menuPresentationEnabled=false;
+        Log("[warn] menu viewport sampling faulted; native menu presentation retained");
+    }
+}
 highfps_entity_probe::Runtime* g_entityRenderCache = nullptr;
 highfps_shader_params::Runtime* g_shaderParamsCache = nullptr;
 bool InNativeRender() { return g_inRenderPhase != 0; }
@@ -1161,6 +1201,7 @@ int __cdecl HookedUpdateWrapper() {
         // The render that follows shows the mod layer from the last real frame. Nothing
         // to clear and nothing for Lua to add, so the flag only matters to the compositor.
         g_inRenderPhase = 1;
+        g_menuPresentationTime=now;
         BeginNativeRender(false);
         return 0;
     }
@@ -1257,6 +1298,7 @@ int __cdecl HookedUpdateWrapper() {
                 g_hiddenFixedRender = false;
                 g_inRenderPhase = 0;
             }
+            SampleMenuPresentation();
             GarbageCollect19715();
             if (ApplyLifecycleTime() > 0) {
                 now = Now();
@@ -1332,6 +1374,7 @@ int __cdecl HookedUpdateWrapper() {
         }
     }
     g_inRenderPhase = 1;
+    g_menuPresentationTime=now;
     BeginNativeRender(!g_separateNativeFrames);
     return result;
 }
@@ -1383,8 +1426,36 @@ void __cdecl Render19715() {
     uint64_t before = 0;
     const bool audit = g_cfg.diag && g_separateNativeFrames;
     if (audit) before = PureGameplayHash19715();
-    __try { reinterpret_cast<void(__cdecl*)()>(Addr(0x94D340))(); }
-    __finally { g_inRenderPhase = 0; g_luaFrameIntermediate = 0; }
+    highfps::menu_presentation::Scope menuScope;
+    __try {
+        if(g_separateNativeFrames && g_cfg.interpolate && g_menuPresentationEnabled) {
+            __try {
+                const auto c=MenuPresentationContext();
+                if(menuScope.Begin(g_menuHistory,c,reinterpret_cast<float*>(c.menu+0x44),
+                                   g_menuPresentationTime,g_lastWrapperTime,g_luaFrameIntermediate!=0) &&
+                   g_cfg.diag && g_menuPresentLines++<12000) {
+                    const auto* v=reinterpret_cast<const float*>(c.menu+0x44);
+                    Log("[menu-present] t=%.6f tick=%u page=%d a=%.6f prev=(%.6f,%.6f) cur=(%.6f,%.6f) xy=(%.6f,%.6f)",
+                        g_menuPresentationTime,FrameCounter(),*reinterpret_cast<int*>(c.menu+0x40),
+                        highfps::menu_presentation::Alpha60(g_menuPresentationTime,g_lastWrapperTime),
+                        g_menuHistory.previous.x,g_menuHistory.previous.y,g_menuHistory.current.x,g_menuHistory.current.y,v[0],v[1]);
+                }
+            } __except(EXCEPTION_EXECUTE_HANDLER) {
+                menuScope.Abandon();g_menuHistory.Invalidate();g_menuPresentationEnabled=false;
+                Log("[warn] menu viewport preview faulted; native menu presentation retained");
+            }
+        }
+        reinterpret_cast<void(__cdecl*)()>(Addr(0x94D340))();
+    } __finally {
+        __try {
+            if(menuScope.Applied() && !menuScope.Restore(MenuPresentationContext()))
+                Log("[menu-restore] owner or viewport changed during presentation; history invalidated");
+        } __except(EXCEPTION_EXECUTE_HANDLER) {
+            menuScope.Abandon();g_menuPresentationEnabled=false;
+            Log("[warn] menu viewport restore faulted; interpolation disabled");
+        }
+        g_inRenderPhase=0;g_luaFrameIntermediate=0;
+    }
     if (audit && before != PureGameplayHash19715()) {
         static unsigned reported = 0;
         if (reported++ < 32) Log("[pure-state] gameplay fields changed during presentation at manager=%u game=%u", FrameCounter(), GameFrame());
@@ -1397,9 +1468,12 @@ bool Validate19715Sites() {
     static const uint8_t limiter[] = {0x84,0xDB,0x75,0x0C};
     static const uint8_t branch[] = {0x0F,0x85,0xF3,0xFE,0xFF,0xFF};
     static const uint8_t update[] = {0x55,0x8B,0xEC,0x83,0xE4,0xF0,0x81,0xEC,0x68,0x04,0x00,0x00};
+    static const uint8_t menuViewportReads[]={0xf3,0x0f,0x10,0x40,0x44,0xf3,0x0f,0x10,0x48,0x48};
     uint8_t paused[] = {0x8B,0xD1,0x56,0x8B,0x35,0,0,0,0};
     *reinterpret_cast<uint32_t*>(paused + 5) = uint32_t(reinterpret_cast<uintptr_t>(Addr(0xC0C09C)));
-    return Expect(0x6FE500,paused,sizeof paused,"J374 read-only Game::IsPaused") &&
+    return Expect(0x97897F,menuViewportReads,sizeof menuViewportReads,"J374 main-menu viewport fields") &&
+           Expect(0x942635,menuViewportReads,sizeof menuViewportReads,"J374 character-menu viewport fields") &&
+           Expect(0x6FE500,paused,sizeof paused,"J374 read-only Game::IsPaused") &&
            Expect(0x9295CF,call,sizeof call,"J374 input + update calls") &&
            Expect(0x9295DD,render,sizeof render,"J374 Manager render call") &&
            Expect(0x9295EB,gc,sizeof gc,"J374 Lua GC call") &&
