@@ -1,0 +1,118 @@
+{
+  "date": "2026-11-10",
+  "scope": "Fixed-seed Greed large-room movement, stops, reversals and camera boundaries; camera presentation change only.",
+  "candidate_source_commit": "144426100ccf4f4527160ebfa93605fb40c9f3c3",
+  "candidate_dll_sha256": "8b9c9d87fd55407d04a42a4eac88a3478c15d8d42fd1ac8ceb1d22b07ba9b372",
+  "measurement": {
+    "units": "native room-scroll coordinates, not physical panel pixels",
+    "game_frame_range": [
+      5,
+      725
+    ],
+    "bounds_tolerance": 0.01,
+    "reversal_minimum_step": 0.1,
+    "native_direction_threshold": 0.02,
+    "reversal_rule": "Opposite display step while the two latest authoritative camera segments have a consistent direction; adjacent samples less than 100 ms apart and at most two main ticks apart.",
+    "swap_timing": "Native SwapBuffers return timestamps; not a physical scanout or VRR measurement.",
+    "coordinate_log_precision": 0.001
+  },
+  "presentation_results": [
+    {
+      "case": "r5_90hz",
+      "samples": 2163,
+      "median_swap_interval_ms": 11.111,
+      "authoritative_scroll_y": [
+        -182.0,
+        0.0
+      ],
+      "display_scroll_y": [
+        -184.52,
+        2.702
+      ],
+      "outside_authoritative_bounds": 22,
+      "maximum_bound_overshoot": 2.702,
+      "outside_previous_current_hull": 422,
+      "reverse_steps_against_consistent_native_direction": 20,
+      "maximum_reverse_step": 2.52,
+      "camera_alpha_lerp_max_residual": null
+    },
+    {
+      "case": "camera_fix_90hz",
+      "samples": 2163,
+      "median_swap_interval_ms": 11.111,
+      "authoritative_scroll_y": [
+        -182.0,
+        0.0
+      ],
+      "display_scroll_y": [
+        -182.0,
+        0.0
+      ],
+      "outside_authoritative_bounds": 0,
+      "maximum_bound_overshoot": 0,
+      "outside_previous_current_hull": 0,
+      "reverse_steps_against_consistent_native_direction": 0,
+      "maximum_reverse_step": 0,
+      "camera_alpha_lerp_max_residual": 0.000959664
+    },
+    {
+      "case": "camera_fix_80hz",
+      "samples": 1922,
+      "median_swap_interval_ms": 12.502,
+      "authoritative_scroll_y": [
+        -182.0,
+        0.0
+      ],
+      "display_scroll_y": [
+        -182.0,
+        0.0
+      ],
+      "outside_authoritative_bounds": 0,
+      "maximum_bound_overshoot": 0,
+      "outside_previous_current_hull": 0,
+      "reverse_steps_against_consistent_native_direction": 0,
+      "maximum_reverse_step": 0,
+      "camera_alpha_lerp_max_residual": 0.000850308
+    }
+  ],
+  "native_60hz_fixed_tick_comparison": [
+    {
+      "case": "camera_fix_90hz",
+      "matched_world_ticks": 720,
+      "maximum_absolute_differences": {
+        "player_x": 0.0,
+        "player_y": 0.0,
+        "player_velocity_x": 0.0,
+        "player_velocity_y": 0.0,
+        "native_scroll_x": 0.0,
+        "native_scroll_y": 0.0,
+        "main_render_callback_count": 0.0,
+        "player_render_callback_count": 0.0,
+        "player_update_callback_count": 0.0
+      }
+    },
+    {
+      "case": "camera_fix_80hz",
+      "matched_world_ticks": 720,
+      "maximum_absolute_differences": {
+        "player_x": 0.0,
+        "player_y": 0.0,
+        "player_velocity_x": 0.0,
+        "player_velocity_y": 0.0,
+        "native_scroll_x": 0.0,
+        "native_scroll_y": 0.0,
+        "main_render_callback_count": 0.0,
+        "player_render_callback_count": 0.0,
+        "player_update_callback_count": 0.0
+      }
+    }
+  ],
+  "camera_model_tests": "Executed 32-bit Windows console test: 45/60/80/90/100/144 Hz, variable 48-144 Hz intervals, stop/reversal/clamp continuity, frozen-world camera samples, stationary pause, lifecycle resets and invalid-time guards.",
+  "limitations": [
+    "One fixed-room fixture does not cover every camera mode, room type, moving pause or transition.",
+    "Camera display is delayed by one 60 Hz sample (about 16.7 ms); player input sampling and prediction remain unchanged.",
+    "Native sprite pixel snapping is retained; this does not claim to eliminate every sprite-level pixel step.",
+    "Physical VRR is not validated by these traces.",
+    "An initial startup timeout occurred before the camera pipeline ran; the successful retry is the measured case, and no startup root cause is claimed."
+  ]
+}

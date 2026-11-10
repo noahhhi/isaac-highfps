@@ -19,3 +19,7 @@ These compact reports retain case IDs, executable/DLL/fixture/configuration hash
 Native60 is the same J374 executable with the high-FPS component disabled. A DLL hash can still appear in that case's file manifest; the configuration hash and case setup identify its disabled role. An artifact hash is evidence of which file was used, not a universal compatibility result.
 
 The standalone test report does not validate startup patch installation or the full renderer. The ALL7 direct-spawn Update-owned RenderToTexture correction has its own passing report. Moving-pause and real rewind now have separate reports. Other untested lifecycle/menu/mod paths remain open, and runtime/physical VRR has not been validated. The earlier Blood Splat misses must not be described as harmless solely because the effect is short-lived.
+
+## Camera correction (0.13.0-j374.3)
+
+[camera-presentation.json](camera-presentation.json) checks the actual per-presentation camera fields against native bounds and the sampled endpoint interval. [greed-canonical.json](greed-canonical.json) independently compares native60, old90, new90 and new80 canonical events. Source is `1444261`; neither report is a physical VRR test or a universal pixel-level smoothness claim. The fixture is [large-room-greed-fixture.lua](../../tests/fixtures/large-room-greed-fixture.lua). The failed first candidate startup is retained as an unclassified installation-stage timeout, not a camera test pass.

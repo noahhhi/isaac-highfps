@@ -1,0 +1,340 @@
+{
+  "schema": 1,
+  "date": "2026-11-10",
+  "candidate_source_commit": "144426100ccf4f4527160ebfa93605fb40c9f3c3",
+  "purpose": "Verify canonical logic and camera state remain unchanged by independent camera presentation interpolation.",
+  "shared": {
+    "metadata": {
+      "seed": "1500427799",
+      "stageSeed": "1473973499",
+      "playerSeed": "3754715714",
+      "difficulty": "2",
+      "stage": "1",
+      "room": "84",
+      "shape": "4",
+      "bounds": "60.000,140.000,580.000,700.000",
+      "lane": "190.000",
+      "y_top": "220.000",
+      "y_bottom": "620.000",
+      "duration": "720"
+    },
+    "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+    "fixture_sha256": "32a5b046bc4625e07328fb35f5d5a750d00262ca9aefefdcb1b4ecbe98e7eb47",
+    "enabled_lua_manifest_sha256": "5843b9b342cf5cf839e93d186279a4c11e9b0db22951d6497dca80b9a5af4473",
+    "records_per_case": 2175,
+    "records_by_kind": {
+      "start": 1,
+      "main": 1440,
+      "phase_change": 13,
+      "update": 720,
+      "done": 1
+    },
+    "coverage": {
+      "travel_y": 464.00296,
+      "scroll_y_range": 181.999969,
+      "reverse_nonzero": 1.0,
+      "long_travel": 1.0,
+      "scroll_available": 1.0,
+      "main": 1440.0,
+      "u": 720.0
+    }
+  },
+  "runs": [
+    {
+      "id": "native60",
+      "complete": true,
+      "injected_dll_sha256": null,
+      "present_median_hz": null,
+      "present_samples": 0,
+      "world_updates_per_second_regression": 29.998975333418496,
+      "game_errors": 0,
+      "native_fatal_or_fallback_reports": 0,
+      "pure_state_or_lua_reports": 0
+    },
+    {
+      "id": "r5_90",
+      "complete": true,
+      "injected_dll_sha256": "64ef7294beac052590079c65ec8ec622142a81a3e4c8d79105e40418bb046318",
+      "present_median_hz": 90.00090000900009,
+      "present_samples": 1983,
+      "world_updates_per_second_regression": 30.000051883502273,
+      "game_errors": 0,
+      "native_fatal_or_fallback_reports": 0,
+      "pure_state_or_lua_reports": 0
+    },
+    {
+      "id": "camera_90",
+      "complete": true,
+      "injected_dll_sha256": "8b9c9d87fd55407d04a42a4eac88a3478c15d8d42fd1ac8ceb1d22b07ba9b372",
+      "present_median_hz": 90.00090000900009,
+      "present_samples": 1983,
+      "world_updates_per_second_regression": 29.999918465107264,
+      "game_errors": 0,
+      "native_fatal_or_fallback_reports": 0,
+      "pure_state_or_lua_reports": 0
+    },
+    {
+      "id": "camera_80",
+      "complete": true,
+      "injected_dll_sha256": "8b9c9d87fd55407d04a42a4eac88a3478c15d8d42fd1ac8ceb1d22b07ba9b372",
+      "present_median_hz": 79.99040115186179,
+      "present_samples": 1762,
+      "world_updates_per_second_regression": 29.999851949536463,
+      "game_errors": 0,
+      "native_fatal_or_fallback_reports": 0,
+      "pure_state_or_lua_reports": 0
+    }
+  ],
+  "comparisons": [
+    {
+      "baseline": "native60",
+      "trial": "r5_90",
+      "same_metadata": true,
+      "seed_comparison": {
+        "seed": {
+          "baseline": "1500427799",
+          "trial": "1500427799",
+          "equal": true
+        },
+        "stageSeed": {
+          "baseline": "1473973499",
+          "trial": "1473973499",
+          "equal": true
+        },
+        "playerSeed": {
+          "baseline": "3754715714",
+          "trial": "3754715714",
+          "equal": true
+        }
+      },
+      "same_exe_and_fixture": true,
+      "same_enabled_lua_sources": true,
+      "common_records": 2175,
+      "missing_or_extra_records": 0,
+      "event_order_identical": true,
+      "all_normalized_record_fields_exact": true,
+      "mismatching_records": 0,
+      "groups": {
+        "player_state": {
+          "exact": true,
+          "max_absolute_errors": {
+            "px": 0.0,
+            "py": 0.0,
+            "vx": 0.0,
+            "vy": 0.0,
+            "speed": 0.0
+          },
+          "field_mismatch_counts": {}
+        },
+        "camera_state": {
+          "exact": true,
+          "max_absolute_errors": {
+            "scroll_available": 0.0,
+            "scroll_x": 0.0,
+            "scroll_y": 0.0,
+            "screen_available": 0.0,
+            "screen_x": 0.0,
+            "screen_y": 0.0
+          },
+          "field_mismatch_counts": {}
+        },
+        "clocks_callbacks_input_queries": {
+          "exact": true,
+          "max_absolute_errors": {
+            "gf": 0.0,
+            "tc": 0.0,
+            "rf": 0.0,
+            "ui": 0.0,
+            "u": 0.0,
+            "main": 0.0,
+            "pu": 0.0,
+            "pr": 0.0,
+            "iq": 0.0
+          },
+          "field_mismatch_counts": {}
+        },
+        "input_phase": {
+          "exact": true,
+          "max_absolute_errors": {
+            "requested": 0.0,
+            "applied": 0.0
+          },
+          "field_mismatch_counts": {}
+        }
+      }
+    },
+    {
+      "baseline": "native60",
+      "trial": "camera_90",
+      "same_metadata": true,
+      "seed_comparison": {
+        "seed": {
+          "baseline": "1500427799",
+          "trial": "1500427799",
+          "equal": true
+        },
+        "stageSeed": {
+          "baseline": "1473973499",
+          "trial": "1473973499",
+          "equal": true
+        },
+        "playerSeed": {
+          "baseline": "3754715714",
+          "trial": "3754715714",
+          "equal": true
+        }
+      },
+      "same_exe_and_fixture": true,
+      "same_enabled_lua_sources": true,
+      "common_records": 2175,
+      "missing_or_extra_records": 0,
+      "event_order_identical": true,
+      "all_normalized_record_fields_exact": true,
+      "mismatching_records": 0,
+      "groups": {
+        "player_state": {
+          "exact": true,
+          "max_absolute_errors": {
+            "px": 0.0,
+            "py": 0.0,
+            "vx": 0.0,
+            "vy": 0.0,
+            "speed": 0.0
+          },
+          "field_mismatch_counts": {}
+        },
+        "camera_state": {
+          "exact": true,
+          "max_absolute_errors": {
+            "scroll_available": 0.0,
+            "scroll_x": 0.0,
+            "scroll_y": 0.0,
+            "screen_available": 0.0,
+            "screen_x": 0.0,
+            "screen_y": 0.0
+          },
+          "field_mismatch_counts": {}
+        },
+        "clocks_callbacks_input_queries": {
+          "exact": true,
+          "max_absolute_errors": {
+            "gf": 0.0,
+            "tc": 0.0,
+            "rf": 0.0,
+            "ui": 0.0,
+            "u": 0.0,
+            "main": 0.0,
+            "pu": 0.0,
+            "pr": 0.0,
+            "iq": 0.0
+          },
+          "field_mismatch_counts": {}
+        },
+        "input_phase": {
+          "exact": true,
+          "max_absolute_errors": {
+            "requested": 0.0,
+            "applied": 0.0
+          },
+          "field_mismatch_counts": {}
+        }
+      }
+    },
+    {
+      "baseline": "native60",
+      "trial": "camera_80",
+      "same_metadata": true,
+      "seed_comparison": {
+        "seed": {
+          "baseline": "1500427799",
+          "trial": "1500427799",
+          "equal": true
+        },
+        "stageSeed": {
+          "baseline": "1473973499",
+          "trial": "1473973499",
+          "equal": true
+        },
+        "playerSeed": {
+          "baseline": "3754715714",
+          "trial": "3754715714",
+          "equal": true
+        }
+      },
+      "same_exe_and_fixture": true,
+      "same_enabled_lua_sources": true,
+      "common_records": 2175,
+      "missing_or_extra_records": 0,
+      "event_order_identical": true,
+      "all_normalized_record_fields_exact": true,
+      "mismatching_records": 0,
+      "groups": {
+        "player_state": {
+          "exact": true,
+          "max_absolute_errors": {
+            "px": 0.0,
+            "py": 0.0,
+            "vx": 0.0,
+            "vy": 0.0,
+            "speed": 0.0
+          },
+          "field_mismatch_counts": {}
+        },
+        "camera_state": {
+          "exact": true,
+          "max_absolute_errors": {
+            "scroll_available": 0.0,
+            "scroll_x": 0.0,
+            "scroll_y": 0.0,
+            "screen_available": 0.0,
+            "screen_x": 0.0,
+            "screen_y": 0.0
+          },
+          "field_mismatch_counts": {}
+        },
+        "clocks_callbacks_input_queries": {
+          "exact": true,
+          "max_absolute_errors": {
+            "gf": 0.0,
+            "tc": 0.0,
+            "rf": 0.0,
+            "ui": 0.0,
+            "u": 0.0,
+            "main": 0.0,
+            "pu": 0.0,
+            "pr": 0.0,
+            "iq": 0.0
+          },
+          "field_mismatch_counts": {}
+        },
+        "input_phase": {
+          "exact": true,
+          "max_absolute_errors": {
+            "requested": 0.0,
+            "applied": 0.0
+          },
+          "field_mismatch_counts": {}
+        }
+      }
+    }
+  ],
+  "method": {
+    "key": [
+      "fixture f",
+      "kind",
+      "ordinal within identical f+kind"
+    ],
+    "ignored": "wall time t only",
+    "ui": "subtract the start event's UI counter, retain all subsequent deltas"
+  },
+  "scope": [
+    "HFLG records compare canonical player position/velocity, camera scroll and screen coordinates, clocks, callback counts and input query results. All recorded fields are compared, not only selected state columns.",
+    "Each trial has exactly the same 2175 event keys and sequence as native60. Only wall time t is excluded and UI counter initial offsets are subtracted.",
+    "Seed, stageSeed and playerSeed metadata are equal. No other per-entity InitSeed stream exists in HFLG; this does not establish stochastic entity equivalence.",
+    "Artifact fingerprints verify the game executable, test fixture and enabled Lua sources; they do not fingerprint all mod resources or configuration.",
+    "Native60 has no injected present-frame telemetry. Its nominal refresh is the test configuration, not independently measured here. The native60 artifact manifest contains a staged DLL hash, which is not evidence of that DLL being loaded.",
+    "Canonical equality alone does not prove visible intermediate-frame smoothness. Pixel analysis is a separate report.",
+    "The original camera90 attempt timed out during startup before the fixture. It is excluded; camera90 uses the completed retry. These results do not resolve the startup timeout cause.",
+    "This is one fixed-seed vertical scrolling Greed room, including reversal, at fixed 80 and 90 Hz. Other room geometries, runtime refresh changes and physical VRR are outside this comparison."
+  ]
+}

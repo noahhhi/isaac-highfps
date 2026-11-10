@@ -1,6 +1,6 @@
 # Repentance+ 1.9.7.15.J374 port
 
-Version `0.13.0-j374.2` builds a dedicated DLL for the 32-bit **1.9.7.15.J374** game. Final R5 production source is commit `7c2a47d`; the [R5 summary](validation/release-r5-evidence.json) binds the delivered DLL hash to its 80/100 Hz validation. Its development and build environment is Fedora WSL; runtime checks use an isolated Steam Deck/Proton game copy. The original J460 binary is incompatible with J374, including its update wrapper and graphics ABI. Do not remove version guards to load the other build.
+Version `0.13.0-j374.3` builds a dedicated DLL for the 32-bit **1.9.7.15.J374** game. Production camera source is commit `1444261`; [camera presentation](validation/camera-presentation.json) and [canonical Greed](validation/greed-canonical.json) reports bind its 80/90 Hz verification. The earlier R5 clocks remain covered by their original, separately hashed reports. Its development and build environment is Fedora WSL; runtime checks use an isolated Steam Deck/Proton game copy. The original J460 binary is incompatible with J374, including its update wrapper and graphics ABI. Do not remove version guards to load the other build.
 
 ## Executable and ABI boundary
 

@@ -32,7 +32,7 @@ J374's Manager counter increments at the end of its update. Even parity on entry
 
 ## Native previews
 
-Non-player entities interpolate between recorded authoritative positions. The player uses a short prediction window based on the original velocity, friction and time-scale fields. Camera/room-scroll preview follows the same presentation timeline. Before another authoritative update, the fork restores the engine's backup positions and scroll state.
+Non-player entities interpolate between recorded authoritative positions. The player uses a short prediction window based on the original velocity, friction and time-scale fields. Camera/room-scroll presentation independently interpolates `C_previous + cameraAlpha * (C_current - C_previous)`, with cameraAlpha from the 60 Hz main clock even when world/player prediction is frozen. This adds one main tick of camera display delay and does not add input or player-prediction delay. It preserves native camera easing and bounds instead of deriving room translation from a predicted player position; sprite pixel snapping remains native. Before another authoritative update, the fork restores the engine's backup positions and scroll state.
 
 The native per-type Interpolate methods are not repeatedly called for display frames: some of them also modify velocity, height or other simulation state. Temporary preview positions themselves are not authoritative speed measurements. Verification must compare positions immediately around native updates, together with wall time and game/Manager counters.
 
@@ -83,3 +83,11 @@ Caching a Lua parameter table does not establish that an arbitrary shader's reso
 The [canonical callback report](validation/canonical-overlay-comparison.json), [type/cadence report](validation/render-types-comparison.json), [room-transition matrix](validation/transition-matrix-comparison.json), [screen-shader parameter report](validation/shader-comparison.json), [menu curves](validation/menu-curve-comparison.json) and [ordinary floor report](validation/floor-comparison.json) support the bounded results quoted in the README. A final release should rerun the relevant gates against its exact DLL hash. Physical VRR, runtime refresh changes, broader shaders and untested floor/menu/lifecycle/mod cases must not be inferred from those reports. The [moving-pause](validation/pause-moving-comparison.json) and [real rewind](validation/rewind-comparison.json) reports establish their explicitly sampled paths; a live Lua VM replacement was not observed.
 
 The final R5 DLL and production source commit `7c2a47d` are tied together in [release evidence](validation/release-r5-evidence.json). A runtime compositor-limit experiment requested a new cap but measured unchanged cadence; it is explicitly excluded from variable-rate/VRR passing evidence.
+
+## Large-room camera regression
+
+The previous screen-lock algorithm assumed camera translation mirrored player movement. In the controlled Greed room, native vertical scroll had already clamped at -182, but presentation continued to -184.520 before snapping back to -182. At the other boundary it reached +2.702 instead of stopping at zero. The native camera itself and gameplay state matched native60; this was a presentation defect.
+
+The replacement uses the two engine-produced scroll samples as endpoints. Stop/reverse/clamp and scope-reset tests cover the interpolation math; 80/90 Hz Greed cases verify the actual preview fields, callback sequence and canonical state. See the separate camera/state reports in validation. The initial new-candidate 90-second startup timeout occurred during hook installation, before the fixture; its cause remains unclassified and it is excluded from successful camera cases.
+
+The engine's 30 Hz full-world phase, 60 Hz main phase and output cadence are distinct. Their scheduling is decoupled on the engine thread; output at 90 Hz does not request 90 logic updates. A separate rendering thread would additionally require immutable snapshots and an audit of native/Lua rendering mutations. This patch does not claim thread-level asynchronous rendering.

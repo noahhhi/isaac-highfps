@@ -9,5 +9,6 @@
   "overlay-side-effects.lua": "b5d12d00cd83b963fb028905480bf31c6fd2df964f3c1ecec7b50aa5ed79f1e3",
   "shader-probe/main.lua": "4646b76e9348117ce61b89572d2f68524de959045e256f5826f315f532924184",
   "shader-probe/metadata.xml": "3b076ebc284c6e87a20991672087d742db62dcc993c4f2879e92af092c49eaa3",
-  "shader-probe/content/shaders.xml": "e1ab30305d94d65795ea357a8a1a5b42d6a8528d3986a6b8f8bb78d078800b70"
+  "shader-probe/content/shaders.xml": "e1ab30305d94d65795ea357a8a1a5b42d6a8528d3986a6b8f8bb78d078800b70",
+  "large-room-greed-fixture.lua": "32a5b046bc4625e07328fb35f5d5a750d00262ca9aefefdcb1b4ecbe98e7eb47"
 }

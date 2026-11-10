@@ -6,7 +6,7 @@ These tests do not start Isaac, read process memory or open game saves. They com
 bash tests/run-tests.sh core
 ```
 
-`core` covers lifecycle debt, menu scalar timing, native UI snapshot/replay ownership, and mock draw-command capture/replay. It uses a normal native C++17 compiler when available. If native standard-library headers are unavailable, automatic selection falls back to the x86 MSVC build and requires `XWIN_ROOT` plus WSL Windows interop or Wine.
+`core` covers scheduler/lifecycle debt, camera presentation, menu scalar timing, native UI snapshot/replay ownership, and mock draw-command capture/replay. It uses a normal native C++17 compiler when available. If native standard-library headers are unavailable, automatic selection falls back to the x86 MSVC build and requires `XWIN_ROOT` plus WSL Windows interop or Wine.
 
 ```sh
 XWIN_ROOT=/path/to/x86-msvc-sysroot TEST_BACKEND=msvc \
@@ -30,6 +30,8 @@ The runtime is loaded from that path; it is not copied into the repository or bu
 `all` runs core and ABI tests, and runs shader plus offline Lua fixture tests when `SHADER_LUA_DLL` is supplied. Otherwise it prints an explicit optional skip. `TEST_BACKEND=native|msvc`, `CXX`, `CXXFLAGS`, `CLANG_CL`, `TEST_WINDOWS_RUNNER=auto|interop|wine`, `TEST_WINE_PREFIX` and `TEST_TIMEOUT` can override local tool choices. Use a dedicated test prefix if overriding its location.
 
 The existing `render_timing_test.cpp` is included in the core run without changing its source. It adds fixed-rate/variable-interval scheduler and motion-model checks; the lifecycle test also checks explicit exclusion versus retained ordinary debt.
+
+`camera_presentation_test.cpp` checks the production camera helper independently of player prediction: monotone native-camera easing at 45/60/80/90/100/144 FPS, continuous stops/reversals/clamps, camera motion while world updates are frozen, stationary pause, room/epoch discontinuities, variable 48–144 Hz sample intervals and invalid-time guards. It checks sampled camera mathematics; it does not replace live large-room captures or physical VRR validation.
 
 Do not commit generated executables, object files, DLL inputs, prefixes, proprietary game files or saves. Unit success does not establish live-game timing, pixel output, physical VRR or arbitrary mod compatibility; those have separate validation reports under `docs/validation/`.
 
