@@ -1,0 +1,822 @@
+{
+  "schema": 1,
+  "date": "2026-11-10",
+  "feature": "Regret direct-removal ghost icons, resource reload and fade",
+  "status": "R2 and R4 direct-removal image sequences verified; R4 native Blind option-choice supplement verified within measured scopes",
+  "source_mapping": "Working-tree candidate labels identify the exact tested DLL below; no committed-source mapping or later-binary equivalence is asserted. Lua source and fixture hashes identify actual test inputs.",
+  "method": {
+    "comparison": "SHA256 of decoded JPEG RGB icon crops; adjacent duplicate presentations collapsed, nonconsecutive duplicates retained. Capture times are GstMultiFileSink timestamps.",
+    "left_roi_xyxy": [
+      470,
+      140,
+      535,
+      225
+    ],
+    "right_roi_xyxy": [
+      748,
+      160,
+      812,
+      225
+    ],
+    "intervals": "Per-event exact frame ranges and event-relative timestamps appear below; no nominal-FPS index estimate.",
+    "native_capture_gaps": "Two native gaps >25ms at indices19 and67 are outside measured fade windows."
+  },
+  "cases": {
+    "native60": {
+      "case_id": "regret-native60-visible-20261110",
+      "dll_present_sha256": "4119e933accfafc8f156b511f84916655825607947a9ff345bac32653bbfe9ec",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "bb2e83844e01e0fa0a22224ffcff2eb31dc8eaa681af944739ed5ef9ccfbbccd",
+      "mod_main_lua_sha256": "d75c6713bc8c898ce993588112c2de5b53f109dcba11c6e818c75bb9bc3593e3",
+      "artifact_manifest_sha256": "dcf5613852d3ba817b098d5336b74b5a470ac8d9cf6c5ce156e9113cca37094e",
+      "game_log_sha256": "d59b55732b4fd9ad4a4d16ac43d339d41419942b224032e6d344bcf401cb45cf",
+      "highfps_enabled": false
+    },
+    "R1": {
+      "case_id": "regret-fixed90-visible-20261110",
+      "dll_present_sha256": "0221770be17b98e339bc7fb8de0ab322406d93f2fe9d721c4a3a640bc74785d1",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "bb2e83844e01e0fa0a22224ffcff2eb31dc8eaa681af944739ed5ef9ccfbbccd",
+      "mod_main_lua_sha256": "d75c6713bc8c898ce993588112c2de5b53f109dcba11c6e818c75bb9bc3593e3",
+      "artifact_manifest_sha256": "d220f262036f71e1395e04357d3aa3349a03e07d8217570d956fc3f854290884",
+      "game_log_sha256": "221ed48f51122adceab4f2ef61c58e72c75477af78590cd3af7ffe4878de950f",
+      "highfps_enabled": true
+    },
+    "R2": {
+      "case_id": "regret-r2-90-visible-20261110",
+      "dll_present_sha256": "c3344f15c61a2c377ef3da1496ff7fcabc94abe14deaa722e0d7883c022d723c",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "bb2e83844e01e0fa0a22224ffcff2eb31dc8eaa681af944739ed5ef9ccfbbccd",
+      "mod_main_lua_sha256": "d75c6713bc8c898ce993588112c2de5b53f109dcba11c6e818c75bb9bc3593e3",
+      "artifact_manifest_sha256": "20acb19dc5517549f2a87afe1059033d99362cabf4025213d41380cbc7c0a8e1",
+      "game_log_sha256": "39597b53fc205d25c31ca34d08fb965afce84b63c43537043aa497bf92aafb23",
+      "highfps_enabled": true
+    },
+    "R4_direct": {
+      "case_id": "regret-r4-90-visible-20261110",
+      "highfps_enabled": true,
+      "dll_present_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "bb2e83844e01e0fa0a22224ffcff2eb31dc8eaa681af944739ed5ef9ccfbbccd",
+      "mod_main_lua_sha256": "d75c6713bc8c898ce993588112c2de5b53f109dcba11c6e818c75bb9bc3593e3",
+      "artifact_manifest_sha256": "1bbd2a6295e93ee03759de7668f264eca9922317581d71b3445893d025262062",
+      "game_log_sha256": "2cdf6b54fc2891d589c79dfb7df026384bed216a4a21cf4f34cadc88b647ad7a",
+      "diagnostic_lines": {
+        "[entity-cache-miss]": 0,
+        "[pure-state]": 0,
+        "[pure-lua]": 0,
+        "[FATAL]": 0
+      }
+    }
+  },
+  "r1_vs_native": [
+    {
+      "name": "first_left",
+      "roi": [
+        470,
+        140,
+        535,
+        225
+      ],
+      "native_frames": [
+        126,
+        185
+      ],
+      "candidate_frames": [
+        185,
+        272
+      ],
+      "native_distinct_consecutive": 60,
+      "candidate_distinct_consecutive": 59,
+      "sequence_equal": false,
+      "candidate_is_native_without_first": true,
+      "native_remove_to_first_ms": 33.66843299999989,
+      "candidate_remove_to_first_ms": 54.47491699999985,
+      "native_first_to_final_clear_ms": 1000.353252,
+      "candidate_first_to_final_clear_ms": 979.4026069999999,
+      "native_remove_to_final_clear_ms": 1034.021685,
+      "candidate_remove_to_final_clear_ms": 1033.8775239999998,
+      "matched_distinct_samples": 59,
+      "matched_sample_phase_error_ms_max_abs": 5.454032999999914
+    },
+    {
+      "name": "second_right",
+      "roi": [
+        748,
+        160,
+        812,
+        225
+      ],
+      "native_frames": [
+        246,
+        305
+      ],
+      "candidate_frames": [
+        363,
+        452
+      ],
+      "native_distinct_consecutive": 60,
+      "candidate_distinct_consecutive": 60,
+      "sequence_equal": true,
+      "candidate_is_native_without_first": false,
+      "native_remove_to_first_ms": 33.143402999999516,
+      "candidate_remove_to_first_ms": 33.72103400000004,
+      "native_first_to_final_clear_ms": 1000.0110710000004,
+      "candidate_first_to_final_clear_ms": 999.273531,
+      "native_remove_to_final_clear_ms": 1033.154474,
+      "candidate_remove_to_final_clear_ms": 1032.9945650000002,
+      "matched_distinct_samples": 60,
+      "matched_sample_phase_error_ms_max_abs": 6.141733999999843
+    },
+    {
+      "name": "simultaneous_left",
+      "roi": [
+        470,
+        140,
+        535,
+        225
+      ],
+      "native_frames": [
+        426,
+        485
+      ],
+      "candidate_frames": [
+        633,
+        722
+      ],
+      "native_distinct_consecutive": 60,
+      "candidate_distinct_consecutive": 60,
+      "sequence_equal": true,
+      "candidate_is_native_without_first": false,
+      "native_remove_to_first_ms": 33.243133000000036,
+      "candidate_remove_to_first_ms": 33.090801999999364,
+      "native_first_to_final_clear_ms": 1000.085392,
+      "candidate_first_to_final_clear_ms": 1000.6693820000007,
+      "native_remove_to_final_clear_ms": 1033.328525,
+      "candidate_remove_to_final_clear_ms": 1033.7601840000002,
+      "matched_distinct_samples": 60,
+      "matched_sample_phase_error_ms_max_abs": 6.217413999999977
+    },
+    {
+      "name": "simultaneous_right",
+      "roi": [
+        748,
+        160,
+        812,
+        225
+      ],
+      "native_frames": [
+        426,
+        486
+      ],
+      "candidate_frames": [
+        633,
+        724
+      ],
+      "native_distinct_consecutive": 61,
+      "candidate_distinct_consecutive": 61,
+      "sequence_equal": true,
+      "candidate_is_native_without_first": false,
+      "native_remove_to_first_ms": 33.243133000000036,
+      "candidate_remove_to_first_ms": 33.090801999999364,
+      "native_first_to_final_clear_ms": 1016.7415330000002,
+      "candidate_first_to_final_clear_ms": 1021.3406469999998,
+      "native_remove_to_final_clear_ms": 1049.9846660000003,
+      "candidate_remove_to_final_clear_ms": 1054.431448999999,
+      "matched_distinct_samples": 61,
+      "matched_sample_phase_error_ms_max_abs": 6.217413999999977
+    }
+  ],
+  "r2_vs_native": [
+    {
+      "name": "first_left",
+      "roi": [
+        470,
+        140,
+        535,
+        225
+      ],
+      "native_frames": [
+        126,
+        185
+      ],
+      "candidate_frames": [
+        183,
+        272
+      ],
+      "native_distinct_consecutive": 60,
+      "candidate_distinct_consecutive": 60,
+      "sequence_equal": true,
+      "candidate_is_native_without_first": false,
+      "native_remove_to_first_ms": 33.66843299999989,
+      "candidate_remove_to_first_ms": 33.072482999999764,
+      "native_first_to_final_clear_ms": 1000.353252,
+      "candidate_first_to_final_clear_ms": 1000.0151710000002,
+      "native_remove_to_final_clear_ms": 1034.021685,
+      "candidate_remove_to_final_clear_ms": 1033.087654,
+      "matched_distinct_samples": 60,
+      "matched_sample_phase_error_ms_max_abs": 6.5847049999998575
+    },
+    {
+      "name": "second_right",
+      "roi": [
+        748,
+        160,
+        812,
+        225
+      ],
+      "native_frames": [
+        246,
+        305
+      ],
+      "candidate_frames": [
+        363,
+        452
+      ],
+      "native_distinct_consecutive": 60,
+      "candidate_distinct_consecutive": 60,
+      "sequence_equal": true,
+      "candidate_is_native_without_first": false,
+      "native_remove_to_first_ms": 33.143402999999516,
+      "candidate_remove_to_first_ms": 32.26001300000014,
+      "native_first_to_final_clear_ms": 1000.0110710000004,
+      "candidate_first_to_final_clear_ms": 1000.2020709999995,
+      "native_remove_to_final_clear_ms": 1033.154474,
+      "candidate_remove_to_final_clear_ms": 1032.4620839999995,
+      "matched_distinct_samples": 60,
+      "matched_sample_phase_error_ms_max_abs": 6.497234999999435
+    },
+    {
+      "name": "simultaneous_left",
+      "roi": [
+        470,
+        140,
+        535,
+        225
+      ],
+      "native_frames": [
+        426,
+        485
+      ],
+      "candidate_frames": [
+        633,
+        722
+      ],
+      "native_distinct_consecutive": 60,
+      "candidate_distinct_consecutive": 60,
+      "sequence_equal": true,
+      "candidate_is_native_without_first": false,
+      "native_remove_to_first_ms": 33.243133000000036,
+      "candidate_remove_to_first_ms": 33.06776300000003,
+      "native_first_to_final_clear_ms": 1000.085392,
+      "candidate_first_to_final_clear_ms": 1000.0009209999998,
+      "native_remove_to_final_clear_ms": 1033.328525,
+      "candidate_remove_to_final_clear_ms": 1033.0686839999998,
+      "matched_distinct_samples": 60,
+      "matched_sample_phase_error_ms_max_abs": 7.25326500000012
+    },
+    {
+      "name": "simultaneous_right",
+      "roi": [
+        748,
+        160,
+        812,
+        225
+      ],
+      "native_frames": [
+        426,
+        486
+      ],
+      "candidate_frames": [
+        633,
+        724
+      ],
+      "native_distinct_consecutive": 61,
+      "candidate_distinct_consecutive": 61,
+      "sequence_equal": true,
+      "candidate_is_native_without_first": false,
+      "native_remove_to_first_ms": 33.243133000000036,
+      "candidate_remove_to_first_ms": 33.06776300000003,
+      "native_first_to_final_clear_ms": 1016.7415330000002,
+      "candidate_first_to_final_clear_ms": 1022.2285170000002,
+      "native_remove_to_final_clear_ms": 1049.9846660000003,
+      "candidate_remove_to_final_clear_ms": 1055.2962800000003,
+      "matched_distinct_samples": 61,
+      "matched_sample_phase_error_ms_max_abs": 7.25326500000012
+    }
+  ],
+  "r2_capture": {
+    "frames": 810,
+    "median_delta_ms": 11.04772700000023,
+    "maximum_delta_ms": 13.405028999999956,
+    "gaps_over_25ms": 0
+  },
+  "inherited_tail_blink": {
+    "native_blank_frame": 485,
+    "native_final_faint_frame": 486,
+    "candidate_blank_frame": 722,
+    "candidate_final_faint_frames": [
+      723,
+      724
+    ],
+    "scope": "same behavior in native; mod ipairs/table.remove skips shifted next element for one canonical render"
+  },
+  "scope_limits": [
+    "Base R2 section covers direct removal; the separate R4 supplement covers a constructed native Blind option group. Shops and naturally rolled room generation remain unverified.",
+    "R1 missed exactly the first native ghost state; R2 recovered it in actual captures.",
+    "R2 simultaneous icons match native separately; no claim of arbitrary resource churn compatibility.",
+    "Spawn InitSeeds differed despite equal start seed, fixture and executable; no whole-RNG equivalence claim.",
+    "Pixel crops prove measured rendering only; capture timestamps are not physical input-to-photon or VRR measurements.",
+    "No third-party mod source/resources, game binaries, captures, saves, private paths or full mod list are bundled."
+  ],
+  "native_blind_option_choice": {
+    "scope": "Constructed native Blind option group, natural pickup/removal, observed unpicked Inner Eye ghost",
+    "native_case": "regret-blind-native60-20261110",
+    "r4_case": "regret-blind-r4-90-20261110",
+    "callback_state_records": {
+      "native": 45,
+      "r4": 45,
+      "all_fields_exact": true
+    },
+    "viewed_images": {
+      "native_question_marks": 30,
+      "r4_question_marks": 180,
+      "native_selected_onion_unpicked_eye": 120,
+      "r4_selected_onion_unpicked_eye": 270
+    },
+    "ghost_roi_xyxy": [
+      742,
+      355,
+      814,
+      440
+    ],
+    "native_visible_eye_frames": [
+      112,
+      154
+    ],
+    "r4_visible_eye_frames": [
+      251,
+      340
+    ],
+    "native_visible_samples": 43,
+    "r4_visible_samples": 90,
+    "native_to_r4_image_matches": {
+      "exact": 23,
+      "n": 43,
+      "max_mae_rgb": 0.17211328976034856,
+      "median_mae_rgb": 0.0,
+      "max_absolute_capture_time_difference_ms": 5.777322999999779,
+      "matches": [
+        {
+          "native_frame": 112,
+          "r4_frame": 252,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -5.602192000000006
+        },
+        {
+          "native_frame": 113,
+          "r4_frame": 254,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": 1.113672000000232
+        },
+        {
+          "native_frame": 114,
+          "r4_frame": 255,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -5.715281999999711
+        },
+        {
+          "native_frame": 115,
+          "r4_frame": 257,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": 1.4661420000003922
+        },
+        {
+          "native_frame": 116,
+          "r4_frame": 258,
+          "mae_rgb": 0.11628540305010893,
+          "capture_time_difference_ms": -5.59975200000018
+        },
+        {
+          "native_frame": 117,
+          "r4_frame": 261,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -5.701112000000119
+        },
+        {
+          "native_frame": 118,
+          "r4_frame": 263,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": 1.0994520000000563
+        },
+        {
+          "native_frame": 119,
+          "r4_frame": 264,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -5.698832000000209
+        },
+        {
+          "native_frame": 120,
+          "r4_frame": 267,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -5.48361200000036
+        },
+        {
+          "native_frame": 121,
+          "r4_frame": 270,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -5.536122000000088
+        },
+        {
+          "native_frame": 122,
+          "r4_frame": 273,
+          "mae_rgb": 0.13927015250544664,
+          "capture_time_difference_ms": -5.526252999999759
+        },
+        {
+          "native_frame": 123,
+          "r4_frame": 276,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -5.476112999999838
+        },
+        {
+          "native_frame": 124,
+          "r4_frame": 278,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -0.17135899999987103
+        },
+        {
+          "native_frame": 125,
+          "r4_frame": 279,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -5.777322999999779
+        },
+        {
+          "native_frame": 126,
+          "r4_frame": 281,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -0.1149489999998643
+        },
+        {
+          "native_frame": 127,
+          "r4_frame": 282,
+          "mae_rgb": 0.11083877995642703,
+          "capture_time_difference_ms": -5.576283000000348
+        },
+        {
+          "native_frame": 128,
+          "r4_frame": 285,
+          "mae_rgb": 0.1596949891067538,
+          "capture_time_difference_ms": -5.4890130000000426
+        },
+        {
+          "native_frame": 129,
+          "r4_frame": 288,
+          "mae_rgb": 0.16715686274509803,
+          "capture_time_difference_ms": -5.585292999999769
+        },
+        {
+          "native_frame": 130,
+          "r4_frame": 290,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": 1.0044420000001608
+        },
+        {
+          "native_frame": 131,
+          "r4_frame": 291,
+          "mae_rgb": 0.12913943355119825,
+          "capture_time_difference_ms": -5.671152999999762
+        },
+        {
+          "native_frame": 132,
+          "r4_frame": 293,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": 1.4631630000003781
+        },
+        {
+          "native_frame": 133,
+          "r4_frame": 294,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -5.692183000000295
+        },
+        {
+          "native_frame": 134,
+          "r4_frame": 296,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": 1.3121229999999429
+        },
+        {
+          "native_frame": 135,
+          "r4_frame": 297,
+          "mae_rgb": 0.14520697167755992,
+          "capture_time_difference_ms": -5.394813000000109
+        },
+        {
+          "native_frame": 136,
+          "r4_frame": 299,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -0.03283800000009052
+        },
+        {
+          "native_frame": 137,
+          "r4_frame": 300,
+          "mae_rgb": 0.13513071895424836,
+          "capture_time_difference_ms": -4.84098200000016
+        },
+        {
+          "native_frame": 138,
+          "r4_frame": 303,
+          "mae_rgb": 0.11056644880174292,
+          "capture_time_difference_ms": -5.383721999999924
+        },
+        {
+          "native_frame": 139,
+          "r4_frame": 306,
+          "mae_rgb": 0.08017429193899782,
+          "capture_time_difference_ms": -5.5488430000001365
+        },
+        {
+          "native_frame": 140,
+          "r4_frame": 308,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": 1.0128019999999793
+        },
+        {
+          "native_frame": 141,
+          "r4_frame": 309,
+          "mae_rgb": 0.17211328976034856,
+          "capture_time_difference_ms": -5.557062000000279
+        },
+        {
+          "native_frame": 142,
+          "r4_frame": 312,
+          "mae_rgb": 0.14586056644880174,
+          "capture_time_difference_ms": -5.623641999999762
+        },
+        {
+          "native_frame": 143,
+          "r4_frame": 314,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -0.12944899999967063
+        },
+        {
+          "native_frame": 144,
+          "r4_frame": 317,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -0.12709900000018592
+        },
+        {
+          "native_frame": 145,
+          "r4_frame": 318,
+          "mae_rgb": 0.14842047930283223,
+          "capture_time_difference_ms": -5.4982219999999415
+        },
+        {
+          "native_frame": 146,
+          "r4_frame": 321,
+          "mae_rgb": 0.12031590413943355,
+          "capture_time_difference_ms": -5.596612000000167
+        },
+        {
+          "native_frame": 147,
+          "r4_frame": 324,
+          "mae_rgb": 0.15299564270152508,
+          "capture_time_difference_ms": -5.73118199999989
+        },
+        {
+          "native_frame": 148,
+          "r4_frame": 326,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": -0.2794790000000269
+        },
+        {
+          "native_frame": 149,
+          "r4_frame": 327,
+          "mae_rgb": 0.11481481481481481,
+          "capture_time_difference_ms": -5.725391999999996
+        },
+        {
+          "native_frame": 150,
+          "r4_frame": 329,
+          "mae_rgb": 0.0,
+          "capture_time_difference_ms": 1.5035619999999028
+        },
+        {
+          "native_frame": 151,
+          "r4_frame": 330,
+          "mae_rgb": 0.11410675381263617,
+          "capture_time_difference_ms": -5.675592000000229
+        },
+        {
+          "native_frame": 152,
+          "r4_frame": 333,
+          "mae_rgb": 0.14520697167755992,
+          "capture_time_difference_ms": -5.583743000000307
+        },
+        {
+          "native_frame": 153,
+          "r4_frame": 336,
+          "mae_rgb": 0.1377995642701525,
+          "capture_time_difference_ms": -5.572402999999948
+        },
+        {
+          "native_frame": 154,
+          "r4_frame": 339,
+          "mae_rgb": 0.12903050108932462,
+          "capture_time_difference_ms": -5.517152999999997
+        }
+      ]
+    },
+    "r4_to_sampled_native_max_best_mae_rgb": 2.4467320261437906,
+    "timing": {
+      "native_start_bracket_s": [
+        2.774462148,
+        2.807837061
+      ],
+      "native_clear_bracket_s": [
+        3.77441324,
+        3.807742983
+      ],
+      "r4_start_bracket_s": [
+        2.779822013,
+        2.792336962
+      ],
+      "r4_clear_bracket_s": [
+        3.780013945,
+        3.790929432
+      ],
+      "r4_first_visible_to_first_clear_ms": 998.5924700000002
+    },
+    "limits": [
+      "Native capture has dropped presentation samples; not all60 fade states can be compared exactly.",
+      "ROI includes native removal poof, so small pixel differences are reported rather than claiming exact full-region equality.",
+      "The comparison covers constructed OptionsPickupIndex71 under real Blind curse, not naturally rolled room generation or shop ghosts.",
+      "Inventory increments at fixture tick121 after pickup animation; the unpicked pedestal vanishes before tick90. Alignment uses actual image presence, not inventory increment."
+    ],
+    "artifacts": {
+      "native": {
+        "case_id": "regret-blind-native60-20261110",
+        "dll_present_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+        "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "8910e8038e0fa16f03e30c9f741708db3b376314ab54ce03030af74a88c0e69f",
+        "target_mod_lua_sha256": {
+          "main.lua": "d75c6713bc8c898ce993588112c2de5b53f109dcba11c6e818c75bb9bc3593e3"
+        },
+        "game_log_sha256": "28cd0e7a971ab3c4c232df2c353b47796431874a8ac7e4f127f366576ef719f3"
+      },
+      "R4": {
+        "case_id": "regret-blind-r4-90-20261110",
+        "dll_present_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+        "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "8910e8038e0fa16f03e30c9f741708db3b376314ab54ce03030af74a88c0e69f",
+        "target_mod_lua_sha256": {
+          "main.lua": "d75c6713bc8c898ce993588112c2de5b53f109dcba11c6e818c75bb9bc3593e3"
+        },
+        "game_log_sha256": "dd7acf717683ff05b61c733e9dfd27c061d4693f5374b0795f7296fa4b45d165",
+        "diagnostic_lines": {
+          "[entity-cache-miss]": 0,
+          "[pure-state]": 0,
+          "[pure-lua]": 0,
+          "[FATAL]": 0
+        }
+      }
+    },
+    "status": "R4 actual native option-choice behavior and captured ghost fade verified, with undersampled native-image limit",
+    "r4_ghost_contact_sheet_review": "All90 captured ghost crops were visually inspected: continuous fade, no disappearance/reappearance."
+  },
+  "r4_vs_native": [
+    {
+      "name": "first_left",
+      "roi": [
+        470,
+        140,
+        535,
+        225
+      ],
+      "native_frames": [
+        126,
+        185
+      ],
+      "candidate_frames": [
+        196,
+        285
+      ],
+      "native_distinct_consecutive": 60,
+      "candidate_distinct_consecutive": 60,
+      "sequence_equal": true,
+      "candidate_is_native_without_first": false,
+      "native_remove_to_first_ms": 33.66843299999989,
+      "candidate_remove_to_first_ms": 33.20386299999978,
+      "native_first_to_final_clear_ms": 1000.353252,
+      "candidate_first_to_final_clear_ms": 999.9468619999998,
+      "native_remove_to_final_clear_ms": 1034.021685,
+      "candidate_remove_to_final_clear_ms": 1033.1507249999995,
+      "matched_distinct_samples": 60,
+      "matched_sample_phase_error_ms_max_abs": 6.793996000000302
+    },
+    {
+      "name": "second_right",
+      "roi": [
+        748,
+        160,
+        812,
+        225
+      ],
+      "native_frames": [
+        246,
+        305
+      ],
+      "candidate_frames": [
+        376,
+        465
+      ],
+      "native_distinct_consecutive": 60,
+      "candidate_distinct_consecutive": 60,
+      "sequence_equal": true,
+      "candidate_is_native_without_first": false,
+      "native_remove_to_first_ms": 33.143402999999516,
+      "candidate_remove_to_first_ms": 33.28754300000014,
+      "native_first_to_final_clear_ms": 1000.0110710000004,
+      "candidate_first_to_final_clear_ms": 1000.0669609999999,
+      "native_remove_to_final_clear_ms": 1033.154474,
+      "candidate_remove_to_final_clear_ms": 1033.3545040000001,
+      "matched_distinct_samples": 60,
+      "matched_sample_phase_error_ms_max_abs": 8.923856000000008
+    },
+    {
+      "name": "simultaneous_left",
+      "roi": [
+        470,
+        140,
+        535,
+        225
+      ],
+      "native_frames": [
+        426,
+        485
+      ],
+      "candidate_frames": [
+        646,
+        735
+      ],
+      "native_distinct_consecutive": 60,
+      "candidate_distinct_consecutive": 60,
+      "sequence_equal": true,
+      "candidate_is_native_without_first": false,
+      "native_remove_to_first_ms": 33.243133000000036,
+      "candidate_remove_to_first_ms": 32.66683200000031,
+      "native_first_to_final_clear_ms": 1000.085392,
+      "candidate_first_to_final_clear_ms": 1000.0000320000008,
+      "native_remove_to_final_clear_ms": 1033.328525,
+      "candidate_remove_to_final_clear_ms": 1032.6668640000012,
+      "matched_distinct_samples": 60,
+      "matched_sample_phase_error_ms_max_abs": 8.044015000000293
+    },
+    {
+      "name": "simultaneous_right",
+      "roi": [
+        748,
+        160,
+        812,
+        225
+      ],
+      "native_frames": [
+        426,
+        486
+      ],
+      "candidate_frames": [
+        646,
+        737
+      ],
+      "native_distinct_consecutive": 61,
+      "candidate_distinct_consecutive": 61,
+      "sequence_equal": true,
+      "candidate_is_native_without_first": false,
+      "native_remove_to_first_ms": 33.243133000000036,
+      "candidate_remove_to_first_ms": 32.66683200000031,
+      "native_first_to_final_clear_ms": 1016.7415330000002,
+      "candidate_first_to_final_clear_ms": 1022.3625470000002,
+      "native_remove_to_final_clear_ms": 1049.9846660000003,
+      "candidate_remove_to_final_clear_ms": 1055.0293790000005,
+      "matched_distinct_samples": 61,
+      "matched_sample_phase_error_ms_max_abs": 8.044015000000293
+    }
+  ],
+  "r4_capture": {
+    "frames": 810,
+    "median_delta_ms": 11.099447999999512,
+    "maximum_delta_ms": 22.194334999999953,
+    "gaps_over_25ms": 0
+  },
+  "r4_vs_r2_note": "Each of the four R4 state sequences matches the native reference exactly, as did R2. This establishes identical measured image-state sequences through their common reference, with separately measured presentation times.",
+  "r4_inherited_tail_blink": {
+    "native_blank_frame": 485,
+    "native_final_faint_frame": 486,
+    "candidate_blank_frame": 735,
+    "candidate_final_faint_frames": [
+      736,
+      737
+    ],
+    "scope": "same behavior in native; mod ipairs/table.remove skips shifted next element for one canonical render"
+  }
+}

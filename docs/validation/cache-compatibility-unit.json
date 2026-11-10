@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-11-10",
+  "game_build": "1.9.7.15.J374",
+  "scope": "Native UI draw capture/replay compatibility changes R1, R2 and the R3 initialization follow-up; canonical Lua cadence retained",
+  "implementation": [
+    "Validate and replay native coloroffset, champion, dogma and gold Sprite shaders with their supported vertex layouts and Transform/Texture0 uniform contract.",
+    "Seal deferred caller-written vertices before format changes; replay supported image vertex formats in order and restore recorded image fields under a valid texture-generation contract. This is not arbitrary GPU sampler-state replay.",
+    "Seal before texture deletion; allow unrelated texture deletion and native nonexistent-name no-ops while rejecting captured-image and framebuffer dependencies.",
+    "Validate texture IDs and deletion generations, shader program/descriptor generations, and render context before replay; preserve native resource references and fresh frame depth.",
+    "Preserve GL deletion dispatch chains, immediately re-arm a lazy resolver before a second deletion, and conservatively invalidate on foreign-thread or unknown context deletion.",
+    "Permit only audited native texture parameter/base-level byte-upload initialization on a known current-unit texture with no captured/target dependency; same-value parameters are no-ops, other changes advance resource generations."
+  ],
+  "source_sha256": {
+    "src/entity_draw_cache_j374_runtime.h": "bb813d577924a9f99b43fe682b9355ad454a28c34cf1cac614e7efac79ff493e",
+    "src/entity_draw_cache_probe.h": "703d5db3d2f9119df3b29681277736b79369a42ff66d062119571689cd31df7f",
+    "src/entity_draw_cache_j374_hooks.h": "7da090e8feaef35f3fe5355c0456a3bc12f65ef2f8232492cd374b5892c79566"
+  },
+  "standalone_validation": {
+    "core": {
+      "command": "tests/run-tests.sh core",
+      "result": "passed"
+    },
+    "abi": {
+      "command": "tests/run-tests.sh abi",
+      "result": "passed",
+      "execution": "x86 Windows binary via WSL interop",
+      "checks": [
+        "Actual NativeBackend shader/layout selection and extra-uniform rejection",
+        "Shader program and descriptor generation changes",
+        "Ordered shared-image formats, deferred vertex attributes, final state, and failed-submit resource restoration",
+        "Native reference acquisition/release and thiscall/fastcall/stdcall observer ABI",
+        "Texture delete: unrelated, current quad, native render target, color framebuffer attachment, invalid arguments, zero and nonexistent names",
+        "Primary/palette same-name texture generation reuse and foreign-thread epoch",
+        "Two deletions through a lazy resolver preserve the original target and both reach the observer",
+        "Canonical main callback, empty scopes, epoch invalidation, foreign-thread and non-render forwarding",
+        "Audited native initialization: executable three/nine-argument call-site ABI stubs, bound-unit texture identity, same-value parameters, supported base-level uploads, dependency/FBO/unknown rejection and lazy dispatch targets"
+      ]
+    },
+    "native_instruction_guards": {
+      "result": "matched exact decrypted J374 bytes",
+      "addresses": [
+        "0xA711E0",
+        "0xA711EF",
+        "0xA15E76",
+        "0xA0C70F",
+        "0xA71317",
+        "0xA7132C",
+        "0xA71341",
+        "0xA71356",
+        "0xA71450",
+        "0xA71470",
+        "0xA714C9",
+        "0xA714E7",
+        "0xA71393",
+        "0xA71413"
+      ]
+    },
+    "diff_whitespace_check": "passed",
+    "test_source_sha256": {
+      "tests/entity_draw_cache_probe_test.cpp": "f83f59d67d48f54389748fb3bbab2160b7e45a543ee4d573dc6a75606b4aea81",
+      "tests/entity_draw_cache_runtime_test.cpp": "6c1384799b1626614a9801f5d5e63a0e98f0d6f8758e1f3adaeb95ea1a8b977f"
+    }
+  },
+  "regret_r2_runtime_diagnostics": {
+    "case": "regret-r2-90-visible-20261110",
+    "dll_sha256": "c3344f15c61a2c377ef3da1496ff7fcabc94abe14deaa722e0d7883c022d723c",
+    "fixture_sha256": "bb2e83844e01e0fa0a22224ffcff2eb31dc8eaa681af944739ed5ef9ccfbbccd",
+    "native_log_sha256": "7870a0ec64435344d6aae2d1810c03c47d5cbee1b4e01925d0f5f2af0d0331c9",
+    "game_log_sha256": "39597b53fc205d25c31ca34d08fb965afce84b63c43537043aa497bf92aafb23",
+    "fixture_completed": true,
+    "first_load_game_frame": 46,
+    "first_load_deleted_textures": [
+      {
+        "n": 1,
+        "first": 1163,
+        "second": 0,
+        "dependency": 0,
+        "attachment": 0,
+        "unknown": 0
+      },
+      {
+        "n": 1,
+        "first": 1164,
+        "second": 0,
+        "dependency": 0,
+        "attachment": 0,
+        "unknown": 0
+      }
+    ],
+    "present_before_load": {
+      "game_frame": 45,
+      "time_s": 38.525454
+    },
+    "present_after_load": {
+      "game_frame": 46,
+      "time_s": 38.536561,
+      "interval_ms": 11.106
+    },
+    "all_logged_cache_replay_misses": 0,
+    "all_logged_shader_rejections": 0,
+    "all_logged_reference_rejections": 0,
+    "unsafe_operation_log_entries": 0,
+    "main_callback_logged_buckets": {
+      "canonical": 790,
+      "replay_hits": 1156,
+      "replay_misses": 0
+    },
+    "comparison": "R1 first load at frame 46 rejected the whole main scope for glDeleteTextures and missed two presentations; R2 observes both unrelated deletions without a scope rejection.",
+    "visual_verification": "Separate image comparison owned by another reviewer; diagnostic success alone does not prove rendered pixels.",
+    "source_revision_scope": "Historical R2; source hashes are in historical_R2_source_sha256. This is not a runtime test of the later R3 initialization follow-up or a combined lifecycle candidate."
+  },
+  "readiness": {
+    "assessment": "R3 standalone core/ABI checks pass; the historical R2 runtime result remains valid for that hash only. Final combined-build startup, feature and lifecycle runtime checks are separate acceptance gates.",
+    "source_modified_during_review": false
+  },
+  "limits": [
+    "Not a claim of compatibility with every enabled mod or arbitrary native GL extension.",
+    "Unknown uniforms, unsupported draws, uploads outside the audited initialization path and unexpressed render-target/GL mutations still reject a capture rather than rerun Lua. Arbitrary sampler-state replay is not supported.",
+    "Texture deletion tracking covers the checked engine dispatch; arbitrary external GL pointers are outside this verified coverage.",
+    "Shader reflection remains uncached; tested GoodTrip workload showed a small measured per-frame cost, not a guarantee for every HUD.",
+    "Unit tests and diagnostic counters do not replace actual feature UI images, motion, interaction or physical VRR validation."
+  ],
+  "historical_R2_source_sha256": {
+    "src/entity_draw_cache_j374_runtime.h": "15af44b83d05ade2f785373606b699c6aa0494f066d4663d95f442947916582c",
+    "src/entity_draw_cache_probe.h": "7cd9a7664569856473fe2e405728a78cea33c380a15b8d4dcc32f30ad3dda7a1",
+    "src/entity_draw_cache_j374_hooks.h": "7da090e8feaef35f3fe5355c0456a3bc12f65ef2f8232492cd374b5892c79566"
+  },
+  "bethany_R2_startup_diagnostic": {
+    "case": "bethany-normal-r2-90-20261110",
+    "game_frame": 0,
+    "callback": 32,
+    "replay_misses": 1,
+    "texture_parameter_unsafe_calls": 24,
+    "texture_upload_unsafe_calls": 3,
+    "interpretation": "First Sprite image loading inside player render; R3 support is restricted to audited native initialization calls. Visibility and final-build acceptance require separate evidence."
+  }
+}

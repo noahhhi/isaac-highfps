@@ -21,6 +21,8 @@ static int __cdecl OriginalMainMock(){
 }
 namespace highfps_entity_probe {
 struct RuntimeTestAccess {
+ static void TestTextureDelete();
+ static void TestTextureMutation();
  static void TestMain(){
   MainBackendMock backend;mainMock=&backend;
   static std::uint32_t rt=0;
@@ -125,7 +127,216 @@ static void TestSubmitFastPath(){
  assert(submitCalls==4);J374Hooks::cache=nullptr;
  std::puts("quad fast-path and null-parameter pass-through preserve submit depth: passed");
 }
+// Actual NativeBackend with a relocated J374 data image and GL reflection stubs.
+// This exercises production Describe/CanReplay/PrepareResource, not a lookalike.
+namespace highfps_entity_probe {
+struct NativeBackendTestAccess {
+ inline static std::uint8_t memory[0x900000]{};
+ inline static std::uint8_t attrs[4][9]={{5,6},{5,6,7},{5,6,7,4,3,2,1,3},{5,6,7,4,3,2,1,3,4}};
+ inline static bool extraUniform=false;
+ inline static unsigned formatCalls=0;
+ inline static int fbo=0,attachmentType=0x1702,attachmentName=77,boundTexture=99;
+ inline static int parameters[4]={0x2601,0x2702,0x2901,0x2901};
+ static void WINAPI TextureParameter(unsigned,unsigned pname,int*out){assert(pname>=0x2800&&pname<=0x2803);*out=parameters[pname-0x2800];}
+ static HGLRC WINAPI Context(){return reinterpret_cast<HGLRC>(0x12345678);}
+ static void WINAPI Attachment(unsigned,unsigned attachment,unsigned property,int*out){
+  if(attachment!=0x8CE0){*out=0;return;}
+  *out=property==0x8CD0?attachmentType:attachmentName;
+ }
+ static void Configure(NativeBackend&b){b.getInt_=&GetInt;b.isEnabled_=&Enabled;b.isTexture_=&IsTexture;b.getTextureParameter_=&TextureParameter;b.context_=&Context;b.knownContext_=Context();b.getAttachment_=&Attachment;b.getProgram_=&Program;b.getUniform_=&Uniform;}
+ static std::uint64_t ForeignEpoch(){return NativeBackend::foreignTextureEpoch_.load();}
+ static std::uintptr_t Address(std::uintptr_t va){assert(va>=0x400000&&va<0xD00000);return reinterpret_cast<std::uintptr_t>(memory+va-0x400000);}
+ template<class T>static T& At(std::uintptr_t va){return *reinterpret_cast<T*>(Address(va));}
+ static void WINAPI GetInt(unsigned property,int*p){
+  *p=property==0x8CA6?fbo:property==0x8CDF?1:property==0x84E0?0x84C0:property==0x8069?boundTexture:0;
+  if(property==0x0BA2 || property==0x0C10)for(int i=1;i<4;++i)p[i]=0;
+ }
+ static unsigned char WINAPI Enabled(unsigned){return 0;}
+ static unsigned char WINAPI IsTexture(unsigned name){return name&&name!=0xffffffffu;}
+ static void WINAPI Program(unsigned,unsigned property,int*out){*out=property==0x8B82?1:(extraUniform?3:2);}
+ static void WINAPI Uniform(unsigned,unsigned i,int,int*length,int*size,unsigned*type,char*out){
+  const char*name=i?"Texture0":"Transform";*length=int(std::strlen(name));*size=1;*type=i?0x8B5E:0x8B5C;std::strcpy(out,name);
+ }
+ static void __thiscall Format(void*image,const void*descriptor){
+  ++formatCalls;auto*p=static_cast<std::uint8_t*>(image);unsigned index=4;
+  const std::uintptr_t va[]={0xBCBCF0,0xBCBCD0,0xBAF720,0xBAF5E8};
+  for(unsigned i=0;i<4;++i)if(descriptor==reinterpret_cast<void*>(Address(va[i])))index=i;
+  assert(index<4);*reinterpret_cast<unsigned*>(p+0x20)=index<2?index:3;
+  *reinterpret_cast<void**>(p+0x34)=attrs[index];p[0x38]=index==0?2:index==1?3:index==2?8:9;
+  *reinterpret_cast<unsigned short*>(p+0x3A)=index==0?28:index==1?36:index==2?88:104;
+ }
+ static void Test(){
+  const std::uintptr_t descriptors[]={0xBCBCF0,0xBCBCD0,0xBAF720,0xBAF5E8};
+  const unsigned counts[]={2,3,8,9};
+  for(unsigned d=0;d<4;++d)for(unsigned i=0;i<counts[d];++i)At<unsigned>(descriptors[d]+8*i+4)=attrs[d][i];
+  const std::uintptr_t shaders[]={0xBD56F8,0xBD5724,0xBD5750,0xBD296C,0xBD2A74,0xBD2890,0xBD2788};
+  const unsigned tableIndices[]={0,10,15,16};
+  for(unsigned i=0;i<7;++i){
+   At<unsigned char>(shaders[i]+4)=1;At<unsigned>(shaders[i]+0x28)=100+i;
+   const auto descriptor=descriptors[i==4?3:2];At<unsigned>(shaders[i]+8)=unsigned(Address(descriptor));
+   At<unsigned>(shaders[i]+0xC)=i==4?9:8;
+   if(i>=3)At<unsigned>(0xAD2AF8+4*tableIndices[i-3])=unsigned(Address(shaders[i]));
+  }
+  NativeBackend b(Address);Configure(b);
+  void*vt[37]{};vt[2]=reinterpret_cast<void*>(Address(0xA06530));vt[3]=reinterpret_cast<void*>(Address(0xA06510));vt[30]=reinterpret_cast<void*>(Address(0xA711E0));vt[33]=reinterpret_cast<void*>(Address(0xA71260));
+  alignas(4) std::uint8_t image[0x80]{};*reinterpret_cast<void***>(image)=vt;
+  *reinterpret_cast<unsigned*>(image+0x78)=42;*reinterpret_cast<unsigned*>(image+0x7C)=43;
+  J374Hooks::setFormat=&Format;J374Hooks::gameThreadId=GetCurrentThreadId();
+  for(unsigned i=3;i<7;++i){
+   Format(image,reinterpret_cast<void*>(Address(descriptors[i==4?3:2])));
+   At<unsigned>(0xBD56C8)=unsigned(Address(shaders[i]));Command c;c.quad.image=image;
+   assert(b.Describe(image,c.layout,c.state));assert(c.layout.stride==(i==4?104:88));
+   assert(c.state.word[9]==Address(shaders[i])&&b.StateRepresentable(c.state));c.vertices.resize(4*c.layout.stride);
+   // Native scene rendering may have changed the same image to another known
+   // format. Preflight must allow ordered restoration, not require final==all.
+   Format(image,reinterpret_cast<void*>(Address(0xBCBCD0)));assert(b.CanReplay(c));
+   assert(b.PrepareResource(c));assert(image[0x38]==(i==4?9:8));
+   b.TextureDeleted(99);assert(b.CanReplay(c)); // Unrelated old image.
+   b.TextureDeleted(42);assert(!b.CanReplay(c));assert(std::strcmp(b.ReplayFailure(),"texture-name-or-generation-changed")==0);
+   assert(b.Describe(image,c.layout,c.state));assert(b.CanReplay(c)); // Same GLuint, new generation.
+   b.TextureDeleted(43);assert(!b.CanReplay(c));assert(b.Describe(image,c.layout,c.state));
+   b.ForeignTextureDelete();assert(!b.CanReplay(c));assert(b.Describe(image,c.layout,c.state));
+   extraUniform=true;assert(!b.CanReplay(c));extraUniform=false;
+   ++At<unsigned>(shaders[i]+0x28);assert(!b.CanReplay(c));--At<unsigned>(shaders[i]+0x28);
+   ++At<unsigned>(shaders[i]+8);assert(!b.CanReplay(c));--At<unsigned>(shaders[i]+8);
+  }
+  At<unsigned>(0xBD56C8)=0x1234;Layout layout;State state;assert(!b.Describe(image,layout,state));
+  At<unsigned>(0xBD56C8)=unsigned(Address(0xBD296C));Format(image,reinterpret_cast<void*>(Address(0xBAF5E8)));
+  assert(!b.Describe(image,layout,state)); // Champion layout with non-champion shader.
+  Format(image,reinterpret_cast<void*>(Address(0xBCBCD0)));At<unsigned>(0xBD56C8)=0x1234;
+  assert(b.Describe(image,layout,state)&&state.word[9]==Address(0xBD5724)); // get_batch overrides current shader.
+  Command final;final.quad.image=image;final.resourceOnly=true;assert(b.DescribeResource(image,final.layout,final.state));
+  final.state.word[21]=std::uint64_t(8)<<32|7;final.state.word[22]=std::uint64_t(10)<<32|9;
+  Format(image,reinterpret_cast<void*>(Address(0xBAF720)));assert(b.CanReplay(final)&&b.PrepareResource(final));
+  assert(*reinterpret_cast<unsigned*>(image+0x24)==7&&*reinterpret_cast<unsigned*>(image+0x30)==10);
+  unsigned texture=77;fbo=1;assert(b.AttachmentDependency(1,&texture)==1);
+  texture=99;assert(b.AttachmentDependency(1,&texture)==0);
+  attachmentType=-1;assert(b.AttachmentDependency(1,&texture)==-1);attachmentType=0x1702;fbo=0;
+  At<unsigned>(0xBD56CC)=unsigned(reinterpret_cast<std::uintptr_t>(image));texture=42;
+  assert(b.AttachmentDependency(1,&texture)==1);At<unsigned>(0xBD56CC)=0;
+  // Exercise the actual thiscall -> fastcall detour ABI repeatedly, including
+  // foreign-thread passthrough and an active capture's no-op/init/change paths.
+  MainBackendMock mock;Cache cache(mock);J374Hooks::cache=&cache;
+  J374Hooks::formatNoop=J374Hooks::formatInit=J374Hooks::formatChange=0;
+  volatile std::uintptr_t hookAddress=reinterpret_cast<std::uintptr_t>(&J374Hooks::SetFormat);
+  auto hook=reinterpret_cast<J374Hooks::FormatFn>(hookAddress);
+  assert(cache.Begin(Key{}));
+  for(int i=0;i<1000;++i)hook(image,reinterpret_cast<void*>(Address(0xBCBCD0)));
+  hook(image,reinterpret_cast<void*>(Address(0xBAF720)));
+  *reinterpret_cast<void**>(image+0x34)=nullptr;image[0x38]=0;
+  hook(image,reinterpret_cast<void*>(Address(0xBAF720)));cache.End();
+  assert(J374Hooks::formatNoop==1000&&J374Hooks::formatChange==1&&J374Hooks::formatInit==1);
+  J374Hooks::gameThreadId=0;hook(image,reinterpret_cast<void*>(Address(0xBCBCD0)));assert(image[0x38]==3);
+  assert(b.stats.uniformChecks>0&&b.stats.uniformGlQueries>=2*b.stats.uniformChecks);
+  J374Hooks::cache=nullptr;J374Hooks::setFormat=nullptr;
+  std::puts("native backend Sprite contracts, program/layout invalidation, format replay and setter ABI: passed");
+ }
+};
+}
+
+namespace highfps_entity_probe {
+struct TextureBackendMock:MainBackendMock {
+ bool StateUsesTexture(const State&s,std::uint32_t name)const override{return name&&s.word[29]==name;}
+ bool CommandUsesTexture(const Command&c,std::uint32_t name)const override{return name&&c.state.word[24]==name;}
+};
+static void** lazyDeleteSlot=nullptr;static unsigned deleteOriginalCalls=0;
+static void WINAPI DeleteMock(int,const unsigned*){++deleteOriginalCalls;}
+static void WINAPI LazyDeleteMock(int n,const unsigned*p){*lazyDeleteSlot=reinterpret_cast<void*>(&DeleteMock);DeleteMock(n,p);}
+void RuntimeTestAccess::TestTextureDelete(){
+ Host host;host.address=[](std::uintptr_t va){return va==0xA27220?reinterpret_cast<std::uintptr_t>(&LazyDeleteMock):NativeBackendTestAccess::Address(va);};
+ Runtime r(host);NativeBackendTestAccess::Configure(r.backend_);
+ TextureBackendMock backend;backend.state.word[24]=42;backend.state.word[29]=88;
+ r.cache_.~Cache();new(&r.cache_)Cache(backend);r.installed_=true;Runtime::active_=&r;
+ J374Hooks::gameThreadId=GetCurrentThreadId();J374Hooks::cache=&r.cache_;
+ Runtime::deleteTarget_.store(&DeleteMock);
+ Key key{};Quad quad;quad.image=&backend;
+ auto capture=[&](){assert(r.cache_.Begin(key));const bool b=r.cache_.BeforeQuad(quad);assert(b);r.cache_.AfterQuad(b,backend.vertices);};
+ capture();float extra=123;std::memcpy(backend.vertices+12,&extra,4);
+ unsigned unrelated=99;Runtime::DeleteTextures(1,&unrelated);
+ // Delete hook must seal before native work can disturb pending storage.
+ std::memset(backend.vertices,0,sizeof backend.vertices);r.cache_.End();assert(r.cache_.Replay(key));
+ float got;std::memcpy(&got,backend.vertices+12,4);assert(got==123&&r.deleteUnrelated_==1);
+ capture();unsigned used=42;Runtime::DeleteTextures(1,&used);r.cache_.End();assert(!r.cache_.Replay(key));assert(r.deleteDependent_==1);
+ capture();used=88;Runtime::DeleteTextures(1,&used);r.cache_.End();assert(!r.cache_.Replay(key));assert(r.deleteDependent_==2);
+ capture();NativeBackendTestAccess::fbo=1;used=77;Runtime::DeleteTextures(1,&used);r.cache_.End();assert(!r.cache_.Replay(key));NativeBackendTestAccess::fbo=0;
+ capture();Runtime::DeleteTextures(1,nullptr);r.cache_.End();assert(!r.cache_.Replay(key));assert(r.deleteUnknown_==1);
+ capture();Runtime::DeleteTextures(0,nullptr);r.cache_.End();assert(r.cache_.Replay(key));
+ backend.state.word[24]=0xffffffffu;capture();unsigned absent=0xffffffffu;
+ Runtime::DeleteTextures(1,&absent);r.cache_.End();assert(r.cache_.Replay(key));backend.state.word[24]=42;
+ // A lazy resolver overwrites the engine import slot. The next delete in the
+ // same native unload must still pass through our observer and its original.
+ void*slot=reinterpret_cast<void*>(&Runtime::DeleteTextures);r.deleteSlot_=&slot;lazyDeleteSlot=&slot;
+ Runtime::deleteTarget_.store(&LazyDeleteMock);const auto before=deleteOriginalCalls;
+ capture();auto invoke=reinterpret_cast<Runtime::DeleteTexturesFn>(slot);invoke(1,&unrelated);
+ assert(slot==reinterpret_cast<void*>(&Runtime::DeleteTextures));assert(Runtime::deleteTarget_.load()==&DeleteMock);
+ reinterpret_cast<Runtime::DeleteTexturesFn>(slot)(1,&unrelated);r.cache_.End();assert(r.cache_.Replay(key));assert(deleteOriginalCalls==before+2);
+ const auto epoch=NativeBackendTestAccess::ForeignEpoch();J374Hooks::gameThreadId=0;
+ Runtime::DeleteTextures(1,&used);assert(NativeBackendTestAccess::ForeignEpoch()==epoch+1);
+ r.cache_.Clear();Runtime::active_=nullptr;J374Hooks::cache=nullptr;
+ std::puts("selective texture delete: seal, unrelated load, captured/RT/FBO dependencies, invalid args, lazy second delete and foreign epoch: passed");
+}
+}
+
+namespace highfps_entity_probe {
+static unsigned parameterCalls=0,imageCalls=0;static void**parameterMockSlot=nullptr;static void**imageMockSlot=nullptr;
+static void WINAPI ParameterMock(unsigned target,unsigned pname,int value){++parameterCalls;if(target==0xDE1&&pname>=0x2800&&pname<=0x2803)NativeBackendTestAccess::parameters[pname-0x2800]=value;}
+static void WINAPI ImageMock(unsigned target,int level,int internal,int width,int height,int border,unsigned format,unsigned type,const void*pixels){
+ ++imageCalls;assert(target==0xDE1&&internal==0x1908&&width==32&&height==32&&border==0&&format==0x1908&&type==0x1401&&pixels==reinterpret_cast<void*>(0x1234));assert(level==0||level==1);
+}
+static void WINAPI LazyParameterMock(unsigned a,unsigned b,int c){*parameterMockSlot=reinterpret_cast<void*>(&ParameterMock);ParameterMock(a,b,c);}
+static void WINAPI LazyImageMock(unsigned a,int b,int c,int d,int e,int f,unsigned g,unsigned h,const void*i){*imageMockSlot=reinterpret_cast<void*>(&ImageMock);ImageMock(a,b,c,d,e,f,g,h,i);}
+void RuntimeTestAccess::TestTextureMutation(){
+ // Machine stubs give production _ReturnAddress a checked native-style callsite
+ // and verify stack cleanup for the real three/nine-argument WINAPI hooks.
+ auto* code=static_cast<std::uint8_t*>(VirtualAlloc(nullptr,4096,MEM_COMMIT|MEM_RESERVE,PAGE_EXECUTE_READWRITE));assert(code);
+ auto stub=[](std::uint8_t*p,void*target,int args){std::size_t i=0;p[i++]=0x55;p[i++]=0x8b;p[i++]=0xec;
+  for(int a=args-1;a>=0;--a){p[i++]=0xff;p[i++]=0x75;p[i++]=std::uint8_t(8+4*a);}
+  p[i++]=0xb8;*reinterpret_cast<std::uint32_t*>(p+i)=unsigned(reinterpret_cast<std::uintptr_t>(target));i+=4;
+  p[i++]=0xff;p[i++]=0xd0;auto*ret=p+i;p[i++]=0x5d;p[i++]=0xc2;p[i++]=std::uint8_t(args*4);p[i++]=0;return ret;};
+ static std::uintptr_t parameterReturn=0,imageReturn=0;
+ parameterReturn=reinterpret_cast<std::uintptr_t>(stub(code,reinterpret_cast<void*>(&Runtime::TexParameteri),3));
+ imageReturn=reinterpret_cast<std::uintptr_t>(stub(code+128,reinterpret_cast<void*>(&Runtime::TexImage2D),9));
+ Host host;host.address=[](std::uintptr_t va){
+  if(va==0xA7131D)return parameterReturn;if(va==0xA71399)return imageReturn;
+  if(va==0xA3B740)return reinterpret_cast<std::uintptr_t>(&LazyParameterMock);
+  if(va==0xA3B3D0)return reinterpret_cast<std::uintptr_t>(&LazyImageMock);
+  return NativeBackendTestAccess::Address(va);
+ };
+ Runtime r(host);NativeBackendTestAccess::Configure(r.backend_);TextureBackendMock backend;
+ backend.state.word[24]=42;backend.state.word[29]=88;
+ r.cache_.~Cache();new(&r.cache_)Cache(backend);Runtime::active_=&r;J374Hooks::gameThreadId=GetCurrentThreadId();J374Hooks::cache=&r.cache_;
+ auto parameter=reinterpret_cast<Runtime::TexParameteriFn>(code);auto upload=reinterpret_cast<Runtime::TexImage2DFn>(code+128);
+ Runtime::parameterTarget_.store(&ParameterMock);Runtime::imageTarget_.store(&ImageMock);
+ auto start=[&](){assert(r.cache_.Begin(Key{}));Quad q;q.image=&backend;const auto b=r.cache_.BeforeQuad(q);assert(b);r.cache_.AfterQuad(b,backend.vertices);};
+ auto finish=[&](bool hit,unsigned reason=0){r.cache_.End();assert(r.cache_.Replay(Key{})==hit);if(!hit)assert(r.cache_.LastReplay().unsafeCode==reason);};
+ auto put=[&](int level=0){upload(0xDE1,level,0x1908,32,32,0,0x1908,0x1401,reinterpret_cast<void*>(0x1234));};
+ NativeBackendTestAccess::boundTexture=99;NativeBackendTestAccess::parameters[0]=0x2601;
+ start();float extra=321;std::memcpy(backend.vertices+12,&extra,4);parameter(0xDE1,0x2800,0x2600);std::memset(backend.vertices,0,64);put();finish(true);
+ float got;std::memcpy(&got,backend.vertices+12,4);assert(got==321&&r.mutationAllowed_==2);
+ NativeBackendTestAccess::boundTexture=42;start();parameter(0xDE1,0x2800,0x2600);finish(true); // Actual no-op on a captured texture.
+ start();parameter(0xDE1,0x2800,0x2601);finish(false,241);
+ start();put();finish(false,225); // Existing captured image storage mutation.
+ NativeBackendTestAccess::boundTexture=77;NativeBackendTestAccess::fbo=1;start();put();finish(false,225);NativeBackendTestAccess::fbo=0;
+ NativeBackendTestAccess::boundTexture=99;start();parameter(0xDE1,0x2800,0x2700);finish(false,241); // Unsupported filtering contract.
+ start();put(1);finish(false,225); // Non-base upload is not the proved initialization path.
+ start();Runtime::TexParameteri(0xDE1,0x2800,0x2600);finish(false,241); // Unknown caller remains guarded.
+ NativeBackendTestAccess::boundTexture=0;start();put();finish(false,225);NativeBackendTestAccess::boundTexture=99;
+ void*pslot=reinterpret_cast<void*>(&Runtime::TexParameteri),*islot=reinterpret_cast<void*>(&Runtime::TexImage2D);
+ r.parameterSlot_=&pslot;r.imageSlot_=&islot;parameterMockSlot=&pslot;imageMockSlot=&islot;
+ Runtime::parameterTarget_.store(&LazyParameterMock);Runtime::imageTarget_.store(&LazyImageMock);
+ start();parameter(0xDE1,0x2800,0x2600);put();finish(true);
+ assert(pslot==reinterpret_cast<void*>(&Runtime::TexParameteri)&&Runtime::parameterTarget_.load()==&ParameterMock);
+ assert(islot==reinterpret_cast<void*>(&Runtime::TexImage2D)&&Runtime::imageTarget_.load()==&ImageMock);
+ const auto epoch=NativeBackendTestAccess::ForeignEpoch();J374Hooks::gameThreadId=0;parameter(0xDE1,0x2800,0x2601);assert(NativeBackendTestAccess::ForeignEpoch()==epoch+1);
+ assert(parameterCalls==7&&imageCalls==6);r.cache_.Clear();Runtime::active_=nullptr;J374Hooks::cache=nullptr;VirtualFree(code,0,MEM_RELEASE);
+ std::puts("native texture initialization: verified caller ABI, seal, bound-unit identity, no-op, dependency/FBO/unknown rejection and lazy targets: passed");
+}
+}
+
 int main(){
+ NativeBackendTestAccess::Test();
+ RuntimeTestAccess::TestTextureDelete();
+ RuntimeTestAccess::TestTextureMutation();
  TestSubmitFastPath();
  TestRefs();
  RuntimeTestAccess::TestMain();

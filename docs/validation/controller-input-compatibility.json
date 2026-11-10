@@ -1,0 +1,1377 @@
+{
+  "schema": 1,
+  "date": "2026-11-10",
+  "game_build": "1.9.7.15.J374",
+  "scope": "Single-player Azazel + Analog Stick + Schoolbag with MCM bound to R3. Real engine input queries and attacks fed by a guarded process-local synthetic XInput source. Not physical-controller or Steam Input validation.",
+  "candidate_dll_sha256": "1a2b77b5cc0ba4fc63890f9d08e09a43674d7c4cf32506f9ef446cb46af8c139",
+  "source_summary_sha256": [
+    "2e8c7af019f2a99d9a754fcb45bd886ff4790db2e3fe949b2e14a3f08ef36afd",
+    "1a0be55994e17a9d61c18500f5fa9777ea39f277374b66756b06b96ad196720b",
+    "be6be8c77704a8fcc6ec110456f097ebbbf3059ae5b6ca1f57cce3331812f2ec"
+  ],
+  "source_sha256": {
+    "src/input_result_cache_j374.h": "61b453ff3a0afe1aa4c399afa72ac5df08935fcc5967ee1a436bf77f39c08a04"
+  },
+  "cases": [
+    {
+      "case": "controller-native60-v3-20261110",
+      "artifact_sha256": {
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "game/winmm.dll": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+        "game/isaac-highfps.ini": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+        "game/xinput1_4.dll": "771bbe933497ccec86c9bcb23f436dd1fe851bb06676ad2e7aaaead220307320",
+        "game/xinput1_3.dll": "771bbe933497ccec86c9bcb23f436dd1fe851bb06676ad2e7aaaead220307320",
+        "game/mods/highfps-validation/main.lua": "152c42e415839014847d1c51b0b3a806048c6471543eac4be1763fa9438b362c",
+        "game/mods/highfps-validation/ce_compat_probe.lua": "a31cf253d6d2f48f6b1fe853e9e955ff1822640e6e3f26b8533c0ba12843d7e7",
+        "launch-child.sh": "ef23841816a6f27d899a18cd00a637339119be99d2f53abe0196e0e90739e619"
+      },
+      "enabled_lua_manifest_sha256": "9c697550af503f2c6d3304dcb07135350315fe30469228d238305d49d98e0063",
+      "seed": 1500427799,
+      "inventory": [
+        {
+          "count": 1,
+          "id": 58
+        },
+        {
+          "count": 1,
+          "id": 105
+        },
+        {
+          "count": 1,
+          "id": 465
+        },
+        {
+          "count": 1,
+          "id": 534
+        }
+      ],
+      "controller_indices": [
+        1
+      ],
+      "sample_count": 1202,
+      "actual_present_median_hz": null,
+      "action_value_vectors": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.74185556173325,
+          0.0
+        ],
+        [
+          0.0,
+          0.58926528692245,
+          0.58926528692245,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.74181735515594,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "action_value_transition_sequence": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.58926528692245,
+          0.58926528692245,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.74181735515594,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.74185556173325,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "shoot_joystick_vectors": [
+        [
+          -1.0,
+          0.0
+        ],
+        [
+          0.0,
+          -1.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.70710676908493,
+          -0.70710676908493
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "trigger_event_sequence": [
+        {
+          "actions": [
+            "shoot_right"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_up"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_left"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_up"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_right"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        }
+      ],
+      "release_hold_manager_ticks": [
+        2,
+        2,
+        2
+      ],
+      "r3_press_release_sequence": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "visible_active_slot_changes": [
+        {
+          "from": "58:105",
+          "to": "105:58",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 0
+        },
+        {
+          "from": "105:58",
+          "to": "58:105",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 1
+        },
+        {
+          "from": "58:105",
+          "to": "105:58",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 1
+        },
+        {
+          "from": "105:58",
+          "to": "58:105",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 1
+        }
+      ],
+      "mcm_visibility_sequence": [
+        true,
+        false,
+        true,
+        false
+      ],
+      "menu_visibility_and_controls_pairs": [
+        [
+          false,
+          true
+        ],
+        [
+          true,
+          false
+        ]
+      ],
+      "final_active_slots": [
+        58,
+        105
+      ],
+      "sampled_player_positions": [
+        [
+          320.0,
+          280.0
+        ]
+      ],
+      "laser_events": [
+        {
+          "ordinal": 1,
+          "variant": 1,
+          "spawner_type": 1,
+          "init_seed": 1621702432,
+          "init_angle": 0.0,
+          "manager_ticks_after_latest_input_zero": 2
+        },
+        {
+          "ordinal": 2,
+          "variant": 1,
+          "spawner_type": 1,
+          "init_seed": 3052494990,
+          "init_angle": 0.0,
+          "manager_ticks_after_latest_input_zero": 2
+        }
+      ],
+      "game_error_count": 0,
+      "owned_proxy_cleanup_recorded": true,
+      "owned_control_file_remaining": false,
+      "highfps_enabled": false,
+      "artifact_dll_role": "staged but disabled",
+      "diagnostics": {
+        "pure_lua_reports": 0,
+        "pure_lua_reporting_limit_reached": false,
+        "pure_lua_callers": {},
+        "pure_state_reports": 0,
+        "fatal_reports": 0
+      },
+      "reported_input_cache_interval_sums": {
+        "0": {},
+        "1": {},
+        "2": {}
+      },
+      "input_cache_miss_detail_lines": 0,
+      "nonzero_skipped_store_lines": 0
+    },
+    {
+      "case": "controller-r4-90-20261110",
+      "artifact_sha256": {
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "game/winmm.dll": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+        "game/isaac-highfps.ini": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "game/xinput1_4.dll": "771bbe933497ccec86c9bcb23f436dd1fe851bb06676ad2e7aaaead220307320",
+        "game/xinput1_3.dll": "771bbe933497ccec86c9bcb23f436dd1fe851bb06676ad2e7aaaead220307320",
+        "game/mods/highfps-validation/main.lua": "152c42e415839014847d1c51b0b3a806048c6471543eac4be1763fa9438b362c",
+        "game/mods/highfps-validation/ce_compat_probe.lua": "a31cf253d6d2f48f6b1fe853e9e955ff1822640e6e3f26b8533c0ba12843d7e7",
+        "launch-child.sh": "ef23841816a6f27d899a18cd00a637339119be99d2f53abe0196e0e90739e619"
+      },
+      "enabled_lua_manifest_sha256": "9c697550af503f2c6d3304dcb07135350315fe30469228d238305d49d98e0063",
+      "seed": 1500427799,
+      "inventory": [
+        {
+          "id": 58,
+          "count": 1
+        },
+        {
+          "id": 105,
+          "count": 1
+        },
+        {
+          "id": 465,
+          "count": 1
+        },
+        {
+          "id": 534,
+          "count": 1
+        }
+      ],
+      "controller_indices": [
+        1
+      ],
+      "sample_count": 1202,
+      "actual_present_median_hz": 90.00900090009002,
+      "action_value_vectors": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.74185556173325,
+          0.0
+        ],
+        [
+          0.0,
+          0.58926528692245,
+          0.58926528692245,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.74181735515594,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "action_value_transition_sequence": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.58926528692245,
+          0.58926528692245,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.74181735515594,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.74185556173325,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "shoot_joystick_vectors": [
+        [
+          -1.0,
+          0.0
+        ],
+        [
+          0.0,
+          -1.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.70710676908493,
+          -0.70710676908493
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "trigger_event_sequence": [
+        {
+          "actions": [
+            "shoot_right"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_up"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_left"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_up"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_right"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        }
+      ],
+      "release_hold_manager_ticks": [
+        2,
+        2,
+        2
+      ],
+      "r3_press_release_sequence": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "visible_active_slot_changes": [
+        {
+          "from": "58:105",
+          "to": "105:58",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 1
+        },
+        {
+          "from": "105:58",
+          "to": "58:105",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 0
+        },
+        {
+          "from": "58:105",
+          "to": "105:58",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 0
+        },
+        {
+          "from": "105:58",
+          "to": "58:105",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 0
+        }
+      ],
+      "mcm_visibility_sequence": [
+        true,
+        false,
+        true,
+        false
+      ],
+      "menu_visibility_and_controls_pairs": [
+        [
+          false,
+          true
+        ],
+        [
+          true,
+          false
+        ]
+      ],
+      "final_active_slots": [
+        58,
+        105
+      ],
+      "sampled_player_positions": [
+        [
+          320.0,
+          280.0
+        ]
+      ],
+      "laser_events": [
+        {
+          "ordinal": 1,
+          "variant": 1,
+          "spawner_type": 1,
+          "init_seed": 2017594987,
+          "init_angle": 0.0,
+          "manager_ticks_after_latest_input_zero": 2
+        },
+        {
+          "ordinal": 2,
+          "variant": 1,
+          "spawner_type": 1,
+          "init_seed": 3921788796,
+          "init_angle": 0.0,
+          "manager_ticks_after_latest_input_zero": 2
+        }
+      ],
+      "game_error_count": 0,
+      "owned_proxy_cleanup_recorded": true,
+      "owned_control_file_remaining": false,
+      "highfps_enabled": true,
+      "artifact_dll_role": "enabled candidate",
+      "diagnostics": {
+        "pure_lua_reports": 64,
+        "pure_lua_reporting_limit_reached": true,
+        "pure_lua_callers": {
+          "008742DC": 64
+        },
+        "pure_state_reports": 0,
+        "fatal_reports": 0
+      },
+      "reported_input_cache_interval_sums": {
+        "0": {},
+        "1": {},
+        "2": {}
+      },
+      "input_cache_miss_detail_lines": 0,
+      "nonzero_skipped_store_lines": 0
+    },
+    {
+      "case": "controller-r5-90-20261110",
+      "artifact_sha256": {
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "game/winmm.dll": "1a2b77b5cc0ba4fc63890f9d08e09a43674d7c4cf32506f9ef446cb46af8c139",
+        "game/isaac-highfps.ini": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "game/xinput1_4.dll": "771bbe933497ccec86c9bcb23f436dd1fe851bb06676ad2e7aaaead220307320",
+        "game/xinput1_3.dll": "771bbe933497ccec86c9bcb23f436dd1fe851bb06676ad2e7aaaead220307320",
+        "game/mods/highfps-validation/main.lua": "152c42e415839014847d1c51b0b3a806048c6471543eac4be1763fa9438b362c",
+        "game/mods/highfps-validation/ce_compat_probe.lua": "a31cf253d6d2f48f6b1fe853e9e955ff1822640e6e3f26b8533c0ba12843d7e7",
+        "launch-child.sh": "ef23841816a6f27d899a18cd00a637339119be99d2f53abe0196e0e90739e619"
+      },
+      "enabled_lua_manifest_sha256": "9c697550af503f2c6d3304dcb07135350315fe30469228d238305d49d98e0063",
+      "seed": 1500427799,
+      "inventory": [
+        {
+          "count": 1,
+          "id": 58
+        },
+        {
+          "count": 1,
+          "id": 105
+        },
+        {
+          "count": 1,
+          "id": 465
+        },
+        {
+          "count": 1,
+          "id": 534
+        }
+      ],
+      "controller_indices": [
+        1
+      ],
+      "sample_count": 1202,
+      "actual_present_median_hz": 89.99280057595392,
+      "action_value_vectors": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.74185556173325,
+          0.0
+        ],
+        [
+          0.0,
+          0.58926528692245,
+          0.58926528692245,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.74181735515594,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "action_value_transition_sequence": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.58926528692245,
+          0.58926528692245,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.74181735515594,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.74185556173325,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "shoot_joystick_vectors": [
+        [
+          -1.0,
+          0.0
+        ],
+        [
+          0.0,
+          -1.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.70710676908493,
+          -0.70710676908493
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "trigger_event_sequence": [
+        {
+          "actions": [
+            "shoot_right"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_up"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_left"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_up"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_right"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        }
+      ],
+      "release_hold_manager_ticks": [
+        2,
+        2,
+        2
+      ],
+      "r3_press_release_sequence": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "visible_active_slot_changes": [
+        {
+          "from": "58:105",
+          "to": "105:58",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 0
+        },
+        {
+          "from": "105:58",
+          "to": "58:105",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 1
+        },
+        {
+          "from": "58:105",
+          "to": "105:58",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 0
+        },
+        {
+          "from": "105:58",
+          "to": "58:105",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 1
+        }
+      ],
+      "mcm_visibility_sequence": [
+        true,
+        false,
+        true,
+        false
+      ],
+      "menu_visibility_and_controls_pairs": [
+        [
+          false,
+          true
+        ],
+        [
+          true,
+          false
+        ]
+      ],
+      "final_active_slots": [
+        58,
+        105
+      ],
+      "sampled_player_positions": [
+        [
+          320.0,
+          280.0
+        ]
+      ],
+      "laser_events": [
+        {
+          "ordinal": 1,
+          "variant": 1,
+          "spawner_type": 1,
+          "init_seed": 3595933666,
+          "init_angle": 0.0,
+          "manager_ticks_after_latest_input_zero": 2
+        },
+        {
+          "ordinal": 2,
+          "variant": 1,
+          "spawner_type": 1,
+          "init_seed": 1177790945,
+          "init_angle": 0.0,
+          "manager_ticks_after_latest_input_zero": 2
+        }
+      ],
+      "game_error_count": 0,
+      "owned_proxy_cleanup_recorded": true,
+      "owned_control_file_remaining": false,
+      "highfps_enabled": true,
+      "artifact_dll_role": "enabled candidate",
+      "diagnostics": {
+        "pure_lua_reports": 0,
+        "pure_lua_reporting_limit_reached": false,
+        "pure_lua_callers": {},
+        "pure_state_reports": 0,
+        "fatal_reports": 0
+      },
+      "reported_input_cache_interval_sums": {
+        "0": {
+          "native": 9737,
+          "hit": 1781,
+          "nilRaw": 1781,
+          "missRaw": 0
+        },
+        "1": {
+          "native": 15684,
+          "hit": 0,
+          "nilRaw": 0,
+          "missRaw": 0
+        },
+        "2": {
+          "native": 13904,
+          "hit": 0,
+          "nilRaw": 0,
+          "missRaw": 0
+        }
+      },
+      "input_cache_miss_detail_lines": 0,
+      "nonzero_skipped_store_lines": 0
+    },
+    {
+      "case": "controller-r5-45-20261110",
+      "artifact_sha256": {
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "game/winmm.dll": "1a2b77b5cc0ba4fc63890f9d08e09a43674d7c4cf32506f9ef446cb46af8c139",
+        "game/isaac-highfps.ini": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "game/xinput1_4.dll": "771bbe933497ccec86c9bcb23f436dd1fe851bb06676ad2e7aaaead220307320",
+        "game/xinput1_3.dll": "771bbe933497ccec86c9bcb23f436dd1fe851bb06676ad2e7aaaead220307320",
+        "game/mods/highfps-validation/main.lua": "152c42e415839014847d1c51b0b3a806048c6471543eac4be1763fa9438b362c",
+        "game/mods/highfps-validation/ce_compat_probe.lua": "a31cf253d6d2f48f6b1fe853e9e955ff1822640e6e3f26b8533c0ba12843d7e7",
+        "launch-child.sh": "ef23841816a6f27d899a18cd00a637339119be99d2f53abe0196e0e90739e619"
+      },
+      "enabled_lua_manifest_sha256": "9c697550af503f2c6d3304dcb07135350315fe30469228d238305d49d98e0063",
+      "seed": 1500427799,
+      "inventory": [
+        {
+          "id": 58,
+          "count": 1
+        },
+        {
+          "id": 105,
+          "count": 1
+        },
+        {
+          "id": 465,
+          "count": 1
+        },
+        {
+          "id": 534,
+          "count": 1
+        }
+      ],
+      "controller_indices": [
+        1
+      ],
+      "sample_count": 1202,
+      "actual_present_median_hz": 45.00247513613248,
+      "action_value_vectors": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.74185556173325,
+          0.0
+        ],
+        [
+          0.0,
+          0.58926528692245,
+          0.58926528692245,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.74181735515594,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "action_value_transition_sequence": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.58926528692245,
+          0.58926528692245,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.74181735515594,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.74185556173325,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.74185556173325,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "shoot_joystick_vectors": [
+        [
+          -1.0,
+          0.0
+        ],
+        [
+          0.0,
+          -1.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.70710676908493,
+          -0.70710676908493
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "trigger_event_sequence": [
+        {
+          "actions": [
+            "shoot_right"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_up"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_left"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_up"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [
+            "shoot_right"
+          ],
+          "r3": false
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        },
+        {
+          "actions": [],
+          "r3": true
+        }
+      ],
+      "release_hold_manager_ticks": [
+        2,
+        2,
+        2
+      ],
+      "r3_press_release_sequence": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "visible_active_slot_changes": [
+        {
+          "from": "58:105",
+          "to": "105:58",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 1
+        },
+        {
+          "from": "105:58",
+          "to": "58:105",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 1
+        },
+        {
+          "from": "58:105",
+          "to": "105:58",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 1
+        },
+        {
+          "from": "105:58",
+          "to": "58:105",
+          "button_still_pressed": false,
+          "manager_ticks_after_observed_release": 0
+        }
+      ],
+      "mcm_visibility_sequence": [
+        true,
+        false,
+        true,
+        false
+      ],
+      "menu_visibility_and_controls_pairs": [
+        [
+          false,
+          true
+        ],
+        [
+          true,
+          false
+        ]
+      ],
+      "final_active_slots": [
+        58,
+        105
+      ],
+      "sampled_player_positions": [
+        [
+          320.0,
+          280.0
+        ]
+      ],
+      "laser_events": [
+        {
+          "ordinal": 1,
+          "variant": 1,
+          "spawner_type": 1,
+          "init_seed": 308132027,
+          "init_angle": 0.0,
+          "manager_ticks_after_latest_input_zero": 2
+        },
+        {
+          "ordinal": 2,
+          "variant": 1,
+          "spawner_type": 1,
+          "init_seed": 686032038,
+          "init_angle": 0.0,
+          "manager_ticks_after_latest_input_zero": 2
+        }
+      ],
+      "game_error_count": 0,
+      "owned_proxy_cleanup_recorded": true,
+      "owned_control_file_remaining": false,
+      "highfps_enabled": true,
+      "artifact_dll_role": "enabled candidate",
+      "diagnostics": {
+        "pure_lua_reports": 0,
+        "pure_lua_reporting_limit_reached": false,
+        "pure_lua_callers": {},
+        "pure_state_reports": 0,
+        "fatal_reports": 0
+      },
+      "reported_input_cache_interval_sums": {
+        "0": {
+          "native": 9842,
+          "hit": 902,
+          "nilRaw": 902,
+          "missRaw": 0
+        },
+        "1": {
+          "native": 15840,
+          "hit": 0,
+          "nilRaw": 0,
+          "missRaw": 0
+        },
+        "2": {
+          "native": 14064,
+          "hit": 0,
+          "nilRaw": 0,
+          "missRaw": 0
+        }
+      },
+      "input_cache_miss_detail_lines": 0,
+      "nonzero_skipped_store_lines": 0
+    }
+  ],
+  "functional_comparisons": {
+    "R4_90": {
+      "seed": true,
+      "inventory": true,
+      "controller_indices": true,
+      "optimizer_config": true,
+      "action_value_vectors": true,
+      "action_value_transition_sequence": true,
+      "shoot_joystick_vectors": true,
+      "trigger_event_sequence": true,
+      "release_hold_manager_ticks": true,
+      "r3_press_release_sequence": true,
+      "mcm_visibility_sequence": true,
+      "menu_visibility_and_controls_pairs": true,
+      "final_active_slots": true,
+      "sampled_player_positions": true,
+      "active_slot_sequence": true,
+      "laser_count_type_source": true,
+      "raw_command_sequence": true
+    },
+    "R5_90": {
+      "seed": true,
+      "inventory": true,
+      "controller_indices": true,
+      "optimizer_config": true,
+      "action_value_vectors": true,
+      "action_value_transition_sequence": true,
+      "shoot_joystick_vectors": true,
+      "trigger_event_sequence": true,
+      "release_hold_manager_ticks": true,
+      "r3_press_release_sequence": true,
+      "mcm_visibility_sequence": true,
+      "menu_visibility_and_controls_pairs": true,
+      "final_active_slots": true,
+      "sampled_player_positions": true,
+      "active_slot_sequence": true,
+      "laser_count_type_source": true,
+      "raw_command_sequence": true
+    },
+    "R5_45": {
+      "seed": true,
+      "inventory": true,
+      "controller_indices": true,
+      "optimizer_config": true,
+      "action_value_vectors": true,
+      "action_value_transition_sequence": true,
+      "shoot_joystick_vectors": true,
+      "trigger_event_sequence": true,
+      "release_hold_manager_ticks": true,
+      "r3_press_release_sequence": true,
+      "mcm_visibility_sequence": true,
+      "menu_visibility_and_controls_pairs": true,
+      "final_active_slots": true,
+      "sampled_player_positions": true,
+      "active_slot_sequence": true,
+      "laser_count_type_source": true,
+      "raw_command_sequence": true
+    }
+  },
+  "input_cache_contract": {
+    "typed_abi": "Both wrappers return handled in AL and write a separate bool/float output only when handled. Nil leaves output untouched and follows the existing native raw-query branch.",
+    "snapshot_policy": "Every canonical/outside-render query still executes. Same-key repeated calls retain the latest completed authoritative result; pure presentation does not run Lua.",
+    "lifetime": "Per-fixed-tick samples, entity identity fields, dispatcher/Lua state/ref, lifecycle epoch and chained lua_close generation. No Lua references retained.",
+    "raw_fallback": "Cached nil is a cache hit, not a missing sample. Unknown pure keys fall back through the original caller raw-query branch without Lua and are logged.",
+    "standalone_evidence": "input-cache-unit.json",
+    "live_coverage": "The observed pure hits in both R5 runs are hook0 cached-nil results. Hooks1/2 and handled true overrides are not claimed as positively hit on pure frames by these live cases."
+  },
+  "historical_r4_failure": {
+    "functional_features_match_native": true,
+    "pure_lua_audit_reports": 64,
+    "reporting_limit_reached": true,
+    "caller_va": "0x8742DC",
+    "callback_id": 13,
+    "classification": "MC_INPUT_ACTION executed during pure render. Most recorded reports occur during post-seed frame0; the saturated log cannot show when later calls stopped."
+  },
+  "limits": [
+    "Input APIs report the final callback-chain result, not an isolated private Optimizer return. The same fixture adds public API reads in both cases.",
+    "External packet times can shift queries into neighboring canonical ticks; wall-time polling counts and whole-run frame alignment are not required equal.",
+    "The low-amplitude packet may already be suppressed by the native deadzone; this does not isolate the mod threshold.",
+    "MCM remains bound to R3. Both menu toggles and Schoolbag changes are compared with the native combined-mod baseline.",
+    "Slot transitions are observed, not a complete trace of SwapActiveItems invocation count.",
+    "Laser InitSeed differences are reported, not normalized into a claim of identical RNG state. INIT angle is not final trajectory evidence.",
+    "Native60 has no injected presentation-rate telemetry. Runtime VRR, physical input latency, Mars, Tainted Azazel, charge familiars and multiplayer remain outside this scenario.",
+    "A passing functional comparison does not excuse pure-render Lua calls; saturated audit logs cannot prove that later calls stopped.",
+    "The 45 Hz run has 324 nonzero sampled action components versus 325 in native/90Hz because external phase boundaries land on different canonical ticks; counts are not forced equal.",
+    "No visual laser trajectory comparison or hardware latency measurement was performed. Laser InitSeed values differ and INIT angles are not treated as final aim directions."
+  ],
+  "matched_inputs_and_settings": {
+    "same_seed": 1500427799,
+    "same_inventory": true,
+    "same_fixture_helper_proxy_and_enabled_lua_manifest": true,
+    "mcm_open_controller_button": 13,
+    "optimizer_registered_input_hooks": 3,
+    "optimizer_runtime_options": [
+      {
+        "value": true,
+        "label": "Enable optimizer: on"
+      },
+      {
+        "value": true,
+        "label": "Attack-shape item pass-through: on"
+      },
+      {
+        "value": true,
+        "label": "Schoolbag quick swap: on"
+      },
+      {
+        "value": true,
+        "label": "Tainted Azazel native input (Rep+): on"
+      },
+      {
+        "value": true,
+        "label": "Mars analog guard: on"
+      },
+      {
+        "value": false,
+        "label": "Diagnostic logging: off"
+      }
+    ],
+    "raw_command_sequence_equal": true
+  },
+  "conclusions": [
+    "All 17 scoped functional comparisons match native in R5 at 90 Hz and 45 Hz, including exact action/joystick vector values, trigger sequence, three 2-tick release holds, four Schoolbag swaps, MCM visibility/controls and two real laser births.",
+    "All four swaps occur while R3 is released, within 0 or 1 Manager tick of the observed release; final active slots return to 58/105. This is visible state transition evidence, not an exhaustive method-call count.",
+    "Independent pure-Lua audit reports drop from the R4 reporting limit 64 to 0 in both R5 cases. Input-cache misses and skipped-store reports are 0.",
+    "Reported interval sums show 1781 hook 0 cached-nil hits at 90 Hz and 902 at 45 Hz. They correctly take native raw fallback; hooks 1/2 have no observed pure hits.",
+    "Periodic diagnostic totals are sums of emitted intervals, not a lossless whole-process query count or a 60-calls-per-second requirement."
+  ]
+}

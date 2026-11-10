@@ -27,3 +27,20 @@ The standalone test report does not validate startup patch installation or the f
 ## Menu presentation (0.13.0-j374.4)
 
 [menu-presentation.json](menu-presentation.json) compares eight main-menu/character-page transitions, preserving capture timestamps and complete input windows. [menu-game-regression.json](menu-game-regression.json) checks the final DLL in the established Greed fixture. The analysis script is [analyze_main_menu.py](../../tests/analyze_main_menu.py); it only reads recorded data and never accesses a live game or input device. Recordings include native.log (when enabled), menu-clock.json, input-events.json, and timestamped capture/frame-NNNN.jpg plus capture/gst.log. Capture and event startup timing is approximate, so no input-to-photon latency claim is made. Arrow-only recordings and page-slide recordings are kept separate.
+
+## MCM and Character Enhance feature checks
+
+| Report | Measured scope |
+| --- | --- |
+| [MCM browsing](mcm-browse-compatibility.json) | Open, category navigation, held-key repeat and close, including R4 at 45 Hz; all 107 registered setting values unchanged. Multiple canonical ticks per presentation retain native repeat timing. No option editing, popup or controller claim. |
+| [Bethany shield](ce-bethany-compatibility.json) | Native60/R2/R4 canonical state, two real damage-callback requests, selected shield/hit styles, recorded 99/30/4-charge visuals and a bounded zero-charge tail. R4 has no reported cache rejection in this case; the earlier R2 startup rejection remains documented. |
+| [Eden starting choice and fade](ce-eden-compatibility.json) | Native/R2/R4/R5 post-continuation timing and three room/background ROIs. The early callback interval improves from R2's 61 ms to R4's 296 ms and R5's 289 ms against native 306 ms; all 60 fade states match. The initial capture shows the previous Isaac bootstrap, followed by a black new-Eden room background. |
+| [Controller input chain](controller-input-compatibility.json) | A guarded process-local XInput source exercises native queries, analog aim, release, Schoolbag and MCM at 90/45 Hz. R5 preserves the scoped native behavior and eliminates the observed pure-render MC13 Lua calls. Cached nil hits retain native raw fallback. This is not physical-controller validation. |
+
+These reports exercise the named features, not every enabled mod or every drawing path. Eden's target semantic comparison excludes the unseeded bootstrap and reports differing pickup InitSeed values separately; it is not an all-fields or spawn-RNG identity claim. The Eden report records the pending-start lifecycle hook and stable-epoch presentation gate with source and DLL hashes. Tests remain isolated and silent; no physical-controller or runtime VRR result is implied.
+
+## Mod compatibility (0.13.0-j374.5)
+
+[Mod image regressions](mod-image-regressions.md) distinguish the old missing drawing, R1 Sprite support, R2 texture deletion correction and subsequent candidates by DLL hash. [Range](range-mod-compatibility.json) and [TimeMachine](timemachine-mod-compatibility.json) exercise actual weapons and native machines; diagnostic-only loads are not feature passes. [Input unit/ABI](input-cache-unit.json) and [controller exercise](controller-input-compatibility.json) separate native query preservation, pure-render replay and process-local controller behavior. The controller report retains the R4 pure-Lua failure despite its matching functional outputs. The [authored fixtures](../../tests/fixtures/mod-compat/README.md) are isolated test inputs, not game-session mods for normal installation.
+
+The [combined `.5` release manifest](mod-compatibility-release.json) identifies the exact release DLL and final affected-path checks. Earlier component cases remain separately hashed rather than silently relabeled as tests of a later binary.

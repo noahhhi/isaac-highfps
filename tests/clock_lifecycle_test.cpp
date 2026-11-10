@@ -71,6 +71,17 @@ template<class Clock> void boundedCatchup(int ms) {
 }
 
 int main() {
+    highfps::CanonicalPresentationEpoch presentation;
+    check(!presentation.Ready(0), "no presentation before capture", 0, presentation.Ready(0), 0);
+    presentation.Complete(1, 1);
+    check(presentation.Ready(1), "stable canonical ready", 0, presentation.Ready(1), 1);
+    check(!presentation.Ready(2), "later lifecycle invalidates", 0, presentation.Ready(2), 0);
+    presentation.Complete(1, 2);
+    check(!presentation.Ready(2), "render-side rewind holds", 0, presentation.Ready(2), 0);
+    presentation.Complete(2, 3);
+    check(!presentation.Ready(3), "nested replacement holds", 0, presentation.Ready(3), 0);
+    presentation.Complete(3, 3);
+    check(presentation.Ready(3), "full new capture resumes", 0, presentation.Ready(3), 1);
     // 230 reproduces the observed room-load length. 249/251 deliberately straddle
     // 250ms wall time; 267/268 also cross the old now-next > .25 threshold after
     // an initial tick, proving the test is not fooled by its one-tick phase.

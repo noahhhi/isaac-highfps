@@ -1,0 +1,499 @@
+{
+  "schema": 1,
+  "date": "2026-11-10",
+  "build": "R4 working-tree candidate",
+  "status": "Recorded native weapon state/callback/hit sequences match in all three measured cases",
+  "source_commit": null,
+  "source_mapping": "Exact DLL and executed fixture hashes identify test inputs; no committed-source or later-binary equivalence is asserted.",
+  "method": {
+    "alignment": "Preserve record order and duplicate callbacks; normalize game-frame origin and map knife IDs to (variant,subtype,birth tick,birth ordinal).",
+    "comparison": "Compare every remaining recorded field exactly, including Scale, SpriteScale, TargetPosition, position, velocity, rotation, size, player-relative distance, range, hit amounts/source classes and target HP.",
+    "setup": "Normal clear starting room, fixed run seed, native character/items and attack input. The sole test Gaper has zero contact damage and large HP; player weapon damage and cooldown are not overridden.",
+    "precision": "Equality is at the fixture recorded decimal precision, not a memory-bitwise or pixel comparison."
+  },
+  "cases": {
+    "forgotten": {
+      "canonical_record_comparison": {
+        "record_order_and_values_exact": true,
+        "native_only_keys": 0,
+        "candidate_only_keys": 0,
+        "common_keys": 1330,
+        "mismatch_fields": {},
+        "numeric_max_absolute_difference": {},
+        "first_mismatches": [],
+        "first_native_only_keys": [],
+        "first_candidate_only_keys": []
+      },
+      "native_summary": {
+        "events": {
+          "start": 1,
+          "target_setup": 1,
+          "tick": 21,
+          "init": 4,
+          "knife_update": 634,
+          "main": 659,
+          "hit": 9,
+          "DONE": 1
+        },
+        "done": [
+          {
+            "case": "forgotten",
+            "ev": "DONE",
+            "t": "300",
+            "u": "301",
+            "r": "600",
+            "hits": "9",
+            "knives": "4"
+          }
+        ],
+        "births": [
+          {
+            "t": "0",
+            "id": "1",
+            "v": "1",
+            "sub": "0",
+            "ef": "0"
+          },
+          {
+            "t": "30",
+            "id": "2",
+            "v": "1",
+            "sub": "4",
+            "ef": "0"
+          },
+          {
+            "t": "120",
+            "id": "3",
+            "v": "1",
+            "sub": "4",
+            "ef": "0"
+          },
+          {
+            "t": "210",
+            "id": "4",
+            "v": "1",
+            "sub": "4",
+            "ef": "0"
+          }
+        ],
+        "hit_source_families": {
+          "1,0,0": {
+            "hits": 3,
+            "damage": 47.25,
+            "ticks": [
+              32,
+              122,
+              212
+            ]
+          },
+          "8,1,0": {
+            "hits": 6,
+            "damage": 47.25,
+            "ticks": [
+              90,
+              115,
+              180,
+              205,
+              270,
+              295
+            ]
+          }
+        },
+        "damage_total": 94.5
+      },
+      "artifacts": {
+        "native": {
+          "case_id": "range-forgotten-normal-native60-20261110",
+          "highfps_enabled": false,
+          "dll_present_sha256": "c3344f15c61a2c377ef3da1496ff7fcabc94abe14deaa722e0d7883c022d723c",
+          "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "91ef13ebe96aac0679b9998e15481f4c542a304dd201a5ab6b241c5915c8a080",
+          "target_mod_lua_sha256": {
+            "main.lua": "7d43caadeaa6de527a4ed1576c9346e68862b43572edbcf1bd4f7aa4fb4dec96",
+            "mod_config_menu.lua": "8cddc1b82400f123288cdc51f01e08cb67da750b4763e52d5e7cf4303f9c346c"
+          },
+          "game_log_sha256": "ab3f9f3e11c75b5c92600e06a231c1016de200c26a13f5784a8b65ef4b34b749"
+        },
+        "candidate": {
+          "case_id": "range-forgotten-normal-r4-90-20261110",
+          "highfps_enabled": true,
+          "dll_present_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+          "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "91ef13ebe96aac0679b9998e15481f4c542a304dd201a5ab6b241c5915c8a080",
+          "target_mod_lua_sha256": {
+            "main.lua": "7d43caadeaa6de527a4ed1576c9346e68862b43572edbcf1bd4f7aa4fb4dec96",
+            "mod_config_menu.lua": "8cddc1b82400f123288cdc51f01e08cb67da750b4763e52d5e7cf4303f9c346c"
+          },
+          "game_log_sha256": "25929f674b277b26486dff18225e84a8cf33597cceef8ab7cb32debda4ca6b78"
+        }
+      },
+      "candidate_diagnostic_lines": {
+        "[entity-cache-miss]": 0,
+        "[pure-state]": 0,
+        "[pure-lua]": 0,
+        "[FATAL]": 0
+      },
+      "candidate_present_median_hz_last500": 89.99280057595392,
+      "observed_mod_path": {
+        "frame0_subtype4_variants": [
+          1
+        ],
+        "target_position_values": [
+          "4.00000,0.00000"
+        ],
+        "scales": [
+          "1.044444"
+        ],
+        "sprite_scales": [
+          "1.044444,1.044444"
+        ],
+        "note": "Configured factor5 produces observed scale1.044444 for these native swing states."
+      }
+    },
+    "sword": {
+      "canonical_record_comparison": {
+        "record_order_and_values_exact": true,
+        "native_only_keys": 0,
+        "candidate_only_keys": 0,
+        "common_keys": 1104,
+        "mismatch_fields": {},
+        "numeric_max_absolute_difference": {},
+        "first_mismatches": [],
+        "first_native_only_keys": [],
+        "first_candidate_only_keys": []
+      },
+      "native_summary": {
+        "events": {
+          "start": 1,
+          "target_setup": 1,
+          "tick": 21,
+          "init": 9,
+          "knife_update": 507,
+          "main": 552,
+          "hit": 12,
+          "DONE": 1
+        },
+        "done": [
+          {
+            "case": "sword",
+            "ev": "DONE",
+            "t": "300",
+            "u": "301",
+            "r": "600",
+            "hits": "12",
+            "knives": "9"
+          }
+        ],
+        "births": [
+          {
+            "t": "30",
+            "id": "1",
+            "v": "10",
+            "sub": "0",
+            "ef": "0"
+          },
+          {
+            "t": "30",
+            "id": "2",
+            "v": "10",
+            "sub": "4",
+            "ef": "0"
+          },
+          {
+            "t": "90",
+            "id": "3",
+            "v": "10",
+            "sub": "4",
+            "ef": "0"
+          },
+          {
+            "t": "120",
+            "id": "4",
+            "v": "10",
+            "sub": "0",
+            "ef": "0"
+          },
+          {
+            "t": "120",
+            "id": "5",
+            "v": "10",
+            "sub": "4",
+            "ef": "0"
+          },
+          {
+            "t": "180",
+            "id": "6",
+            "v": "10",
+            "sub": "4",
+            "ef": "0"
+          },
+          {
+            "t": "210",
+            "id": "7",
+            "v": "10",
+            "sub": "0",
+            "ef": "0"
+          },
+          {
+            "t": "210",
+            "id": "8",
+            "v": "10",
+            "sub": "4",
+            "ef": "0"
+          },
+          {
+            "t": "270",
+            "id": "9",
+            "v": "10",
+            "sub": "4",
+            "ef": "0"
+          }
+        ],
+        "hit_source_families": {
+          "1,0,0": {
+            "hits": 6,
+            "damage": 156.0,
+            "ticks": [
+              32,
+              90,
+              120,
+              180,
+              210,
+              270
+            ]
+          },
+          "2,47,0": {
+            "hits": 6,
+            "damage": 70.5,
+            "ticks": [
+              37,
+              100,
+              123,
+              190,
+              213,
+              280
+            ]
+          }
+        },
+        "damage_total": 226.5
+      },
+      "artifacts": {
+        "native": {
+          "case_id": "range-sword-normal-native60-20261110",
+          "highfps_enabled": false,
+          "dll_present_sha256": "c3344f15c61a2c377ef3da1496ff7fcabc94abe14deaa722e0d7883c022d723c",
+          "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "82b1ebacc5f370553b6abd253f6db6a1b670319f6ab55ae8fcfb842749a422b7",
+          "target_mod_lua_sha256": {
+            "main.lua": "7d43caadeaa6de527a4ed1576c9346e68862b43572edbcf1bd4f7aa4fb4dec96",
+            "mod_config_menu.lua": "8cddc1b82400f123288cdc51f01e08cb67da750b4763e52d5e7cf4303f9c346c"
+          },
+          "game_log_sha256": "b4dc3ca0ef890f66df4793e83f64ee59e663673134cd2c5bdab5fcf6425baa8a"
+        },
+        "candidate": {
+          "case_id": "range-sword-normal-r4-90-20261110",
+          "highfps_enabled": true,
+          "dll_present_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+          "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "82b1ebacc5f370553b6abd253f6db6a1b670319f6ab55ae8fcfb842749a422b7",
+          "target_mod_lua_sha256": {
+            "main.lua": "7d43caadeaa6de527a4ed1576c9346e68862b43572edbcf1bd4f7aa4fb4dec96",
+            "mod_config_menu.lua": "8cddc1b82400f123288cdc51f01e08cb67da750b4763e52d5e7cf4303f9c346c"
+          },
+          "game_log_sha256": "ebd8e958cd0c0d3f29fa8719d84f892dc28b2029e10e11bcd2d8e06d13aa8a4c"
+        }
+      },
+      "candidate_diagnostic_lines": {
+        "[entity-cache-miss]": 0,
+        "[pure-state]": 0,
+        "[pure-lua]": 0,
+        "[FATAL]": 0
+      },
+      "candidate_present_median_hz_last500": 90.0130518925244,
+      "observed_mod_path": {
+        "frame0_subtype4_variants": [
+          10
+        ],
+        "target_position_values": [
+          "4.00000,0.00000"
+        ],
+        "scales": [
+          "1.044444"
+        ],
+        "sprite_scales": [
+          "1.044444,1.044444"
+        ],
+        "note": "Configured factor5 produces observed scale1.044444 for these native swing states."
+      }
+    },
+    "bag": {
+      "canonical_record_comparison": {
+        "record_order_and_values_exact": true,
+        "native_only_keys": 0,
+        "candidate_only_keys": 0,
+        "common_keys": 267,
+        "mismatch_fields": {},
+        "numeric_max_absolute_difference": {},
+        "first_mismatches": [],
+        "first_native_only_keys": [],
+        "first_candidate_only_keys": []
+      },
+      "native_summary": {
+        "events": {
+          "start": 1,
+          "target_setup": 1,
+          "tick": 21,
+          "native_bag_use": 3,
+          "hit": 18,
+          "init": 6,
+          "knife_update": 96,
+          "main": 120,
+          "DONE": 1
+        },
+        "done": [
+          {
+            "case": "bag",
+            "ev": "DONE",
+            "t": "300",
+            "u": "301",
+            "r": "600",
+            "hits": "18",
+            "knives": "6"
+          }
+        ],
+        "births": [
+          {
+            "t": "39",
+            "id": "1",
+            "v": "4",
+            "sub": "0",
+            "ef": "0"
+          },
+          {
+            "t": "39",
+            "id": "2",
+            "v": "4",
+            "sub": "4",
+            "ef": "0"
+          },
+          {
+            "t": "129",
+            "id": "3",
+            "v": "4",
+            "sub": "0",
+            "ef": "0"
+          },
+          {
+            "t": "129",
+            "id": "4",
+            "v": "4",
+            "sub": "4",
+            "ef": "0"
+          },
+          {
+            "t": "219",
+            "id": "5",
+            "v": "4",
+            "sub": "0",
+            "ef": "0"
+          },
+          {
+            "t": "219",
+            "id": "6",
+            "v": "4",
+            "sub": "4",
+            "ef": "0"
+          }
+        ],
+        "hit_source_families": {
+          "2,0,0": {
+            "hits": 15,
+            "damage": 52.5,
+            "ticks": [
+              34,
+              51,
+              59,
+              69,
+              80,
+              120,
+              137,
+              148,
+              159,
+              170,
+              210,
+              227,
+              238,
+              249,
+              260
+            ]
+          },
+          "1,0,0": {
+            "hits": 3,
+            "damage": 9.0,
+            "ticks": [
+              41,
+              131,
+              221
+            ]
+          }
+        },
+        "damage_total": 61.5
+      },
+      "artifacts": {
+        "native": {
+          "case_id": "range-bag-normal-native60-20261110",
+          "highfps_enabled": false,
+          "dll_present_sha256": "c3344f15c61a2c377ef3da1496ff7fcabc94abe14deaa722e0d7883c022d723c",
+          "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "13cf47370bfc5e9f5ea8afafc6470e549b4391a2b959933fdc4e3bf6d4bb397f",
+          "target_mod_lua_sha256": {
+            "main.lua": "7d43caadeaa6de527a4ed1576c9346e68862b43572edbcf1bd4f7aa4fb4dec96",
+            "mod_config_menu.lua": "8cddc1b82400f123288cdc51f01e08cb67da750b4763e52d5e7cf4303f9c346c"
+          },
+          "game_log_sha256": "1ed9d17d92951250cae2c46193eab7e61333e880a079aaf2d333f487d3f52656"
+        },
+        "candidate": {
+          "case_id": "range-bag-normal-r4-90-20261110",
+          "highfps_enabled": true,
+          "dll_present_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+          "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "13cf47370bfc5e9f5ea8afafc6470e549b4391a2b959933fdc4e3bf6d4bb397f",
+          "target_mod_lua_sha256": {
+            "main.lua": "7d43caadeaa6de527a4ed1576c9346e68862b43572edbcf1bd4f7aa4fb4dec96",
+            "mod_config_menu.lua": "8cddc1b82400f123288cdc51f01e08cb67da750b4763e52d5e7cf4303f9c346c"
+          },
+          "game_log_sha256": "e889b725e200ee1bdc1dd27a7345d777ccc35405340e334acc4236dcfc68f263"
+        }
+      },
+      "candidate_diagnostic_lines": {
+        "[entity-cache-miss]": 0,
+        "[pure-state]": 0,
+        "[pure-lua]": 0,
+        "[FATAL]": 0
+      },
+      "candidate_present_median_hz_last500": 90.01710324961742,
+      "observed_mod_path": {
+        "frame0_subtype4_variants": [
+          4
+        ],
+        "target_position_values": [
+          "4.00000,0.00000"
+        ],
+        "scales": [
+          "1.000000"
+        ],
+        "sprite_scales": [
+          "1.000000,1.000000"
+        ],
+        "note": "Bag default factor0 leaves scale1; TargetPosition(4,0) and anchoring still exercise its configured path."
+      }
+    }
+  },
+  "limits": [
+    "Only measured Forgotten variant1, Spirit Sword variant10 and Bag variant4 families/subtypes0/4; not every RangeFix whitelist variant or synergy.",
+    "Native APIs/input create weapon knives; no arbitrary manually spawned knife is substituted.",
+    "Bag reports three melee hits separately from fifteen ordinary tear hits; total hit count alone is not weapon-path coverage.",
+    "These logs do not validate rendered pixels, physical hardware input, all RNG state, other characters or arbitrary mods.",
+    "Older Greed-mode/failed Sword cases are not used as this normal-room baseline."
+  ]
+}

@@ -1,6 +1,6 @@
 # Repentance+ 1.9.7.15.J374 port
 
-Version `0.13.0-j374.4` builds a dedicated DLL for the 32-bit **1.9.7.15.J374** game. Menu presentation source is `4c552f0`, bound to its 80/90 Hz checks in [menu-presentation.json](validation/menu-presentation.json). Earlier camera and R5 clock reports retain their original DLL/source hashes and coverage. Its development and build environment is Fedora WSL; runtime checks use an isolated Steam Deck/Proton game copy. The original J460 binary is incompatible with J374, including its update wrapper and graphics ABI. Do not remove version guards to load the other build.
+Version `0.13.0-j374.5` builds a dedicated DLL for the 32-bit **1.9.7.15.J374** game. The `.5` compatibility release adds the Sprite/texture-lifetime repairs described below. Menu presentation source remains `4c552f0`, bound to its earlier 80/90 Hz checks in [menu-presentation.json](validation/menu-presentation.json). Earlier camera and `.2` fixed-clock reports retain their original DLL/source hashes and coverage. Its development and build environment is Fedora WSL; runtime checks use an isolated Steam Deck/Proton game copy. The original J460 binary is incompatible with J374, including its update wrapper and graphics ABI. Do not remove version guards to load the other build.
 
 ## Executable and ABI boundary
 
@@ -74,6 +74,28 @@ Short loading debt was possible in the upstream scheduler too. The fork's early 
 
 Native menu scalars and shared UI animation helpers have their own timing repairs. Reused preview sprites still perform required Play/type initialization. Pure presentation replays their recorded canonical animation result rather than incrementing the timeout/frame again. Cache ownership is reset across lifecycle epochs, including object-address reuse.
 
+## `.5` UI draw-cache compatibility
+
+GoodTrip exposed a shared rendering defect: the old cache rejected the ordinary ANM2 shader path and treated every vertex-format setter as unsafe. One such operation invalidated the whole native main-callback draw scope, so unrelated UI in the same pass could also disappear. The repair supports the four verified native Sprite shader contracts and ordered supported vertex-format restoration. Recorded image filter/wrap fields are restored only under the valid texture-generation contract; this is not arbitrary GPU sampler replay. Canonical Lua execution remains at its native cadence; display frames replay drawing without repeating mod side effects.
+
+Regret then exposed a separate first-load failure. R1 still rejected any `glDeleteTextures` call, including disposal of unrelated old graphics. R2 checks real texture objects, retained draw dependencies and framebuffer attachments, and tracks texture-name generations. It allows unrelated deletion while retaining rejection for actual dependencies or unknown state. Unknown shader uniforms, layouts, uploads outside the audited initialization path and unrepresented GL operations remain unsupported; this is not an all-mod compatibility claim.
+
+The compared DLLs are identified exactly:
+
+| Role | SHA256 |
+| --- | --- |
+| Native60 control / old90 negative control, with different INI modes | `4119e933accfafc8f156b511f84916655825607947a9ff345bac32653bbfe9ec` |
+| R1 native Sprite/format repair | `0221770be17b98e339bc7fb8de0ab322406d93f2fe9d721c4a3a640bc74785d1` |
+| R2 Sprite/format plus selective texture lifetime repair | `c3344f15c61a2c377ef3da1496ff7fcabc94abe14deaa722e0d7883c022d723c` |
+
+GoodTrip cases `goodtrip-{native60,old90,fixed90}-keys-20261110` exercised two real isolated Tab holds. All completed with 1080 main render callbacks and 720 calls each to GoodTrip's map/UI/Tab paths. In captured frames selected by the independently visible native Tab timer, the map appeared in 242/242 native samples, 0/184 old90 samples and 180/180 R1 samples. The separate Sprite control appeared in all 360 native/R1 samples and none of the old90 samples. The R1 map region's median and p95 RGB difference from the native reference were zero. Each capture covers only about six seconds at native60 or four seconds at 90 Hz; the selected map samples cover part of the first hold, not every frame of the full 18-second fixture or teleport behavior. In conservative hold interiors, R1's native present intervals had p99 11.230 ms and maximum 12.049 ms across 990 samples. Shader reflection cost averaged 8.655 ms per roughly one-second workload bucket; no permanent program-ID-only reflection cache was introduced.
+
+Regret cases `regret-native60-visible-20261110`, `regret-fixed90-visible-20261110` and `regret-r2-90-visible-20261110` use the same visible-ghost fixture. R1's first load at game frame 46 rejected the main scope and missed two presentations. R2 observes both deletions as unrelated, with no dependency/attachment/unknown classification, and records zero replay misses, shader/reference rejections or unsafe-operation entries over the run. The first presentation at frame 46 follows the previous one by 11.106 ms. These diagnostics establish removal of the reproduced rejection; they do not substitute for an independent image comparison of first-visible ghost alpha and subsequent drawing.
+
+Bethany's first player-render callback exposed another startup-only rejection in R2: three ordinary Sprite image uploads caused 24 native parameter calls and three `glTexImage2D` calls. The R3 header follow-up supports only their audited native 2D initialization call sites. It seals pending vertices, queries the current unit's bound texture, permits unrelated initialization or actual same-value parameter calls, and rejects captured-image/target dependencies and unsupported arguments. Resource generations advance for real changes, so older captures cannot silently reuse altered texture content. This follow-up has standalone ABI/dependency tests; the historical R1/R2 measurements above must not be relabeled as evidence for a later combined DLL. Final affected-feature and lifecycle cases belong to that DLL's release report.
+
+The [sanitized cache implementation/unit report](validation/cache-compatibility-unit.json) records exact R2 source/test hashes, test domains and Regret runtime artifact/log hashes. It covers the common cache repair, not final acceptance of every enabled mod, controller interaction, Character Enhance, range previews, inventory helpers or rewind integration. Those feature cases require their own exact-build reports.
+
 ## Verification and limits
 
 The evidence directory separates test cases by executable, DLL, fixture and mod-set identifiers. Reports describe the observed scope rather than asserting that the entire game is equivalent.
@@ -100,6 +122,10 @@ One earlier isolated launch did not complete within its 45-second startup budget
 
 ## Bug reports
 
-Include the J374 executable version, fork DLL hash, INI, display/compositor mode, reproduction steps and enabled mods. Capture `%TEMP%\isaac-highfps.log` with `Diag=1` for a short controlled reproduction, then turn detailed diagnostics off. Particularly useful markers include `[pipeline]`, `[present]`, `[lifecycle]`, `[entity-cache]`, `[shader-cache]`, `[native-ui-replay]`, `[native-ui-epoch]`, `[pure-state]` and `[pure-lua]` where enabled by that build.
+Include the J374 executable version, fork DLL hash, INI, display/compositor mode, reproduction steps and enabled mods. Capture `%TEMP%\isaac-highfps.log` with `Diag=1` for a short controlled reproduction, then turn detailed diagnostics off. Particularly useful markers include `[pipeline]`, `[present]`, `[lifecycle]`, `[entity-cache]`, `[entity-cache-format]`, `[entity-cache-shader]`, `[entity-cache-texture]`, `[shader-cache]`, `[native-ui-replay]`, `[native-ui-epoch]`, `[pure-state]` and `[pure-lua]` where enabled by that build.
 
 Report actual frame pacing and animation/gameplay timing separately. A high presentation rate can coexist with an incorrectly timed native animation or a mod graphic that updates its position only at the canonical 60 Hz sample.
+
+## Combined compatibility release
+
+[mod-compatibility-release.json](validation/mod-compatibility-release.json) binds the `.5` release DLL, production-source hashes and final affected-path cases. The earlier R1/R2/R4 image and weapon reports retain their own hashes. The combined release additionally accounts for the entire pending native start/continue operation and holds display output until a complete canonical render of the new lifetime is ready. MC_INPUT_ACTION uses typed scalar snapshots only for extra presentations; every authoritative query, including nested updates, remains native. See the [controller report](validation/controller-input-compatibility.json) and [input ABI/design](validation/input-cache-unit.json) for cached-nil, raw fallback and coverage limits.

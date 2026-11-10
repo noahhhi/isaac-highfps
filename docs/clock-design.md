@@ -46,9 +46,21 @@ Keys distinguish lifecycle epoch, entity generation/identity, callback, render p
 
 **Coordinates are the canonical callback's coordinates.** The cache does not infer that an arbitrary screen-space quad belongs to a particular moving entity and does not translate it to the player's interpolated position. This preserves the callback's sampled drawing semantics, but mod-drawn attachments can remain visibly sampled at 60 Hz even when the base entity's native movement is smoother.
 
-Unsupported layouts, resource/context changes, unrepresented GL operations or shader state invalidate capture/replay instead of executing Lua again at output frequency. A failed replay can omit that mod scope from an extra presentation; its canonical callback still runs at the native cadence. Missing/unsafe records are diagnostic evidence to investigate, not automatic proof that the affected drawing is harmless.
+Unsupported layouts, resource/context changes, unrepresented GL operations or shader state invalidate capture/replay instead of executing Lua again at output frequency. The main draw scope contains the native main callback pass, potentially including several mods. If one unsupported operation repeatedly invalidates that scope, all its cached UI can disappear from presented images: canonical drawing occurs in the hidden render. Its Lua callbacks still execute at their native cadence. Missing/unsafe records therefore need both dependency analysis and visible-output checks.
 
 The `LuaOverlay` option is retained for configuration compatibility. With the current supported pipeline active it selects draw capture/replay, not the old per-callback FBO overlay implementation. `LuaVanillaCadence` and `LuaOverlay` should both remain enabled for validation of this design.
+
+## Supported Sprite formats and texture lifetime
+
+The `.5` cache repair supports four verified native Sprite shader contracts: `coloroffset`, `coloroffset_champion`, `coloroffset_dogma` and `coloroffset_gold`. J374 image shader enum 3 means “keep the selected shader”; it is also the normal ANM2 path, not evidence of a user-defined shader. The cache validates the native shader identity, program/attribute generation, 88/104-byte layout and the `Transform`/`Texture0` uniform contract. Ordinary Sprite color offsets, clipping and related fields are captured from the completed vertex data. Arbitrary shader uniforms remain outside this contract.
+
+`SetVertexFormat` seals pending vertices before the native setter can invalidate storage. Repeated identical setup and a newly loaded image's initial format no longer invalidate the whole callback. The first quad acquires the native image reference; doing that during image construction would precede registration. Each replayed draw restores its captured supported vertex format in order and the recorded image filter/wrap fields while the texture generation remains valid. This is not general replay of arbitrary GPU sampler-state changes. A final resource-state command preserves changes made after the image's last draw, including a shared image used with different supported layouts. Unknown formats still fail closed.
+
+Texture deletion is checked against actual dependencies. The hook seals pending data, ignores native no-op deletions of zero/nonexistent names, and allows deletion of an unrelated old image. Deleting a texture used by a captured quad, the native render target or a bound framebuffer attachment invalidates the affected capture. Captured primary/palette texture names carry resource generations, so later reuse of the same numeric name or an observed content change does not validate an old command. Foreign-thread or unknown-context deletion conservatively invalidates old captures. The checked engine dispatch retains its original target/chain; lazy resolution is re-armed immediately so a second deletion in the same native unload is observed.
+
+A subsequent first-resource initialization repair covers the exact audited J374 calls to `glTexParameteri` and `glTexImage2D`. It permits only the native filter/wrap parameters and base-level byte uploads, after querying the texture bound to the current unit and excluding captured/target dependencies. An actual same-value parameter call is a no-op. Other accepted changes advance the resource generation, making older captures stale. Unknown callers, formats or dependencies remain rejected. Native images created inside a render callback can therefore initialize before their first captured draw without invalidating unrelated drawing. Arbitrary sampler-state transitions are not replayed by calling Lua again or by bypassing generation checks.
+
+These changes leave Update → canonical Render → GC and Lua callback cadence unchanged. They expand supported drawing rather than adding presentation-frequency Lua calls. The [cache compatibility report](validation/cache-compatibility-unit.json) separates standalone shader/format/lifetime tests from the real Regret first-load diagnostic regression. Shader reflection remains uncached; its measured cost and image visibility are separate acceptance checks.
 
 ## Update-owned render-to-texture
 
@@ -65,6 +77,18 @@ The audit separates three kinds of render work:
 A blanket “each sprite may update once per display frame” rule would break these reused templates. Replay checks animation identity, allocation ownership and bounds. Lifecycle changes invalidate the UI records as well as the entity cache; a pure UI scope waits for a new canonical capture before touching a replacement owner.
 
 These repairs cover the audited call sites. They do not establish that all game animations use the same clock.
+
+## Input callback result sampling
+
+`MC_INPUT_ACTION` (13) can be queried from native rendering as well as updating. Its query count is **not** fixed at 60 calls per second: every authoritative Update/canonical query executes natively, including repeated queries, reentrant calls and extra `Game:Update` calls made by mods such as TimeMachine. Only queries reached from a pure Manager-render pass reuse a sample.
+
+The two guarded J374 wrappers return a `handled` flag plus a bool or float output. A false input override is `handled=true, value=false`; nil/no override is `handled=false` and leaves the output untouched. The cache preserves that distinction and float bits. On a nil sample or missing key, the wrapper returns unhandled without writing the output, allowing its original caller to perform the existing raw input query with its controller index, online aggregation and flags. It does not force the action itself to false, reconstruct controller input or execute Lua to fill a miss.
+
+Samples are cleared once before each fixed input/update pass. A key contains entity pointer, native Index, type, variant, InitSeed, hook and action; null entity is valid. Scene epoch, dispatcher object, dispatcher Lua state/reference and a chained `lua_close` generation invalidate context, including same-address VM reuse. No Lua references are retained. The numeric wrapper's unused argument is not a controller index and is not part of the key.
+
+The latest completed authoritative result wins for each key; there is no query ordinal. Recording happens after the original returns, so a recursive inner result cannot overwrite a subsequently completed outer override. This preserves all authoritative calls while sampling their final state for presentation. It does not promise equivalent pure-frame behavior for arbitrary Lua whose answer intentionally changes with query count. Capacity is 4096 keys per fixed tick; overflow leaves new keys uncached, and subsequent misses use the same diagnosed native-raw fallback.
+
+`[input-cache]` reports native calls, hits, nil/raw results and misses; `[input-cache-miss]` provides bounded key/reason detail. A functional-looking controller test must not hide a missing sample. The [standalone input-cache report](validation/input-cache-unit.json) covers typed results, lifetime/reset rules and ABI tests. Exact-build single-controller runtime validation is pending in that report; multiplayer, online input and arbitrary custom input filters must not be inferred from unit success.
 
 ## Shader callbacks and graphics boundaries
 
@@ -101,3 +125,9 @@ Page ID changes deliberately retain history because they start the slide. Object
 The main-menu arrow uses six native Cursor-layer frames marked non-interpolated; it remains a discrete selection. Main-menu ANM2 art/Continue preview animation is separate from viewport motion and retains its native timing. The tests do not establish the performance of selecting an available Continue preview or every other menu path.
 
 See validation/menu-presentation.json for frame-window definitions and canonical comparison. A 720-tick Greed regression on the same final DLL also matched all 2,175 recorded events from the camera release after wall-time/UI-origin normalization; no menu-restore or pure-state warnings appeared.
+
+### Render-triggered start and continuation
+
+J374 invokes `Manager::ProcessPendingGameStart` (`0x951250`) every update, but only the pending byte at `+0x4B000` enters synchronous start/continue work. The lifecycle union includes this pending branch through its return, covering asset/fade setup and `MC_POST_GAME_STARTED` after `RestoreState`. The no-op branch and ordinary slow updates retain their scheduling debt. Entry, pending branch, thiscall caller and no-stack-argument return are checked before patching.
+
+A Lua render callback can replace a room/run while a canonical render is in progress. `CanonicalPresentationEpoch` accepts a capture only when its beginning and end epochs agree, including GC. Otherwise the extra presentation keeps the previous front buffer until the next complete canonical render; it does not replay missing transition masks or execute extra Lua. The skipped render also skips its Swap, so a short sleep prevents a busy loop while awaiting the next scheduled update. This gate checks scene lifetime, not support for every possible drawing command.

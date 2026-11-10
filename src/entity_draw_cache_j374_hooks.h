@@ -20,6 +20,30 @@ struct J374Hooks {
     inline static EntityFn player=nullptr,tear=nullptr,effect=nullptr,npc=nullptr,projectile=nullptr,laser=nullptr,bomb=nullptr,pickup=nullptr,familiar=nullptr,knife=nullptr;
     inline static unsigned submitDepth=0;
     inline static SubmitFn submit=nullptr;
+    using FormatFn=void(__thiscall*)(void*,const void*);
+    inline static FormatFn setFormat=nullptr;
+    inline static std::uint64_t formatNoop=0,formatInit=0,formatChange=0;
+    static void __fastcall SetFormat(void* image,void*,const void* descriptor) {
+        if(GetCurrentThreadId()!=gameThreadId || !cache || !cache->Capturing() || cache->Replaying()) {
+            setFormat(image,descriptor);return;
+        }
+        // The native setter may free the old layout and subsequent native calls
+        // may resize its batches. Finish caller-written vertex data first.
+        cache->SealPending();
+        const auto* p=static_cast<const std::uint8_t*>(image);
+        const auto oldEnum=*reinterpret_cast<const std::uint32_t*>(p+0x20);
+        const auto oldAttrs=*reinterpret_cast<const std::uintptr_t*>(p+0x34);
+        const auto oldSize=*reinterpret_cast<const std::uint32_t*>(p+0x38);
+        setFormat(image,descriptor);
+        if(oldEnum==*reinterpret_cast<const std::uint32_t*>(p+0x20) &&
+           oldAttrs==*reinterpret_cast<const std::uintptr_t*>(p+0x34) &&
+           oldSize==*reinterpret_cast<const std::uint32_t*>(p+0x38))++formatNoop;
+        else if(!oldAttrs || !(oldSize&0xff))++formatInit;
+        else ++formatChange;
+        // No early Retain here: LoadGraphics can call this before a new image is
+        // registered. The first quad snapshots its format and takes a native ref;
+        // Cache::End captures the final state of every image actually drawn.
+    }
     static void Entity(unsigned callback,EntityFn original,void* entity,const float* offset) {
         if(GetCurrentThreadId()!=gameThreadId){original(entity,offset);return;}
         if(InsideRender && !InsideRender()){original(entity,offset);if(OnOutsideRender)OnOutsideRender(callback);return;}

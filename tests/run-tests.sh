@@ -76,6 +76,9 @@ run_abi() {
   printf '\n[abi] entity_draw_cache_runtime_test\n'
   build_windows "$repo_dir/tests/entity_draw_cache_runtime_test.cpp" entity_draw_cache_runtime_test
   run_windows "$output_dir/entity_draw_cache_runtime_test.exe"
+  printf '\n[abi] input_result_cache_test\n'
+  build_windows "$repo_dir/tests/input_result_cache_test.cpp" input_result_cache_test
+  run_windows "$output_dir/input_result_cache_test.exe"
 }
 run_shader() {
   : "${SHADER_LUA_DLL:?Set SHADER_LUA_DLL to a compatible local Lua 5.3 runtime DLL; no DLL is bundled/copied}"

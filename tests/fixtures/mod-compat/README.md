@@ -1,0 +1,27 @@
+# Authored mod-feature fixtures
+
+These Lua files are authored validation fixtures, not copies of the mods being tested. Required third-party mods and their art are not bundled. Exact fixture hashes are in [source-hashes.json](source-hashes.json); tested DLL and target-mod Lua hashes are in the corresponding [image reports](../../../docs/validation/mod-image-regressions.md).
+
+Run only in a dedicated isolated game/profile with a verified process identity and display. Before **every** launch, including after a fresh profile copy, set music, sound-effect and voice-chat output volumes to zero in that isolated profile. Preserve the user's real-game and system audio/input. These files may restart to a fixed seed, change character/items/health, spawn entities, move the player, remove test pickups or trigger native item use. Never deploy them to a normal play session. No test runner automatically installs them.
+
+Enable one fixture at a time, disable other autoseed/input fixtures, and keep the actual target mod enabled. Capture the exact executed source hash after any CASE edits. Original source comments are retained so tested hashes stay reproducible; a historical DRAFT comment does not override the recorded completed cases below.
+
+| Fixture | Behavior and measured scope | Status |
+|---|---|---|
+| `goodtrip-feature-fixture.lua` | Seeds a stationary scene, observes real GoodTrip draw methods, adds a reused-Sprite control strip. Requires real isolated Tab held over relative world ticks60–239 and300–479. It deliberately does not synthesize Map through MC_INPUT_ACTION. | Native60 / earlier90 / R1 / R4 at90 and80 / R5 at80 captured; measured map/control drawing verified,720/721 input-boundary count variation retained. |
+| `regret-pedestal-probe.lua` | Spawns two known native collectibles, removes them separately and together, observes actual Regret ghosts. Disables movement temporarily. | Native60 / R1 / R2 / R4 direct-removal image sequences measured. Native Blind choice uses the separate fixture below. |
+| `regret-blind-options-fixture.lua` | Requires Normal, clear starting room and Isaac without Glowing Hourglass. Applies Blind, constructs a native option group, then walks into one pedestal; the engine handles acquisition/removal. No direct Remove or substitute ghost drawing. | Native60 / R4 pickup/removal and captured ghost fade verified. Not naturally rolled treasure-room generation. |
+| `rangefix-feature-fixture.lua` | CASE selects Forgotten, Spirit Sword or Bag of Crafting; real character/item use and shooting create the knives. Logs creation/update/render state and actual target damage. Requires Normal and an initially clear room; only the test NPC's contact damage is zeroed. | Normal native60 / R4 paired recorded-state comparisons passed for all three CASE values; see range-mod-compatibility.json. No pixel claim. |
+| `timemachine-feature-fixture.lua` | Requires Normal/clear room. Walks into native slots, leaves, tests zero coins and a low-health blood-machine guard. Observes original acceleration calls without invoking them directly. | Native60 / R4 / R5 explicit-seed comparisons:332 recorded events matched; R5 retains authoritative nested-input calls. Extra slot/player updates and TimeCounter increments are intentional mod behavior. |
+
+TimeMachine's low-health segment uses ordinary damage cooldown to avoid the engine's own lethal contact while checking the mod's acceleration refusal. It does not prove unprotected donation/death safety. A zero-coin slot may still receive extra updates under the actual mod; compare with native behavior instead of imposing a30Hz rule.
+
+A missing feature trigger is not a pass: require actual Map queries/draw calls, naturally generated weapon families and hits, or actual machine contact/acceleration calls. Do not broaden callback equality into pixel or arbitrary-mod compatibility claims. The fixtures write no persistent configuration themselves, but normal game/mod exit handlers can save data; use an expendable isolated profile.
+
+## Character, menu and controller observers
+
+`ce-bethany-probe.lua`, `ce-eden-probe.lua`, `mcm-browse-observer.lua` and `controller-native-chain-probe.lua` require `ce_compat_probe.lua` alongside the selected fixture as `main.lua`. Bethany/Eden/controller require Normal difficulty. Their queued native `restart <character>` then `seed` commands select the actual character; merely changing a current player before `seed` does not select the new-run character on J374. Eden writes only the fixture's own progress latch, which must be fresh for each run; never clear real mod or player save data to reset a test. The published Eden case uses the starting-choice mode, not the optional blessing mode.
+
+MCM's external schedule opens/browses/closes without editing options. The controller schedule requires engine-reported controller ownership and real input API responses; the Lua fixture neither assigns ControllerIndex nor supplies MC_INPUT_ACTION replacements. The recorded tests used a process-local synthetic XInput provider in the isolated process, not a system virtual device or physical-controller validation. That environment-specific provider is not bundled: these schedules and observers are test inputs, not turnkey deployment tools.
+
+See the individual Character Enhance, MCM and controller reports under `docs/validation` for measured features, candidate hashes and remaining boundaries.

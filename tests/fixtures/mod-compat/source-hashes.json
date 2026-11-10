@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "note": "Authored fixture sources only. Exact tested input hashes are recorded per report; a draft/template hash is not runtime validation.",
+  "files": {
+    "goodtrip-feature-fixture.lua": {
+      "sha256": "6d23529a7b3cde1eb347acfa36a1353c18fc4f3b1583a0a6e11f995c69e31d46",
+      "status": "Native60/.4/R1, R4 at90/80, and R5 at80 real-Tab graphics verified in captured windows;720/721 boundary-count variation retained."
+    },
+    "regret-pedestal-probe.lua": {
+      "sha256": "bb2e83844e01e0fa0a22224ffcff2eb31dc8eaa681af944739ed5ef9ccfbbccd",
+      "status": "Native60/R1/R2/R4 direct-removal image sequences measured; R2 and R4 match all60/60/60/61 native ROI states."
+    },
+    "regret-blind-options-fixture.lua": {
+      "sha256": "8910e8038e0fa16f03e30c9f741708db3b376314ab54ce03030af74a88c0e69f",
+      "status": "Native60/R4 natural pickup/removal of a constructed Blind option group verified;43 native vs90 R4 captured ghost samples, not full60-state exactness."
+    },
+    "rangefix-feature-fixture.lua": {
+      "sha256": "91ef13ebe96aac0679b9998e15481f4c542a304dd201a5ab6b241c5915c8a080",
+      "status": "Normal native60 vs R4 at90: all three CASE variants matched recorded canonical sequences; CASE-specific tested hashes in range-mod-compatibility.json"
+    },
+    "timemachine-feature-fixture.lua": {
+      "sha256": "051f7037ad6068c07e33a444a54a22cdf6a1dc3353cabe9daf408d9125291949",
+      "status": "Explicit native slot seeds/separate positions: native60/R4/R5 all332 recorded events match; R5 authoritative nested-input forwarding verified within scope."
+    },
+    "ce_compat_probe.lua": {
+      "sha256": "a31cf253d6d2f48f6b1fe853e9e955ff1822640e6e3f26b8533c0ba12843d7e7",
+      "status": "Authored fixture/helper or input schedule; see corresponding per-case compatibility report for exact executed hashes and scope."
+    },
+    "ce-bethany-probe.lua": {
+      "sha256": "99c7ce78460f0d51c83a099776766dffbf487eddd1638cd1656a1be0695cc1bb",
+      "status": "Authored fixture/helper or input schedule; see corresponding per-case compatibility report for exact executed hashes and scope."
+    },
+    "ce-eden-probe.lua": {
+      "sha256": "eaed1e76cde46de41268fecda58ef425fcf70b5cd6e31149d012526f5bfe1179",
+      "status": "Authored fixture/helper or input schedule; see corresponding per-case compatibility report for exact executed hashes and scope."
+    },
+    "mcm-browse-observer.lua": {
+      "sha256": "f3603c706e5bfd65e90bf891635b84cbd9f69c5e337c7d073524d9ed05b110a1",
+      "status": "Authored fixture/helper or input schedule; see corresponding per-case compatibility report for exact executed hashes and scope."
+    },
+    "controller-native-chain-probe.lua": {
+      "sha256": "152c42e415839014847d1c51b0b3a806048c6471543eac4be1763fa9438b362c",
+      "status": "Authored fixture/helper or input schedule; see corresponding per-case compatibility report for exact executed hashes and scope."
+    },
+    "controller-native-chain-sequence.json": {
+      "sha256": "b2afdd5fb589b705982498bb8a5b87dcb8d8adb9219449f2a56969b381094221",
+      "status": "Authored fixture/helper or input schedule; see corresponding per-case compatibility report for exact executed hashes and scope."
+    },
+    "mcm-browse-sequence.json": {
+      "sha256": "6cd23f8ce06b073e0c74fc53ebcd6bc3f61b241b1a5b2bc6e7b40981ea4a00ba",
+      "status": "Authored fixture/helper or input schedule; see corresponding per-case compatibility report for exact executed hashes and scope."
+    }
+  }
+}

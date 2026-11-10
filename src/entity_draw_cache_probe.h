@@ -55,6 +55,7 @@ struct Layout {
 };
 struct Command {
     Quad quad{};
+    bool resourceOnly=false; // Ordered image format/filter/wrap state, no geometry.
     State state{};
     Layout layout{};
     // Custom deleter releases an actual native strong reference, not a raw pointer.
@@ -68,6 +69,16 @@ struct Backend {
     virtual bool StateRepresentable(const State&) { return true; }
     virtual bool Describe(void* image, Layout& layout, State& state)=0;
     virtual std::shared_ptr<void> Retain(void* image)=0;
+    // Optional native resource-state support. A retained image remains alive while
+    // End snapshots its final state, including changes after its last quad.
+    virtual bool HasResourceState() const { return false; }
+    virtual bool DescribeResource(void*,Layout&,State&) { return false; }
+    virtual bool SameResource(const Command& a,const Command& b) const {
+        return a.layout==b.layout && a.state==b.state;
+    }
+    virtual bool PrepareResource(const Command&) { return true; }
+    virtual bool StateUsesTexture(const State&,std::uint32_t) const { return true; }
+    virtual bool CommandUsesTexture(const Command&,std::uint32_t) const { return true; }
     // Must validate every command BEFORE replay starts. Unknown shader/RT/layout fails.
     virtual bool CanReplay(const Command& command)=0;
     virtual const char* ReplayFailure() const { return "resource-or-context"; }
@@ -136,10 +147,37 @@ public:
     }
     // RT changes/clears, unsupported draw types, unmanaged buffers, shader uniform
     // writes, resource changes and nested callback scopes all invalidate the cache.
+    void SealPending() { if(capturing_ && !replaying_) Seal(); }
+    bool TextureDeleted(std::uint32_t texture,std::uint32_t reason=145) {
+        if(!capturing_ || replaying_ || !texture)return false;
+        Seal();
+        bool used=backend_.StateUsesTexture(current_.entryState,texture);
+        for(const auto&c:current_.commands)used=used || backend_.CommandUsesTexture(c,texture);
+        if(used)Unsafe(reason); // Checked texture delete/upload/parameter dispatch.
+        return used;
+    }
     void Unsafe(std::uint32_t reason=0) { if (capturing_) { Seal();if(!bad_){current_.reject="unsafe-operation";current_.unsafeCode=reason;}bad_=true; } }
     void End() {
         if (!capturing_) return;
         Seal();
+        if(!bad_ && backend_.HasResourceState()) {
+            // One final resource command per retained image, only if its final
+            // state differs from its last captured use. Iterate the original
+            // command count; appended state commands must not extend this loop.
+            const auto count=current_.commands.size();
+            for(std::size_t i=0;i<count && !bad_;++i) {
+                const auto image=current_.commands[i].quad.image;
+                bool later=false;
+                for(std::size_t j=i+1;j<count;++j)if(current_.commands[j].quad.image==image){later=true;break;}
+                if(later)continue;
+                Command final;final.quad.image=image;final.resourceOnly=true;
+                final.imageLease=current_.commands[i].imageLease;
+                if(!backend_.DescribeResource(image,final.layout,final.state)) {
+                    bad_=true;current_.reject="unsupported-final-image-state";break;
+                }
+                if(!backend_.SameResource(current_.commands[i],final))current_.commands.push_back(std::move(final));
+            }
+        }
         current_.exitState=backend_.ReadState();
         current_.noOp=current_.commands.empty() && current_.exitState==current_.entryState;
         current_.valid=!bad_ && (current_.noOp || (backend_.ContextCompatible(current_.exitState,current_.entryState) && backend_.StateRepresentable(current_.exitState)));
@@ -163,11 +201,14 @@ public:
         if(!found->valid){lastReplay_.reason="invalid-capture";lastReplay_.captureReject=found->reject;lastReplay_.unsafeCode=found->unsafeCode;return false;}
         if(found->noOp)return true; // Nothing drawn and native state unchanged.
         if(found->commands.empty() && !backend_.ContextCompatible(backend_.ReadState(),found->entryState)){lastReplay_.reason="context-changed";return false;}
+        if(!backend_.StateRepresentable(found->exitState)){lastReplay_.reason="exit-shader-generation-or-contract";return false;}
         // Fixed sampled positions are intentional; no guessed entity translation.
         for (const auto& c:found->commands) if (!backend_.CanReplay(c)){lastReplay_.reason=backend_.ReplayFailure();return false;}
         const State saved=backend_.ReadState(); replaying_=true;
         bool ok=true;
         for (const auto& c:found->commands) {
+            if(!backend_.PrepareResource(c)){ok=false;lastReplay_.reason="resource-prepare-failed";break;}
+            if(c.resourceOnly)continue;
             backend_.ApplyState(c.state);
             auto* dst=backend_.Submit(c.quad);
             if (!dst) { ok=false;lastReplay_.reason="native-submit-null";break; }
@@ -177,6 +218,17 @@ public:
             for (unsigned v=0;v<4;++v) std::memcpy(&z[v],dst+v*c.layout.stride+c.layout.positionOffset+8,4);
             std::memcpy(dst,c.vertices.data(),c.vertices.size());
             for (unsigned v=0;v<4;++v) std::memcpy(dst+v*c.layout.stride+c.layout.positionOffset+8,&z[v],4);
+        }
+        if(!ok && backend_.HasResourceState()) {
+            // A failed native submission must not strand a shared image in an
+            // intermediate format. Restore each image's captured final resource
+            // state (its last command, including an explicit trailing change).
+            for(std::size_t i=0;i<found->commands.size();++i) {
+                bool later=false;
+                for(std::size_t j=i+1;j<found->commands.size();++j)
+                    if(found->commands[j].quad.image==found->commands[i].quad.image){later=true;break;}
+                if(!later)backend_.PrepareResource(found->commands[i]);
+            }
         }
         backend_.ApplyState(ok ? found->exitState : saved); replaying_=false; return ok;
     }

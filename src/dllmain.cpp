@@ -27,6 +27,7 @@
 #ifdef HIGHFPS_BUILD_19715
 #include "entity_draw_cache_j374_runtime.h"
 #include "shader_params_cache_j374.h"
+#include "input_result_cache_j374.h"
 #endif
 
 namespace {
@@ -762,6 +763,7 @@ void ConfigurePresentation() {
 bool g_endPacingActive = false;
 bool g_hiddenFixedRender = false;
 bool g_separateNativeFrames = false;
+highfps::CanonicalPresentationEpoch g_canonicalPresentation;
 bool OverlayPipelineReady();
 double g_menuPresentationTime = 0;
 #ifdef HIGHFPS_BUILD_19715
@@ -805,6 +807,8 @@ void SampleMenuPresentation() {
 }
 highfps_entity_probe::Runtime* g_entityRenderCache = nullptr;
 highfps_shader_params::Runtime* g_shaderParamsCache = nullptr;
+highfps_input_cache::Runtime* g_inputResultCache = nullptr;
+std::uint64_t InputCacheEpoch() { return g_lifecycleEpoch; }
 bool InNativeRender() { return g_inRenderPhase != 0; }
 uintptr_t ResolveCacheAddress(uintptr_t address) { return reinterpret_cast<uintptr_t>(Addr(address)); }
 void CacheLog(const char* message) { Log("%s", message); }
@@ -832,12 +836,20 @@ void EnsureFixedRenderPipeline() {
     shaderHost.address = &ResolveCacheAddress; shaderHost.expect = &Expect; shaderHost.poke = &Poke;
     shaderHost.writeJump = &WriteRel32Jmp; shaderHost.log = &CacheLog; shaderHost.insideRender = &InNativeRender;
     g_shaderParamsCache = new highfps_shader_params::Runtime(shaderHost);
+    highfps_input_cache::Host inputHost;
+    inputHost.address = &ResolveCacheAddress; inputHost.expect = &Expect; inputHost.poke = &Poke;
+    inputHost.writeJump = &WriteRel32Jmp; inputHost.log = &CacheLog;
+    inputHost.insideRender = &InNativeRender; inputHost.epoch = &InputCacheEpoch;
+    g_inputResultCache = new highfps_input_cache::Runtime(inputHost);
     if (g_entityRenderCache->Install() && g_shaderParamsCache->Install() &&
+        g_inputResultCache->Install() &&
         highfps::native_ui_replay::InstallNativeUiReplay19715(&g_luaFrameIntermediate)) {
         g_separateNativeFrames = true;
         if (g_cfg.diag) Log("[pipeline] installation completed in %.2f ms", (Now() - installStarted) * 1000.0);
         Log("[pipeline] fixed Update -> native Render -> GC; presentation replays entity Lua drawing");
     } else {
+        // Input's VM-close observer chains through the shader observer.
+        g_inputResultCache->Shutdown();
         g_shaderParamsCache->Shutdown();
         g_entityRenderCache->Shutdown();
         if (g_cfg.maxFps == 0 || g_cfg.maxFps > 60) g_cfg.maxFps = 60;
@@ -850,6 +862,7 @@ void BeginNativeRender(bool canonical) {
         highfps::native_ui_replay::BeginNativeUiRender19715(g_lifecycleEpoch, canonical);
         g_entityRenderCache->BeginRender(g_lifecycleEpoch, canonical);
         g_shaderParamsCache->BeginRender(g_lifecycleEpoch, canonical);
+        g_inputResultCache->BeginRender(canonical);
     }
 }
 #else
@@ -970,6 +983,20 @@ using RestoreStateFn = void(__fastcall*)(void*, void*, void*, bool);
 using RerunStateFn = void(__fastcall*)(void*, void*, void*);
 RestoreStateFn g_restoreStateOriginal = nullptr;
 RerunStateFn g_rerunStateOriginal = nullptr;
+using PendingGameStartFn = void(__fastcall*)(void*, void*);
+PendingGameStartFn g_pendingGameStartOriginal = nullptr;
+void __fastcall HookedPendingGameStart(void* self, void*) {
+    // Manager::Update invokes this on every tick; only its pending branch
+    // performs a synchronous start/continue. Include post-RestoreState assets,
+    // fade setup and MC_POST_GAME_STARTED in the same nested load interval.
+    if (!*reinterpret_cast<const uint8_t*>(static_cast<const uint8_t*>(self) + 0x4B000)) {
+        g_pendingGameStartOriginal(self, nullptr);
+        return;
+    }
+    BeginLifecycleLoad("game-start-continue");
+    __try { g_pendingGameStartOriginal(self, nullptr); }
+    __finally { EndLifecycleLoad(); }
+}
 void __fastcall HookedRestoreState(void* self, void*, void* state, bool startGame) {
     BeginLifecycleLoad("restore-state");
     __try { g_restoreStateOriginal(self, nullptr, state, startGame); }
@@ -993,10 +1020,17 @@ const LifecycleHookSite kLifecycleSites[] = {
     {0x6FE970, {0x55,0x8B,0xEC,0x83,0xE4,0xF8}, 6, reinterpret_cast<void*>(&HookedStartRoom), "Game::StartRoomTransition"},
     {0x6FEDB0, {0x55,0x8B,0xEC,0x6A,0xFF}, 5, reinterpret_cast<void*>(&HookedStartStage), "Game::StartStageTransition"},
     {0x6F92E0, {0x55,0x8B,0xEC,0x6A,0xFF}, 5, reinterpret_cast<void*>(&HookedRestoreState), "Game::RestoreState"},
-    {0x6F8590, {0x55,0x8B,0xEC,0x6A,0xFF}, 5, reinterpret_cast<void*>(&HookedRerunState), "Game::StartFromRerunState"}
+    {0x6F8590, {0x55,0x8B,0xEC,0x6A,0xFF}, 5, reinterpret_cast<void*>(&HookedRerunState), "Game::StartFromRerunState"},
+    {0x951250, {0x53,0x8B,0xDC,0x83,0xEC,0x08}, 6, reinterpret_cast<void*>(&HookedPendingGameStart), "Manager::ProcessPendingGameStart"}
 };
 constexpr unsigned kLifecycleHookCount = sizeof kLifecycleSites / sizeof kLifecycleSites[0];
 bool ValidateLifecycleSites() {
+    static const uint8_t pending[] = {0x80,0xBF,0x00,0xB0,0x04,0x00,0x00,0x0F,0x84,0xC8,0x05,0x00,0x00};
+    static const uint8_t caller[] = {0x8B,0xCF,0xE8,0xED,0x46,0x00,0x00};
+    static const uint8_t epilogue[] = {0x8B,0xE5,0x5D,0x8B,0xE3,0x5B,0xC3};
+    if (!Expect(0x951299,pending,sizeof pending,"J374 pending-start byte and no-op branch") ||
+        !Expect(0x94CB5C,caller,sizeof caller,"J374 pending-start thiscall caller") ||
+        !Expect(0x951885,epilogue,sizeof epilogue,"J374 pending-start no-stack-argument return")) return false;
     for (const auto& site : kLifecycleSites)
         if (!Expect(site.address, site.bytes, site.length, site.name)) return false;
     return true;
@@ -1017,6 +1051,7 @@ bool InstallLifecycleHooks() {
     g_startStageOriginal = reinterpret_cast<StartStageFn>(code + 96);
     g_restoreStateOriginal = reinterpret_cast<RestoreStateFn>(code + 128);
     g_rerunStateOriginal = reinterpret_cast<RerunStateFn>(code + 160);
+    g_pendingGameStartOriginal = reinterpret_cast<PendingGameStartFn>(code + 192);
     for (unsigned i = 0; i < kLifecycleHookCount; ++i) {
         const auto& site = kLifecycleSites[i];
         uint8_t patch[6] = {0xE9, 0, 0, 0, 0, 0x90};
@@ -1259,6 +1294,9 @@ int __cdecl HookedUpdateWrapper() {
         const uint32_t gameFrameBefore = GameFrame();
         const double updStart = Now();
         if (g_cfg.profile) InterlockedExchange(&g_inUpdate, 1);
+#ifdef HIGHFPS_BUILD_19715
+        if (g_separateNativeFrames) g_inputResultCache->BeginTick();
+#endif
         result = g_wrapperTrampoline();
         ++g_renderPassesDue;
         if (logicPhase) {
@@ -1287,6 +1325,7 @@ int __cdecl HookedUpdateWrapper() {
         const bool renderHidden = g_separateNativeFrames || (!crossedLifecycle && catchupSteps + 1 < 16 && g_simClock.Due(now));
 #ifdef HIGHFPS_BUILD_19715
         if (renderHidden) {
+            const auto renderEpoch = g_lifecycleEpoch;
             PrepareOverlay();
             g_luaFrameIntermediate = 0;
             g_inRenderPhase = 1;
@@ -1300,6 +1339,7 @@ int __cdecl HookedUpdateWrapper() {
             }
             SampleMenuPresentation();
             GarbageCollect19715();
+            g_canonicalPresentation.Complete(renderEpoch, g_lifecycleEpoch);
             if (ApplyLifecycleTime() > 0) {
                 now = Now();
                 crossedLifecycle = true;
@@ -1423,6 +1463,16 @@ uint64_t PureGameplayHash19715() {
     return h;
 }
 void __cdecl Render19715() {
+    if (g_separateNativeFrames && !g_canonicalPresentation.Ready(g_lifecycleEpoch)) {
+        // Keep the previously presented frame until a full canonical render has
+        // captured this lifetime. Do not expose a half-restored room without its
+        // Lua transition mask, and never run extra callbacks to fill the cache.
+        g_inRenderPhase = 0;
+        g_luaFrameIntermediate = 0;
+        if (g_cfg.diag) Log("[presentation-hold] epoch=%llu awaiting complete canonical frame", g_lifecycleEpoch);
+        Sleep(1); // This path skips Manager::Render and therefore its paced Swap.
+        return;
+    }
     uint64_t before = 0;
     const bool audit = g_cfg.diag && g_separateNativeFrames;
     if (audit) before = PureGameplayHash19715();

@@ -1,0 +1,292 @@
+{
+  "schema": 1,
+  "date": "2026-11-10",
+  "build": "R5 input-cache affected-path verification; R4 comparison retained",
+  "status": "R4 and R5 controlled native TimeMachine sequences match native60; R5 authoritative nested updates remain forwarded",
+  "source_commit": null,
+  "source_mapping": "Exact DLL, target-mod source and executed fixture hashes identify each measured build. R5 repeats this affected path; no untested later-binary or overall arbitrary-mod equivalence is asserted.",
+  "comparison": {
+    "record_order_and_values_exact": true,
+    "native_only_keys": 0,
+    "candidate_only_keys": 0,
+    "common_keys": 332,
+    "mismatch_fields": {},
+    "numeric_max_absolute_difference": {},
+    "first_mismatches": [],
+    "first_native_only_keys": [],
+    "first_candidate_only_keys": []
+  },
+  "artifacts": {
+    "native": {
+      "case_id": "timemachine-seeded-native60-20261110",
+      "dll_present_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "051f7037ad6068c07e33a444a54a22cdf6a1dc3353cabe9daf408d9125291949",
+      "target_mod_lua_sha256": {
+        "main.lua": "75e96528cf5bcdebae57c152447ba6591ff8580e93f22d28f5d7a0c1353cbd92"
+      },
+      "game_log_sha256": "f3d3a00bd7531498ee75fa2e407026418c20ad4af7fb7fe2ed26c81c4a9d2dd2"
+    },
+    "R4": {
+      "case_id": "timemachine-seeded-r4-90-20261110",
+      "dll_present_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "051f7037ad6068c07e33a444a54a22cdf6a1dc3353cabe9daf408d9125291949",
+      "target_mod_lua_sha256": {
+        "main.lua": "75e96528cf5bcdebae57c152447ba6591ff8580e93f22d28f5d7a0c1353cbd92"
+      },
+      "game_log_sha256": "fd81546a5eb64c07473e776ccaf8636c16d2fa840a770d490c9cbec9f5e91f38",
+      "diagnostic_lines": {
+        "[entity-cache-miss]": 0,
+        "[pure-state]": 0,
+        "[pure-lua]": 0,
+        "[FATAL]": 0
+      }
+    },
+    "R5": {
+      "case_id": "timemachine-seeded-r5-90-20261110",
+      "dll_present_sha256": "1a2b77b5cc0ba4fc63890f9d08e09a43674d7c4cf32506f9ef446cb46af8c139",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "051f7037ad6068c07e33a444a54a22cdf6a1dc3353cabe9daf408d9125291949",
+      "target_mod_lua_sha256": {
+        "main.lua": "75e96528cf5bcdebae57c152447ba6591ff8580e93f22d28f5d7a0c1353cbd92"
+      },
+      "game_log_sha256": "ef5dfffb1a675ad70ad6f70f2d1f64f439a1151cef98a46dea3486d8f97bb7fa",
+      "diagnostic_lines": {
+        "[entity-cache-miss]": 0,
+        "[input-cache-miss]": 0,
+        "[pure-state]": 0,
+        "[pure-lua]": 0,
+        "[FATAL]": 0
+      }
+    }
+  },
+  "events": {
+    "spawn_slot": 3,
+    "start": 1,
+    "phase": 5,
+    "tick": 37,
+    "accel": 285,
+    "DONE": 1
+  },
+  "final": {
+    "ev": "DONE",
+    "t": "360",
+    "gf": "375",
+    "tc": "884",
+    "u": "361",
+    "r": "720",
+    "phase": "low_hp_guard",
+    "coins": "0",
+    "hp": "1",
+    "dc": "420",
+    "slot": "2",
+    "ef": "90",
+    "anim": "Idle",
+    "af": "0",
+    "dist": "19.0000",
+    "contact": "true",
+    "calls": "285",
+    "ran": "201",
+    "slotExtra": "0",
+    "playerExtra": "0",
+    "pos": "440.0000,357.2263",
+    "psize": "10.0000",
+    "ssize": "12.0000",
+    "findCalls": "360",
+    "targets": "3",
+    "guardCalls": "84",
+    "requestedSuccessfulUpdates": "710",
+    "clockExtra": "509",
+    "slotSeed": "5509123"
+  },
+  "phase_acceleration": {
+    "approach": {
+      "calls": 24,
+      "ran": 24,
+      "requested_counts": {
+        "1": 11,
+        "2": 13
+      },
+      "observed_slot_framecount_delta": 0,
+      "observed_player_framecount_delta": 0
+    },
+    "contact_coins": {
+      "calls": 90,
+      "ran": 90,
+      "requested_counts": {
+        "3": 21,
+        "2": 6,
+        "4": 20,
+        "5": 19,
+        "6": 19,
+        "7": 5
+      },
+      "observed_slot_framecount_delta": 0,
+      "observed_player_framecount_delta": 0
+    },
+    "no_coins": {
+      "calls": 84,
+      "ran": 84,
+      "requested_counts": {
+        "1": 10,
+        "2": 21,
+        "3": 19,
+        "4": 21,
+        "5": 12,
+        "6": 1
+      },
+      "observed_slot_framecount_delta": 0,
+      "observed_player_framecount_delta": 0
+    },
+    "leave": {
+      "calls": 3,
+      "ran": 3,
+      "requested_counts": {
+        "5": 3
+      },
+      "observed_slot_framecount_delta": 0,
+      "observed_player_framecount_delta": 0
+    },
+    "low_hp_guard": {
+      "calls": 84,
+      "ran": 0,
+      "requested_counts": {
+        "1": 84
+      },
+      "observed_slot_framecount_delta": 0,
+      "observed_player_framecount_delta": 0
+    }
+  },
+  "setup": {
+    "mode": "Normal clear starting room",
+    "native_slot_seeds": {
+      "paid_slot_1": 5509121,
+      "empty_slot_1": 5509122,
+      "blood_slot_2": 5509123
+    },
+    "spawn": "Game:Spawn with explicit seeds; each returned InitSeed asserted and logged",
+    "phase_positions_relative_to_room_center": [
+      [
+        -120,
+        -60
+      ],
+      [
+        120,
+        -60
+      ],
+      [
+        120,
+        60
+      ]
+    ],
+    "outputs": "Prior machines and payouts are preserved; phases use separate positions to avoid collecting earlier payouts during setup.",
+    "input": "Native player movement supplied through MC_INPUT_ACTION; no virtual device or direct TimeMachine step/accel invocation.",
+    "low_health": "One half-heart with600 ticks of ordinary damage cooldown; no effect invincibility."
+  },
+  "interpretation": {
+    "records_exact": 332,
+    "successful_acceleration_calls": 201,
+    "low_health_refusals": 84,
+    "all_acceleration_calls": 285,
+    "sum_successful_requested_updates": 710,
+    "intentional_extra_TimeCounter": 509,
+    "world_ticks": 360,
+    "main_render_callbacks": 720,
+    "manual_update_FrameCount": "slotDelta/playerDelta stay0 because these native manual Update calls do not increment those counters. Do not interpret this as zero updates; successful original-method results, requested counts, clock and sprite/resource states are compared.",
+    "empty_resource_behavior": "The actual mod accelerates the empty coin slot; this is preserved native behavior, not a requirement to stop at zero coins.",
+    "leave_behavior": "The empty slot remains alive. Three final contact calls at ticks210\u2013212 are followed by no acceleration from213 onward; ticks220\u2013260 advance TimeCounter by40 with no extra debt.",
+    "guard_behavior": "All84 actual low-health calls returnfalse; final health1, ordinary damage cooldown420, and no additional TimeCounter during the guard phase."
+  },
+  "excluded_prior_cases": [
+    {
+      "case_id": "timemachine-normal-native60-20261110",
+      "reason": "Horizontal route never entered the mod contact radius; zero acceleration coverage."
+    },
+    {
+      "case_id": "timemachine-contact-native60-20261110",
+      "reason": "Old fixture falsely required manual Update to increment FrameCount; payout RNG was uncontrolled."
+    },
+    {
+      "case_id": "timemachine-normal-r4-90-20261110",
+      "reason": "Unseeded machine outcomes and same-location payout pickup contaminated later phases; not classified as a product regression."
+    }
+  ],
+  "scope_limits": [
+    "Only native slot variants1/2 with these explicit seeds and configuration; not all payout outcomes, machine variants, Eternal Chest or modded-machine callback pumping.",
+    "Low-health guard under ordinary damage cooldown does not prove unprotected lethal-donation safety.",
+    "Equality is of logged fields/order at recorded precision, not game memory, rendered pixels, physical input or all RNG streams."
+  ],
+  "r5_vs_native": {
+    "record_order_and_values_exact": true,
+    "native_only_keys": 0,
+    "candidate_only_keys": 0,
+    "common_keys": 332,
+    "mismatch_fields": {},
+    "numeric_max_absolute_difference": {},
+    "first_mismatches": [],
+    "first_native_only_keys": [],
+    "first_candidate_only_keys": []
+  },
+  "r5_final": {
+    "ev": "DONE",
+    "t": "360",
+    "gf": "375",
+    "tc": "884",
+    "u": "361",
+    "r": "720",
+    "phase": "low_hp_guard",
+    "coins": "0",
+    "hp": "1",
+    "dc": "420",
+    "slot": "2",
+    "ef": "90",
+    "anim": "Idle",
+    "af": "0",
+    "dist": "19.0000",
+    "contact": "true",
+    "calls": "285",
+    "ran": "201",
+    "slotExtra": "0",
+    "playerExtra": "0",
+    "pos": "440.0000,357.2263",
+    "psize": "10.0000",
+    "ssize": "12.0000",
+    "findCalls": "360",
+    "targets": "3",
+    "guardCalls": "84",
+    "requestedSuccessfulUpdates": "710",
+    "clockExtra": "509",
+    "slotSeed": "5509123"
+  },
+  "r5_input_cache": {
+    "reported_bucket_totals_by_hook": {
+      "0": {
+        "native": 10290,
+        "hit": 0,
+        "nilRaw": 0,
+        "missRaw": 0,
+        "skippedStore": 0
+      },
+      "1": {
+        "native": 14588,
+        "hit": 0,
+        "nilRaw": 0,
+        "missRaw": 0,
+        "skippedStore": 0
+      },
+      "2": {
+        "native": 12208,
+        "hit": 0,
+        "nilRaw": 0,
+        "missRaw": 0,
+        "skippedStore": 0
+      }
+    },
+    "maximum_observed_snapshot_size": 27,
+    "maximum_observed_vm_close_generation": 0,
+    "scope": "Bucket totals include startup/trailing activity and may omit an unreported final partial bucket; they are not fixture-only totals. samples is instantaneous occupancy, not summed.",
+    "interpretation": "All three hook classes forward native calls; replay hits, nil/raw fallbacks, missing/raw fallbacks and skipped stores are0 in reported buckets. This TimeMachine case exercises authoritative/manual nested Update forwarding outside pure render, not positive pure-input replay hits.",
+    "duplicate_lua_evidence": "332 normalized fixture events and their order remain exact, including201 successful acceleration calls,84 low-health refusals,710 successful requested updates,TimeCounter extra509 and720 main render callbacks. No pure-Lua warning lines. This is measured-path evidence, not a universal no-duplicate proof."
+  }
+}

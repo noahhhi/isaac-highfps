@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "start_after": "HFCO_READY, controller > 0, actual proxy poll success and two distinct active slots verified",
+  "send_using": "Existing xinput-test.controller.Session.set; each controls object is a complete desired frame, omitted fields return zero. Keep heartbeat running. No OS input or virtual device.",
+  "clock": "Root records monotonic and wall timestamps for every Session.set, proxy packet and phase. Do not directly subtract Lua Isaac.GetTime from proxy Unix milliseconds without explicit synchronization.",
+  "phases": [
+    {"name": "neutral", "seconds": 0.5, "controls": {}},
+    {"name": "right", "seconds": 0.9, "controls": {"rx": 26000}},
+    {"name": "diagonal_right_up", "seconds": 0.9, "controls": {"rx": 22000, "ry": 22000}},
+    {"name": "low_amplitude", "seconds": 0.5, "controls": {"rx": 3500, "ry": 1500}},
+    {"name": "release_after_low", "seconds": 0.6, "controls": {}},
+    {"name": "left", "seconds": 0.9, "controls": {"rx": -26000}},
+    {"name": "up", "seconds": 0.9, "controls": {"ry": 26000}},
+    {"name": "release_after_turn", "seconds": 0.8, "controls": {}},
+    {"name": "charge_right", "seconds": 0.9, "controls": {"rx": 26000}},
+    {"name": "release_beam", "seconds": 0.8, "controls": {}},
+    {"name": "r3_single_down", "seconds": 0.12, "controls": {"buttons": 128}},
+    {"name": "r3_single_up", "seconds": 0.75, "controls": {}},
+    {"name": "r3_close_mcm_down", "seconds": 0.12, "controls": {"buttons": 128}},
+    {"name": "r3_close_mcm_up", "seconds": 0.75, "controls": {}},
+    {"name": "r3_double_first_down", "seconds": 0.12, "controls": {"buttons": 128}},
+    {"name": "r3_double_gap", "seconds": 0.2, "controls": {}},
+    {"name": "r3_double_second_down", "seconds": 0.12, "controls": {"buttons": 128}},
+    {"name": "r3_double_release", "seconds": 0.75, "controls": {}},
+    {"name": "settle", "seconds": 1.0, "controls": {}}
+  ],
+  "finally": "Set neutral and keep lease until fixture DONE or bounded failure; root then closes only this session and cleans isolated proxy overrides.",
+  "not_covered": ["Physical controller or Steam Input latency", "Tainted Azazel", "Digital-output mode without Analog Stick", "Mars double-tap", "Charge familiars", "Pass-through attack items", "Shared-controller multiplayer"]
+}

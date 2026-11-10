@@ -1,5 +1,16 @@
 #pragma once
 namespace highfps {
+// A Lua render callback can synchronously replace the room/run. Such a render
+// spans two lifetimes and cannot seed a pure presentation of the new lifetime.
+struct CanonicalPresentationEpoch {
+    unsigned long long epoch = 0;
+    bool valid = false;
+    void Complete(unsigned long long before, unsigned long long after) {
+        epoch = after;
+        valid = before == after;
+    }
+    bool Ready(unsigned long long current) const { return valid && epoch == current; }
+};
 // The simulation clock is an absolute schedule, never the time a render loop
 // happened to dispatch an update. This matters for noninteger FPS/60 ratios.
 struct FixedTimeline {

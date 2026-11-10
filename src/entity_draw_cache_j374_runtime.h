@@ -5,6 +5,9 @@
 #include <windows.h>
 #include <algorithm>
 #include <cstdio>
+#include <atomic>
+#include <unordered_map>
+#include <intrin.h>
 namespace highfps_entity_probe {
 struct Host {
     ResolveAddress address=nullptr;
@@ -15,25 +18,197 @@ struct Host {
     bool (*insideRender)()=nullptr;
 };
 class NativeBackend final:public Backend {
+    friend struct NativeBackendTestAccess;
     ResolveAddress address_;
     const char* replayFailure_="none";
     using GetInt=void(WINAPI*)(unsigned,int*);
     using IsEnabled=unsigned char(WINAPI*)(unsigned);
     GetInt getInt_=nullptr; IsEnabled isEnabled_=nullptr;
+    IsEnabled isTexture_=nullptr;
+    using GetTextureParameter=void(WINAPI*)(unsigned,unsigned,int*);
+    GetTextureParameter getTextureParameter_=nullptr;
     using CurrentContext=HGLRC(WINAPI*)();
     CurrentContext context_=nullptr;
+    using GetProgram=void(WINAPI*)(unsigned,unsigned,int*);
+    using GetUniform=void(WINAPI*)(unsigned,unsigned,int,int*,int*,unsigned*,char*);
+    GetProgram getProgram_=nullptr;GetUniform getUniform_=nullptr;
+    using GetAttachment=void(WINAPI*)(unsigned,unsigned,unsigned,int*);
+    GetAttachment getAttachment_=nullptr;
+    HGLRC knownContext_=nullptr;
+    std::unordered_map<std::uint32_t,std::uint64_t> textureGenerations_;
+    inline static std::atomic<std::uint64_t> foreignTextureEpoch_{0};
+    std::uint64_t TextureGeneration(std::uint32_t name)const {
+        const auto it=textureGenerations_.find(name);return it==textureGenerations_.end()?0:it->second;
+    }
+    bool TextureNames(void* image,std::uint64_t&names)const {
+        if(!image){names=0;return true;}
+        auto**vt=*reinterpret_cast<void***>(image);
+        // All J374 ImagePlatform implementations share unload and bind methods.
+        // The abstract ImageBase has neither proved texture storage nor ownership.
+        if(vt[30]!=reinterpret_cast<void*>(address_(0xA711E0)) || vt[33]!=reinterpret_cast<void*>(address_(0xA71260)))return false;
+        const auto*p=static_cast<const std::uint8_t*>(image);
+        names=Pair(*reinterpret_cast<const std::uint32_t*>(p+0x78),*reinterpret_cast<const std::uint32_t*>(p+0x7C));return true;
+    }
+    static bool NamesInclude(std::uint64_t names,std::uint32_t name){return name && (std::uint32_t(names)==name || std::uint32_t(names>>32)==name);}
     template<class T>T Read(std::uintptr_t va)const{return *reinterpret_cast<T*>(address_(va));}
     static std::uint64_t Pair(std::uint32_t a,std::uint32_t b){return a|(std::uint64_t(b)<<32);}
+    int ShaderKind(std::uintptr_t shader)const {
+        const std::uintptr_t objects[]={0xBD56F8,0xBD5724,0xBD5750,0xBD296C,0xBD2A74,0xBD2890,0xBD2788};
+        for(unsigned i=0;i<7;++i)if(shader==address_(objects[i]))return int(i);
+        return -1;
+    }
+    void StampShader(State&s)const {
+        if(ShaderKind(std::uintptr_t(s.word[9]))<0)return;
+        auto* p=reinterpret_cast<const std::uint8_t*>(std::uintptr_t(s.word[9]));
+        s.word[18]=*reinterpret_cast<const std::uint32_t*>(p+0x28);
+        s.word[19]=*reinterpret_cast<const std::uint32_t*>(p+8);
+    }
+    bool UniformContract(unsigned program) {
+        struct Timer {
+            std::uint64_t& ticks;LARGE_INTEGER begin;
+            explicit Timer(std::uint64_t& target):ticks(target){QueryPerformanceCounter(&begin);}
+            ~Timer(){LARGE_INTEGER end;QueryPerformanceCounter(&end);ticks+=end.QuadPart-begin.QuadPart;}
+        } timer(stats.uniformQpc);
+        ++stats.uniformChecks;
+        if(!getProgram_ || !getUniform_) {
+            auto gl=GetModuleHandleA("opengl32.dll");
+            using GetProc=PROC(WINAPI*)(LPCSTR);
+            auto get=gl?reinterpret_cast<GetProc>(GetProcAddress(gl,"wglGetProcAddress")):nullptr;
+            if(!get)return false;
+            auto a=get("glGetProgramiv"),b=get("glGetActiveUniform");
+            const auto valid=[](PROC p){const auto v=reinterpret_cast<std::uintptr_t>(p);return v>3 && v!=~std::uintptr_t(0);};
+            if(!valid(a)||!valid(b))return false;
+            getProgram_=reinterpret_cast<GetProgram>(a);getUniform_=reinterpret_cast<GetUniform>(b);
+        }
+        stats.uniformGlQueries+=2;
+        int linked=0,count=0;getProgram_(program,0x8B82,&linked);getProgram_(program,0x8B86,&count);
+        if(!linked || count<0 || count>2)return false;
+        unsigned seen=0;
+        for(int i=0;i<count;++i) {
+            char name[64]{};int length=0,size=0;unsigned type=0;
+            ++stats.uniformGlQueries;getUniform_(program,unsigned(i),sizeof name,&length,&size,&type,name);
+            if(length<0 || length>=int(sizeof name) || size!=1)return false;
+            name[length]=0;
+            unsigned bit=0;
+            if(std::strcmp(name,"Transform")==0 && type==0x8B5C)bit=1;
+            if(std::strcmp(name,"Texture0")==0 && type==0x8B5E)bit=2;
+            if(!bit || (seen&bit))return false;seen|=bit;
+        }
+        return true;
+    }
+    bool ShaderValid(const State&s) {
+        if(!s.word[9])return true;
+        const int kind=ShaderKind(std::uintptr_t(s.word[9]));if(kind<0)return false;
+        auto* p=reinterpret_cast<const std::uint8_t*>(std::uintptr_t(s.word[9]));
+        if(!p[4] || !s.word[18] || s.word[18]==0xffffffffu ||
+           s.word[18]!=*reinterpret_cast<const std::uint32_t*>(p+0x28) ||
+           s.word[19]!=*reinterpret_cast<const std::uint32_t*>(p+8))return false;
+        if(kind<3)return true; // Existing native simple shader contracts.
+        const unsigned indices[]={0,10,15,16};
+        if(Read<std::uint32_t>(0xAD2AF8+4*indices[kind-3])!=s.word[9])return false;
+        const auto n=*reinterpret_cast<const std::uint32_t*>(p+0xC);
+        const auto* attrs=reinterpret_cast<const std::uint32_t*>(std::uintptr_t(s.word[19]));
+        const unsigned expected[]={5,6,7,4,3,2,1,3,4};
+        if(!attrs || n!=unsigned(kind==4?9:8))return false;
+        for(unsigned i=0;i<n;++i)if(attrs[2*i+1]!=expected[i])return false;
+        // Reflect every validation, not only by program ID: GL may recycle names
+        // after a shader reload. Extra user uniforms are still unsupported.
+        return UniformContract(unsigned(s.word[18]));
+    }
+    static bool Match(const Layout&l,std::initializer_list<std::uint8_t> a) {
+        return l.attributes.size()==a.size() && std::equal(a.begin(),a.end(),l.attributes.begin());
+    }
+    std::uintptr_t FormatDescriptor(unsigned predefined,const Layout&l)const {
+        std::uintptr_t va=0;
+        if(predefined==0 && Match(l,{5,6}))va=0xBCBCF0;
+        if(predefined==1 && Match(l,{5,6,7}))va=0xBCBCD0;
+        if(predefined==3 && Match(l,{5,6,7,4,3,2,1,3}))va=0xBAF720;
+        if(predefined==3 && Match(l,{5,6,7,4,3,2,1,3,4}))va=0xBAF5E8;
+        if(!va)return 0;
+        for(unsigned i=0;i<l.attributes.size();++i)if(Read<std::uint32_t>(va+8*i+4)!=l.attributes[i])return 0;
+        if(Read<std::uint32_t>(va+8*l.attributes.size()+4)!=0)return 0;
+        return address_(va);
+    }
+    bool ImageState(void* image,Layout&l,State&s)const {
+        if(!image)return false;
+        auto* p=static_cast<std::uint8_t*>(image);auto** vt=*reinterpret_cast<void***>(image);
+        if(vt[2]!=reinterpret_cast<void*>(address_(0xA06530)) || vt[3]!=reinterpret_cast<void*>(address_(0xA06510)))return false;
+        l={};l.stride=*reinterpret_cast<std::uint16_t*>(p+0x3A);
+        const auto n=p[0x38];auto* attrs=*reinterpret_cast<std::uint8_t**>(p+0x34);
+        if(!attrs || !n || n>32 || !l.stride || l.stride>512)return false;
+        l.attributes.assign(attrs,attrs+n);
+        static constexpr unsigned sizes[]={0,4,8,12,16,12,16,8,4};unsigned offset=0;
+        for(auto a:l.attributes){if(!a || a>8)return false;if(a==5)l.positionOffset=std::uint16_t(offset);offset+=sizes[a];}
+        if(!l.Valid())return false;
+        s.word[20]=*reinterpret_cast<std::uint32_t*>(p+0x20);
+        s.word[21]=Pair(*reinterpret_cast<std::uint32_t*>(p+0x24),*reinterpret_cast<std::uint32_t*>(p+0x28));
+        s.word[22]=Pair(*reinterpret_cast<std::uint32_t*>(p+0x2C),*reinterpret_cast<std::uint32_t*>(p+0x30));
+        s.word[23]=FormatDescriptor(unsigned(s.word[20]),l);
+        if(!TextureNames(image,s.word[24]))return false;
+        s.word[25]=TextureGeneration(std::uint32_t(s.word[24]));
+        s.word[26]=TextureGeneration(std::uint32_t(s.word[24]>>32));
+        s.word[28]=foreignTextureEpoch_.load();
+        return true;
+    }
 public:
-    struct Stats {std::uint64_t stateReads=0,stateQpc=0,describeReject=0,retainReject=0;};
+    struct Stats {std::uint64_t stateReads=0,stateQpc=0,describeReject=0,retainReject=0,formatReplay=0,uniformChecks=0,uniformGlQueries=0,uniformQpc=0;};
     Stats stats;
     explicit NativeBackend(ResolveAddress address):address_(address) {
         HMODULE gl=GetModuleHandleA("opengl32.dll");
         if(gl){getInt_=reinterpret_cast<GetInt>(GetProcAddress(gl,"glGetIntegerv"));
                isEnabled_=reinterpret_cast<IsEnabled>(GetProcAddress(gl,"glIsEnabled"));
+               isTexture_=reinterpret_cast<IsEnabled>(GetProcAddress(gl,"glIsTexture"));
+               getTextureParameter_=reinterpret_cast<GetTextureParameter>(GetProcAddress(gl,"glGetTexParameteriv"));
                context_=reinterpret_cast<CurrentContext>(GetProcAddress(gl,"wglGetCurrentContext"));}
     }
-    bool Ready()const{return getInt_ && isEnabled_ && context_ && context_();}
+    bool Ready(){if(!getInt_ || !isEnabled_ || !context_ || !context_())return false;knownContext_=context_();return true;}
+    void ForeignTextureDelete(){++foreignTextureEpoch_;}
+    bool KnownTextureContext()const{return context_ && knownContext_ && context_()==knownContext_;}
+    bool ExistingTexture(std::uint32_t name,bool&exists)const {
+        if(!name){exists=false;return true;}
+        if(!KnownTextureContext() || !isTexture_)return false;
+        exists=isTexture_(name)!=0;return true;
+    }
+    bool BoundTexture2D(unsigned target,unsigned&name)const {
+        if(target!=0x0DE1 || !KnownTextureContext() || !isTexture_)return false;
+        int unit=0,bound=0;getInt_(0x84E0,&unit);getInt_(0x8069,&bound);
+        if(unit<0x84C0 || unit>=0x84C0+192 || !bound || !isTexture_(unsigned(bound)))return false;
+        name=unsigned(bound);return true;
+    }
+    bool SameTextureParameter(unsigned pname,int value,bool&same)const {
+        if(!getTextureParameter_)return false;
+        int before=0;getTextureParameter_(0x0DE1,pname,&before);same=before==value;return true;
+    }
+    void TextureDeleted(std::uint32_t name){if(name)++textureGenerations_[name];}
+    // Query the real bound FBO as well as native currentRenderTarget. Depth or
+    // extra color texture attachments must not be mistaken for unrelated names.
+    // Return -1 for unknown state, 0 unrelated, 1 actual attachment dependency.
+    int AttachmentDependency(int n,const unsigned*names) {
+        if(!KnownTextureContext())return -1;
+        std::uint64_t rtNames=0;
+        if(!TextureNames(reinterpret_cast<void*>(Read<std::uint32_t>(0xBD56CC)),rtNames))return -1;
+        for(int i=0;i<n;++i)if(NamesInclude(rtNames,names[i]))return 1;
+        int fbo=0;getInt_(0x8CA6,&fbo);if(!fbo)return 0;
+        if(!getAttachment_) {
+            auto gl=GetModuleHandleA("opengl32.dll");using GetProc=PROC(WINAPI*)(LPCSTR);
+            auto get=gl?reinterpret_cast<GetProc>(GetProcAddress(gl,"wglGetProcAddress")):nullptr;
+            if(!get)return -1;auto fn=get("glGetFramebufferAttachmentParameteriv");
+            if(reinterpret_cast<std::uintptr_t>(fn)<=3 || reinterpret_cast<std::uintptr_t>(fn)==~std::uintptr_t(0))return -1;
+            getAttachment_=reinterpret_cast<GetAttachment>(fn);
+        }
+        int colors=0;getInt_(0x8CDF,&colors);if(colors<1 || colors>32)return -1;
+        for(int i=0;i<colors+2;++i) {
+            const unsigned attachment=i<colors?0x8CE0u+unsigned(i):(i==colors?0x8D00u:0x8D20u);
+            int type=-1,name=0;getAttachment_(0x8D40,attachment,0x8CD0,&type);
+            if(type==0)continue;
+            if(type==0x8D41)continue; // Renderbuffer names are a different namespace.
+            if(type!=0x1702)return -1;
+            getAttachment_(0x8D40,attachment,0x8CD1,&name);
+            if(!name)return -1;
+            for(int j=0;j<n;++j)if(names[j]==unsigned(name))return 1;
+        }
+        return 0;
+    }
     State ReadState() override {
         LARGE_INTEGER begin;QueryPerformanceCounter(&begin);
         State s;
@@ -43,7 +218,15 @@ public:
         int vp[4]{},sc[4]{};getInt_(0x0BA2,vp);getInt_(0x0C10,sc);
         s.word[4]=Pair(vp[0],vp[1]);s.word[5]=Pair(vp[2],vp[3]);
         s.word[6]=Pair(sc[0],sc[1]);s.word[7]=Pair(sc[2],sc[3]);s.word[8]=isEnabled_(0x0C11);
-        s.word[9]=Read<std::uint32_t>(0xBD56C8);
+        s.word[9]=Read<std::uint32_t>(0xBD56C8);StampShader(s);
+        int fbo=0;getInt_(0x8CA6,&fbo);
+        s.word[27]=Pair(std::uint32_t(reinterpret_cast<std::uintptr_t>(context_?context_():nullptr)),unsigned(fbo));
+        s.word[28]=foreignTextureEpoch_.load();
+        if(!TextureNames(reinterpret_cast<void*>(std::uintptr_t(s.word[0])),s.word[29])) {
+            s.word[29]=s.word[30]=s.word[31]=~std::uint64_t(0);
+        } else {
+            s.word[30]=TextureGeneration(std::uint32_t(s.word[29]));s.word[31]=TextureGeneration(std::uint32_t(s.word[29]>>32));
+        }
         for(unsigned i=0;i<5;++i)s.word[10+i]=Read<std::uint32_t>(0xBD56B4+4*i);
         s.word[15]=Pair(Read<std::uint32_t>(0xBAF5E4),Read<std::uint32_t>(0xBAF7A0));
         s.word[16]=Read<std::uint8_t>(0xBD56D1);s.word[17]=Read<std::uint8_t>(0xBD56D3);
@@ -53,47 +236,82 @@ public:
     bool ContextCompatible(const State&a,const State&b)override {
         for(unsigned i=0;i<9;++i)if(a.word[i]!=b.word[i])return false;
         for(unsigned i=15;i<18;++i)if(a.word[i]!=b.word[i])return false;
-        return true; // native blend/shader selection may change inside Sprite::Render
+        for(unsigned i=27;i<32;++i)if(a.word[i]!=b.word[i])return false;
+        return true;
     }
     bool StateRepresentable(const State&s)override {
-        return !s.word[9] || s.word[9]==address_(0xBD56F8) || s.word[9]==address_(0xBD5724) || s.word[9]==address_(0xBD5750);
+        if(s.word[28]!=foreignTextureEpoch_.load() || s.word[30]==~std::uint64_t(0))return false;
+        if(s.word[30]!=TextureGeneration(std::uint32_t(s.word[29])) || s.word[31]!=TextureGeneration(std::uint32_t(s.word[29]>>32)))return false;
+        return ShaderValid(s);
     }
-    bool Describe(void* image,Layout& l,State& s)override {
-        if(!image)return false;
-        auto* p=static_cast<std::uint8_t*>(image);auto** vt=*reinterpret_cast<void***>(image);
-        if(vt[2]!=reinterpret_cast<void*>(address_(0xA06530)) ||
-           vt[3]!=reinterpret_cast<void*>(address_(0xA06510)))return false;
-        const auto predefined=*reinterpret_cast<std::uint32_t*>(p+0x20);
-        if(predefined>2){++stats.describeReject;return false;} // custom shader/uniform lifetime not captured
-        l.stride=*reinterpret_cast<std::uint16_t*>(p+0x3A);
-        auto n=p[0x38];auto* attrs=*reinterpret_cast<std::uint8_t**>(p+0x34);
-        if(!attrs || !n || n>32 || !l.stride || l.stride>512)return false;
-        l.attributes.assign(attrs,attrs+n);
-        static constexpr unsigned sizes[]={0,4,8,12,16,12,16,8,4};unsigned offset=0;
-        for(auto a:l.attributes){if(!a || a>8)return false;if(a==5)l.positionOffset=std::uint16_t(offset);offset+=sizes[a];}
-        if(!l.Valid())return false;
-        s=ReadState();
-        // Native get_batch overrides the prior shader using this exact image enum.
-        s.word[9]=address_(0xBD56F8+0x2C*predefined);
-        s.word[20]=predefined;
-        s.word[21]=Pair(*reinterpret_cast<std::uint32_t*>(p+0x24),*reinterpret_cast<std::uint32_t*>(p+0x28));
-        s.word[22]=Pair(*reinterpret_cast<std::uint32_t*>(p+0x2C),*reinterpret_cast<std::uint32_t*>(p+0x30));
-        s.word[23]=reinterpret_cast<std::uintptr_t>(attrs);
+    bool StateUsesTexture(const State&s,std::uint32_t name)const override{return NamesInclude(s.word[29],name);}
+    bool CommandUsesTexture(const Command&c,std::uint32_t name)const override{return NamesInclude(c.state.word[24],name) || StateUsesTexture(c.state,name);}
+    bool Describe(void* image,Layout&l,State&s)override {
+        s=ReadState();if(!ImageState(image,l,s))return false;
+        const auto predefined=unsigned(s.word[20]);
+        if(predefined<3){s.word[9]=address_(0xBD56F8+0x2C*predefined);StampShader(s);}
+        else if(predefined!=3 || !s.word[23]){++stats.describeReject;return false;}
+        if(!ShaderValid(s)){++stats.describeReject;return false;}
+        if(predefined==3) {
+            const int kind=ShaderKind(std::uintptr_t(s.word[9]));
+            if(kind<3 || (kind==4?l.stride!=104:l.stride!=88)){++stats.describeReject;return false;}
+        }
+        return true;
+    }
+    bool HasResourceState()const override{return true;}
+    bool DescribeResource(void* image,Layout&l,State&s)override {
+        // Resource commands do not inherit or apply the global shader selection.
+        if(!ImageState(image,l,s))return false;
+        return s.word[23] || s.word[20]==2;
+    }
+    bool SameResource(const Command&a,const Command&b)const override {
+        if(!(a.layout==b.layout))return false;
+        for(unsigned i=20;i<27;++i)if(a.state.word[i]!=b.state.word[i])return false;
         return true;
     }
     std::shared_ptr<void> Retain(void* image)override{auto p=RetainJ374Image(image,address_);stats.retainReject+=!p;return p;}
     const char* ReplayFailure()const override{return replayFailure_;}
-    bool CanReplay(const Command& c)override {
-        Layout layout;State now;replayFailure_="none";
-        if(!Describe(c.quad.image,layout,now)){replayFailure_="resource-layout-or-shader";return false;}
-        if(!(layout==c.layout)){replayFailure_="resource-layout-changed";return false;}
-        if(!ContextCompatible(now,c.state)){replayFailure_="context-changed";return false;}
-        for(unsigned i=20;i<24;++i)if(now.word[i]!=c.state.word[i]){replayFailure_="resource-image-state-changed";return false;}
-        if(c.vertices.size()!=4u*c.layout.stride){replayFailure_="invalid-vertex-snapshot";return false;}
+    bool CanReplay(const Command&c)override {
+        replayFailure_="none";
+        Layout nowLayout;State now;
+        if(!ImageState(c.quad.image,nowLayout,now)){replayFailure_="resource-layout-invalid";return false;}
+        if(now.word[24]!=c.state.word[24] || now.word[25]!=c.state.word[25] || now.word[26]!=c.state.word[26] || now.word[28]!=c.state.word[28]) {
+            replayFailure_="texture-name-or-generation-changed";return false;
+        }
+        if(!now.word[23] && now.word[20]!=2){replayFailure_="resource-current-format-unsupported";return false;}
+        const auto descriptor=FormatDescriptor(unsigned(c.state.word[20]),c.layout);
+        if(c.state.word[23]!=descriptor){replayFailure_="resource-descriptor-changed";return false;}
+        // Enum 2 has no proved setter descriptor; preserve its previous immutable
+        // layout support, but never synthesize a descriptor or enum for it.
+        if(!descriptor && (c.state.word[20]!=2 || now.word[20]!=2 || !(nowLayout==c.layout))) {
+            replayFailure_="resource-format-not-replayable";return false;
+        }
+        if(descriptor && !J374Hooks::setFormat){replayFailure_="format-hook-unavailable";return false;}
+        if(!c.resourceOnly) {
+            if(!ContextCompatible(ReadState(),c.state)){replayFailure_="context-changed";return false;}
+            if(!ShaderValid(c.state)){replayFailure_="shader-generation-or-uniform-contract";return false;}
+            if(c.vertices.size()!=4u*c.layout.stride){replayFailure_="invalid-vertex-snapshot";return false;}
+        }
+        return true;
+    }
+    bool PrepareResource(const Command&c)override {
+        Layout layout;State now;
+        if(!ImageState(c.quad.image,layout,now))return false;
+        auto* p=static_cast<std::uint8_t*>(c.quad.image);
+        if(!(layout==c.layout) || now.word[20]!=c.state.word[20]) {
+            if(!c.state.word[23] || !J374Hooks::setFormat)return false;
+            J374Hooks::setFormat(c.quad.image,reinterpret_cast<const void*>(std::uintptr_t(c.state.word[23])));
+            ++stats.formatReplay;
+            layout={};now={};
+            if(!ImageState(c.quad.image,layout,now) || !(layout==c.layout) || now.word[20]!=c.state.word[20])return false;
+        }
+        // Native A06750/A06770 setters are plain assignments to these four fields.
+        // Restore each sampled image's state before native batch selection.
+        for(unsigned i=0;i<4;++i)*reinterpret_cast<std::uint32_t*>(p+0x24+4*i)=
+            std::uint32_t(c.state.word[21+i/2]>>(32*(i%2)));
         return true;
     }
     void ApplyState(const State&s)override {
-        // Context itself is never changed for replay; CanReplay required a match.
         for(unsigned i=0;i<5;++i)*reinterpret_cast<std::uint32_t*>(address_(0xBD56B4+4*i))=std::uint32_t(s.word[10+i]);
         *reinterpret_cast<std::uint32_t*>(address_(0xBD56C8))=std::uint32_t(s.word[9]);
     }
@@ -119,6 +337,132 @@ class Runtime {
     std::array<std::uint64_t,64> canonicalCounts_{},hitCounts_{},missCounts_{},outsideCounts_{};
     ULONGLONG nextReport_=0;
     inline static Runtime* active_=nullptr;
+    using DeleteTexturesFn=void(WINAPI*)(int,const unsigned*);
+    inline static std::atomic<DeleteTexturesFn> deleteTarget_{nullptr};
+    void** deleteSlot_=nullptr;
+    std::uint64_t deleteCalls_=0,deleteUnrelated_=0,deleteDependent_=0,deleteUnknown_=0;
+    unsigned deleteTraces_=0;
+    static bool ReadableNames(int n,const unsigned*names) {
+        if(n<0 || n>4096 || (n && !names))return false;
+        auto p=reinterpret_cast<std::uintptr_t>(names),end=p+std::size_t(n)*4;
+        if(end<p)return false;
+        while(p<end){MEMORY_BASIC_INFORMATION region{};
+            if(!VirtualQuery(reinterpret_cast<void*>(p),&region,sizeof region) || region.State!=MEM_COMMIT ||
+               region.Protect&(PAGE_NOACCESS|PAGE_GUARD))return false;
+            const auto next=reinterpret_cast<std::uintptr_t>(region.BaseAddress)+region.RegionSize;
+            if(next<=p)return false;p=next<end?next:end;
+        }
+        return true;
+    }
+    static void WINAPI DeleteTextures(int n,const unsigned*names) {
+        const auto original=deleteTarget_.load();auto*r=active_;
+        // Installation publishes the original dispatch chain before the hook.
+        if(!r){if(original)original(n,names);return;}
+        const bool lazy=reinterpret_cast<std::uintptr_t>(original)==r->host_.address(0xA27220);
+        if(GetCurrentThreadId()!=J374Hooks::gameThreadId) {
+            // Other GL contexts may share objects. Do not inspect game-owned
+            // vectors or mutate the per-name map from a loading thread.
+            r->backend_.ForeignTextureDelete();
+        } else {
+            ++r->deleteCalls_;r->cache_.SealPending();
+            bool unknown=!ReadableNames(n,names),dependent=false;
+            int attachment=0;std::vector<unsigned> liveNames;
+            if(!unknown && n){
+                for(int i=0;i<n;++i){
+                    bool exists=false;
+                    if(!r->backend_.ExistingTexture(names[i],exists)){unknown=true;break;}
+                    if(exists)liveNames.push_back(names[i]);
+                }
+                if(!unknown && !liveNames.empty()){
+                    attachment=r->backend_.AttachmentDependency(int(liveNames.size()),liveNames.data());unknown=attachment<0;dependent=attachment>0;
+                }
+            }
+            if(unknown){r->backend_.ForeignTextureDelete();r->cache_.Unsafe(145);++r->deleteUnknown_;}
+            else {
+                for(auto name:liveNames){dependent=r->cache_.TextureDeleted(name) || dependent;r->backend_.TextureDeleted(name);}
+                if(dependent){r->cache_.Unsafe(145);++r->deleteDependent_;}else ++r->deleteUnrelated_;
+            }
+            if(r->cache_.Capturing() && (unknown||dependent))++r->reasons_[145];
+            if(r->cache_.Capturing() && r->deleteTraces_<16 && r->host_.log){
+                ++r->deleteTraces_;char line[224];
+                std::snprintf(line,sizeof line,"[entity-cache-texture] delete n=%d first=%u second=%u dependency=%u attachment=%d unknown=%u",n,
+                    !unknown&&n?names[0]:0,!unknown&&n>1?names[1]:0,unsigned(dependent),attachment,unsigned(unknown));r->Message(line);
+            }
+        }
+        if(original)original(n,names);
+        // J374's first call resolves and overwrites its dispatch slot. Re-arm
+        // immediately so the second delete in Image::Unload is observed too.
+        // Preserve the newly resolved target, never substitute a system export.
+        if(lazy && r->deleteSlot_) {
+            auto* next=*r->deleteSlot_;const auto value=reinterpret_cast<std::uintptr_t>(next);
+            if(next!=reinterpret_cast<void*>(&DeleteTextures) && value>3 && value!=~std::uintptr_t(0)) {
+                deleteTarget_.store(reinterpret_cast<DeleteTexturesFn>(next));
+                if(InterlockedCompareExchangePointer(r->deleteSlot_,reinterpret_cast<void*>(&DeleteTextures),next)!=next)
+                    r->backend_.ForeignTextureDelete();
+            }
+        }
+    }
+    using TexParameteriFn=void(WINAPI*)(unsigned,unsigned,int);
+    using TexImage2DFn=void(WINAPI*)(unsigned,int,int,int,int,int,unsigned,unsigned,const void*);
+    inline static std::atomic<TexParameteriFn> parameterTarget_{nullptr};
+    inline static std::atomic<TexImage2DFn> imageTarget_{nullptr};
+    void** parameterSlot_=nullptr;void** imageSlot_=nullptr;
+    std::uint64_t mutationAllowed_=0,mutationNoop_=0,mutationDependent_=0,mutationUnknown_=0;
+    unsigned mutationTraces_=0;
+    bool ProvenTextureCall(unsigned reason,std::uintptr_t caller)const {
+        if(reason==241){for(auto va:{0xA7131Du,0xA71332u,0xA71347u,0xA7135Cu,0xA71456u,0xA71476u,0xA714CFu,0xA714EDu})if(caller==host_.address(va))return true;}
+        if(reason==225)return caller==host_.address(0xA71399) || caller==host_.address(0xA71419);
+        return false;
+    }
+    static bool SupportedParameter(unsigned pname,int value){
+        if(pname==0x2800 || pname==0x2801)return value==0x2600 || value==0x2601;
+        if(pname==0x2802 || pname==0x2803)return value==0x2901 || value==0x812F;
+        return false;
+    }
+    void BeforeTextureMutation(unsigned reason,bool proven,unsigned target,unsigned pname=0,int value=0){
+        if(GetCurrentThreadId()!=J374Hooks::gameThreadId){backend_.ForeignTextureDelete();return;}
+        cache_.SealPending();unsigned name=0;bool same=false,dependent=false;
+        bool unknown=!proven || !backend_.BoundTexture2D(target,name);
+        if(!unknown && reason==241)unknown=!backend_.SameTextureParameter(pname,value,same);
+        if(!unknown && !same && cache_.Capturing()){
+            const int attachment=backend_.AttachmentDependency(1,&name);
+            unknown=attachment<0;dependent=attachment>0;
+        }
+        if(unknown){backend_.ForeignTextureDelete();cache_.Unsafe(reason);++mutationUnknown_;}
+        else if(same)++mutationNoop_;
+        else {
+            dependent=cache_.TextureDeleted(name,reason) || dependent;
+            backend_.TextureDeleted(name); // Content/parameter mutation advances the same lifetime generation.
+            if(dependent){cache_.Unsafe(reason);++mutationDependent_;}else ++mutationAllowed_;
+        }
+        if(cache_.Capturing() && (unknown || dependent))++reasons_[reason];
+        if(cache_.Capturing() && mutationTraces_<24 && host_.log){
+            ++mutationTraces_;char line[240];
+            std::snprintf(line,sizeof line,"[entity-cache-texture] mutation reason=%u texture=%u pname=0x%X value=%d proven=%u noop=%u dependency=%u unknown=%u",reason,name,pname,value,unsigned(proven),unsigned(same),unsigned(dependent),unsigned(unknown));Message(line);
+        }
+    }
+    template<class Fn> static void RearmTextureResolver(Runtime*r,void**slot,Fn original,Fn hook,std::uintptr_t lazy,std::atomic<Fn>&destination){
+        if(!r || !slot || reinterpret_cast<std::uintptr_t>(original)!=r->host_.address(lazy))return;
+        auto* next=*slot;const auto value=reinterpret_cast<std::uintptr_t>(next);
+        if(next==reinterpret_cast<void*>(hook))return;
+        if(value<=3 || value==~std::uintptr_t(0)){r->backend_.ForeignTextureDelete();return;}
+        destination.store(reinterpret_cast<Fn>(next));
+        if(InterlockedCompareExchangePointer(slot,reinterpret_cast<void*>(hook),next)!=next)r->backend_.ForeignTextureDelete();
+    }
+    static void WINAPI TexParameteri(unsigned target,unsigned pname,int value){
+        const auto caller=reinterpret_cast<std::uintptr_t>(_ReturnAddress());auto*r=active_;const auto original=parameterTarget_.load();
+        if(r)r->BeforeTextureMutation(241,r->ProvenTextureCall(241,caller)&&SupportedParameter(pname,value),target,pname,value);
+        if(original)original(target,pname,value);
+        RearmTextureResolver(r,r?r->parameterSlot_:nullptr,original,&TexParameteri,0xA3B740,parameterTarget_);
+    }
+    static void WINAPI TexImage2D(unsigned target,int level,int internal,int width,int height,int border,unsigned format,unsigned type,const void*pixels){
+        const auto caller=reinterpret_cast<std::uintptr_t>(_ReturnAddress());auto*r=active_;const auto original=imageTarget_.load();
+        const bool formatKnown=format==0x1903 || format==0x1907 || format==0x1908;
+        const bool internalKnown=internal==0x1903 || internal==0x1907 || internal==0x1908 || internal==0x8C40 || internal==0x8C42;
+        if(r)r->BeforeTextureMutation(225,r->ProvenTextureCall(225,caller)&&level==0&&border==0&&width>0&&height>0&&formatKnown&&internalKnown&&type==0x1401,target);
+        if(original)original(target,level,internal,width,height,border,format,type,pixels);
+        RearmTextureResolver(r,r?r->imageSlot_:nullptr,original,&TexImage2D,0xA3B3D0,imageTarget_);
+    }
     static void __cdecl Notify(std::uint32_t code){
         if(!active_ || GetCurrentThreadId()!=J374Hooks::gameThreadId)return;
         if((code&0x40000000u) && J374Hooks::submitDepth)return;
@@ -238,6 +582,25 @@ class Runtime {
         auto* slot=reinterpret_cast<void**>(host_.address(g.slot));
         if(*slot==g.gate)return true;
         const auto value=reinterpret_cast<std::uintptr_t>(*slot);
+        if(std::strcmp(g.name,"glTexParameteri")==0 || std::strcmp(g.name,"glTexImage2D")==0) {
+            if(value<=3 || value==~std::uintptr_t(0))return false;
+            if(g.gate){backend_.ForeignTextureDelete();return false;}
+            std::uintptr_t ptr=0;
+            if(std::strcmp(g.name,"glTexParameteri")==0){parameterTarget_.store(reinterpret_cast<TexParameteriFn>(*slot));parameterSlot_=slot;ptr=reinterpret_cast<std::uintptr_t>(&TexParameteri);}
+            else {imageTarget_.store(reinterpret_cast<TexImage2DFn>(*slot));imageSlot_=slot;ptr=reinterpret_cast<std::uintptr_t>(&TexImage2D);}
+            if(!Write(g.slot,reinterpret_cast<const std::uint8_t*>(&ptr),4))return false;
+            g.gate=reinterpret_cast<void*>(ptr);return true;
+        }
+        if(std::strcmp(g.name,"glDeleteTextures")==0) {
+            if(value<=3 || value==~std::uintptr_t(0))return false;
+            // A later third-party replacement may chain to our hook; wrapping it
+            // again would create recursion. Reject that unknown change instead.
+            if(g.gate){backend_.ForeignTextureDelete();return false;}
+            deleteTarget_.store(reinterpret_cast<DeleteTexturesFn>(*slot));deleteSlot_=slot;
+            const auto ptr=reinterpret_cast<std::uintptr_t>(&DeleteTextures);
+            if(!Write(g.slot,reinterpret_cast<const std::uint8_t*>(&ptr),4))return false;
+            g.gate=reinterpret_cast<void*>(ptr);return true;
+        }
         if(value<=3 || value==~std::uintptr_t(0))return true;
         const bool lazy=value==host_.address(g.lazy);
         auto* gate=ObserverGate(*slot,reason|(lazy?0x80000000u:0));if(!gate)return false;
@@ -257,6 +620,21 @@ class Runtime {
             unsigned(counts.entries),unsigned(counts.valid),unsigned(counts.commands),unsigned(counts.refs),
             static_cast<unsigned long long>(backend_.stats.stateReads),1000.0*backend_.stats.stateQpc/freq.QuadPart,
             static_cast<unsigned long long>(backend_.stats.describeReject),static_cast<unsigned long long>(backend_.stats.retainReject));Message(line);
+        std::snprintf(line,sizeof line,"[entity-cache-format] noop=%llu init=%llu changed=%llu replay=%llu",
+            static_cast<unsigned long long>(J374Hooks::formatNoop),static_cast<unsigned long long>(J374Hooks::formatInit),
+            static_cast<unsigned long long>(J374Hooks::formatChange),static_cast<unsigned long long>(backend_.stats.formatReplay));Message(line);
+        J374Hooks::formatNoop=J374Hooks::formatInit=J374Hooks::formatChange=0;
+        std::snprintf(line,sizeof line,"[entity-cache-shader] uniformChecks=%llu glQueries=%llu uniformMs=%.3f",
+            static_cast<unsigned long long>(backend_.stats.uniformChecks),static_cast<unsigned long long>(backend_.stats.uniformGlQueries),
+            1000.0*backend_.stats.uniformQpc/freq.QuadPart);Message(line);
+        std::snprintf(line,sizeof line,"[entity-cache-texture] calls=%llu unrelated=%llu dependent=%llu unknown=%llu",
+            static_cast<unsigned long long>(deleteCalls_),static_cast<unsigned long long>(deleteUnrelated_),
+            static_cast<unsigned long long>(deleteDependent_),static_cast<unsigned long long>(deleteUnknown_));Message(line);
+        deleteCalls_=deleteUnrelated_=deleteDependent_=deleteUnknown_=0;
+        std::snprintf(line,sizeof line,"[entity-cache-texture] initAllowed=%llu parameterNoop=%llu mutationDependent=%llu mutationUnknown=%llu",
+            static_cast<unsigned long long>(mutationAllowed_),static_cast<unsigned long long>(mutationNoop_),
+            static_cast<unsigned long long>(mutationDependent_),static_cast<unsigned long long>(mutationUnknown_));Message(line);
+        mutationAllowed_=mutationNoop_=mutationDependent_=mutationUnknown_=0;
         for(unsigned cb:{2u,25u,28u,32u,36u,41u,45u,49u,52u,56u,59u}){
             if(!canonicalCounts_[cb]&&!hitCounts_[cb]&&!missCounts_[cb]&&!outsideCounts_[cb])continue;
             std::snprintf(line,sizeof line,"[entity-cache] callback=%u canonical=%llu replayHit=%llu replayMiss=%llu",cb,
@@ -345,7 +723,8 @@ inline bool Runtime::Install(){
     {const std::uint8_t want[]={0x53,0x8b,0xdc,0x83,0xec,0x8}; if(!host_.expect(0xa140c0,want,sizeof want,"entity unsafe ApplyFrameImages"))return false;}
     {std::uint8_t want[]={0x8b,0x15,0xb4,0x5a,0xbf,0x0}; *reinterpret_cast<std::uint32_t*>(want+2)=std::uint32_t(host_.address(0xBF5AB4)); if(!host_.expect(0xa14060,want,sizeof want,"entity unsafe ApplyTransparentBatches"))return false;}
     {const std::uint8_t want[]={0x55,0x8b,0xec,0x8b,0x1}; if(!host_.expect(0xa078c0,want,sizeof want,"entity unsafe Triangle"))return false;}
-    {const std::uint8_t want[]={0x55,0x8b,0xec,0x83,0xe4,0xf8}; if(!host_.expect(0xa065d0,want,sizeof want,"entity unsafe VertexFormat"))return false;}
+    {const std::uint8_t want[]={0x55,0x8b,0xec,0x83,0xe4,0xf8}; if(!host_.expect(0xa065d0,want,sizeof want,"entity VertexFormat"))return false;}
+    {const std::uint8_t want[]={0xc2,4,0}; if(!host_.expect(0xa06702,want,sizeof want,"entity VertexFormat no-op RET4") || !host_.expect(0xa0672d,want,sizeof want,"entity VertexFormat changed RET4"))return false;}
     {const std::uint8_t want[]={0x55,0x8b,0xec,0x83,0xe4,0xf8}; if(!host_.expect(0xa05d80,want,sizeof want,"entity unsafe VertexAllocator"))return false;}
     {std::uint8_t want[]={0xb9,0xea,0xe5,0xad,0x0,0xe8,0x89,0xb6,0xff,0xff};*reinterpret_cast<std::uint32_t*>(want+1)=std::uint32_t(host_.address(0xade5ea));if(!host_.expect(0xa22d4d,want,sizeof want,"glBindFramebuffer resolver name"))return false;}
     {std::uint8_t want[]={0xa3,0x14,0xbd,0xbc,0x0};*reinterpret_cast<std::uint32_t*>(want+1)=std::uint32_t(host_.address(0xbcbd14));if(!host_.expect(0xa22d5a,want,sizeof want,"glBindFramebuffer dispatch slot"))return false;}
@@ -862,6 +1241,18 @@ inline bool Runtime::Install(){
     {std::uint8_t want[]={0xb9,0x49,0xd8,0xae,0x0,0xe8,0x89,0xc3,0xfd,0xff};*reinterpret_cast<std::uint32_t*>(want+1)=std::uint32_t(host_.address(0xaed849));if(!host_.expect(0xa4204d,want,sizeof want,"glViewport resolver name"))return false;}
     {std::uint8_t want[]={0xa3,0xc,0xbd,0xbc,0x0};*reinterpret_cast<std::uint32_t*>(want+1)=std::uint32_t(host_.address(0xbcbd0c));if(!host_.expect(0xa4205a,want,sizeof want,"glViewport dispatch slot"))return false;}
     {const std::uint8_t want[]={0x55,0x8B,0xEC,0x6A,0xFF};if(!host_.expect(0x408330,want,5,"entity native SmartImage release"))return false;}
+    {const std::uint8_t want[]={0x56,0x8b,0xf1,0x8d,0x46,0x78,0x50,0x6a,0x01};if(!host_.expect(0xA711E0,want,sizeof want,"ImagePlatform texture0 unload field"))return false;}
+    {const std::uint8_t want[]={0x8d,0x46,0x7c,0x50,0x6a,0x01};if(!host_.expect(0xA711EF,want,sizeof want,"ImagePlatform palette unload field"))return false;}
+    {const std::uint8_t want[]={0xff,0x76,0x78,0x68,0xe1,0x0d,0,0};if(!host_.expect(0xA15E76,want,sizeof want,"ImagePlatform texture bind field"))return false;}
+    {const std::uint8_t want[]={0xff,0x76,0x78,0x68,0xe1,0x0d,0,0};if(!host_.expect(0xA0C70F,want,sizeof want,"ImagePlatform render target texture field"))return false;}
+    for(auto va:{0xA71317u,0xA7132Cu,0xA71341u,0xA71356u,0xA71450u,0xA71470u,0xA714C9u,0xA714E7u}) {
+        std::uint8_t want[]={0xff,0x15,0x5c,0xc6,0xbc,0};*reinterpret_cast<std::uint32_t*>(want+2)=std::uint32_t(host_.address(0xBCC65C));
+        if(!host_.expect(va,want,sizeof want,"native texture parameter callsite"))return false;
+    }
+    for(auto va:{0xA71393u,0xA71413u}) {
+        std::uint8_t want[]={0xff,0x15,0xfc,0xe1,0xbc,0};*reinterpret_cast<std::uint32_t*>(want+2)=std::uint32_t(host_.address(0xBCE1FC));
+        if(!host_.expect(va,want,sizeof want,"native texture upload callsite"))return false;
+    }
     active_=this;J374Hooks::gameThreadId=GetCurrentThreadId();J374Hooks::cache=&cache_;J374Hooks::MakeKey=KeyFor;J374Hooks::OnEvent=Event;J374Hooks::OnMiss=Miss;J374Hooks::InsideRender=host_.insideRender;J374Hooks::OnOutsideRender=OutsideEvent;
     auto fail=[this](){Message("[entity-cache] install failed; reverting all cache hooks");Shutdown();return false;};
     if(!Detour(0x860ab0,reinterpret_cast<void*>(&J374Hooks::Familiar),5,reinterpret_cast<void**>(&J374Hooks::familiar)))return fail();
@@ -881,7 +1272,7 @@ inline bool Runtime::Install(){
     if(!Observe(0xa140c0,6,4,false))return fail(); // ApplyFrameImages
     if(!Observe(0xa14060,6,5,false))return fail(); // ApplyTransparentBatches
     if(!Observe(0xa078c0,5,6,false))return fail(); // Triangle
-    if(!Observe(0xa065d0,6,7,false))return fail(); // VertexFormat
+    if(!Detour(0xa065d0,reinterpret_cast<void*>(&J374Hooks::SetFormat),6,reinterpret_cast<void**>(&J374Hooks::setFormat)))return fail(); // VertexFormat, thiscall RET4
     if(!Observe(0xa05d80,6,8,true))return fail(); // VertexAllocator
     if(!ObserveGl("glBindFramebuffer",0xbcbd14,0xa22d40))return fail();
     if(!ObserveGl("glBindFramebufferEXT",0xbcc524,0xa22d70))return fail();
