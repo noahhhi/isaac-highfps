@@ -15,6 +15,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <cerrno>
+#include <atomic>
+#include "threading_support.h"
 #ifdef HIGHFPS_BUILD_19715
 #include "offsets_19715.h"
 #else
@@ -22,6 +24,7 @@
 #endif
 #include "version.h"
 #include "render_timing.h"
+#include "overload_policy.h"
 #include "camera_presentation.h"
 #include "menu_presentation.h"
 #include "carousel_presentation.h"
@@ -34,11 +37,24 @@
 namespace {
 
 FILE* g_log = nullptr;
+std::atomic<highfps::threading::ProcessTextLog*> g_asyncLog{nullptr};
+highfps::threading::MainThreadAffinity g_mainAffinity;
 
 void Log(const char* fmt, ...) {
     if (!g_log) return;
     va_list ap;
     va_start(ap, fmt);
+    if(auto* worker=g_asyncLog.load(std::memory_order_acquire)) {
+        char line[4096];
+        vsnprintf(line,sizeof line,fmt,ap);va_end(ap);
+        bool accepted=worker->TryWrite(line);
+        if(strncmp(line,"[FATAL]",7)==0) {
+            if(!accepted){worker->Flush(125);accepted=worker->TryWrite(line);}
+            if(accepted)worker->Flush(125);
+            else OutputDebugStringA(line);
+        }
+        return;
+    }
     vfprintf(g_log, fmt, ap);
     va_end(ap);
     fputc('\n', g_log);
@@ -62,6 +78,7 @@ bool InitThreadExited() {
 // ---------------------------------------------------------------- config
 struct Config {
     bool enabled = true;
+    bool nativeTimingProbe = false; // opt-in instrumented vanilla; Enabled=0 only
     bool interpolate = true;
     int idleFps = 0;       // 0 keeps display cadence in menus and while paused
     int vsync = 1;         // -1 follows engine, 0 off, 1 actual display synchronization
@@ -72,6 +89,12 @@ struct Config {
     bool cacheFileProbes = true;
     bool luaVanillaCadence = true;   // pin mod callbacks to the vanilla 60 Hz
     bool luaOverlay = true;          // and composite what they draw onto every frame
+    int mainThreadCpu = -2; // -2 pin current allowed CPU, -1 scheduler managed
+    bool asyncLog = true;
+    bool frameTiming = false; // presentation timestamps without expensive state audits
+    bool overloadFallback = true;
+    bool cacheShaderLocations = true;
+    unsigned cacheEntries=16384,cacheMiB=64;
 } g_cfg;
 
 void LoadConfig() {
@@ -82,6 +105,7 @@ void LoadConfig() {
     if (GetFileAttributesA(path) == INVALID_FILE_ATTRIBUTES) return;   // defaults are fine
 
     g_cfg.enabled     = GetPrivateProfileIntA("highfps", "Enabled", 1, path) != 0;
+    g_cfg.nativeTimingProbe = GetPrivateProfileIntA("highfps", "NativeTimingProbe", 0, path) != 0;
     g_cfg.interpolate = GetPrivateProfileIntA("highfps", "Interpolate", 1, path) != 0;
     g_cfg.maxFps      = GetPrivateProfileIntA("highfps", "MaxFps", 0, path);
     g_cfg.vsync = GetPrivateProfileIntA("highfps", "VSync", 1, path);
@@ -92,6 +116,32 @@ void LoadConfig() {
     g_cfg.cacheFileProbes = GetPrivateProfileIntA("highfps", "CacheFileProbes", 1, path) != 0;
     g_cfg.luaVanillaCadence = GetPrivateProfileIntA("highfps", "LuaVanillaCadence", 1, path) != 0;
     g_cfg.luaOverlay        = GetPrivateProfileIntA("highfps", "LuaOverlay", 1, path) != 0;
+    g_cfg.mainThreadCpu = int(GetPrivateProfileIntA("highfps","MainThreadCpu",-2,path));
+    g_cfg.asyncLog = GetPrivateProfileIntA("highfps","AsyncLog",1,path)!=0;
+    g_cfg.frameTiming = GetPrivateProfileIntA("highfps","FrameTiming",0,path)!=0;
+    g_cfg.overloadFallback = GetPrivateProfileIntA("highfps","OverloadFallback",1,path)!=0;
+    g_cfg.cacheShaderLocations = GetPrivateProfileIntA("highfps","CacheShaderLocations",1,path)!=0;
+    const int entries=int(GetPrivateProfileIntA("highfps","CacheEntries",16384,path));
+    const int mib=int(GetPrivateProfileIntA("highfps","CacheMiB",64,path));
+    if(entries>=1024 && entries<=32768)g_cfg.cacheEntries=unsigned(entries);
+    if(mib>=16 && mib<=128)g_cfg.cacheMiB=unsigned(mib);
+}
+
+void ConfigureThreading() {
+    static bool attempted=false;
+    // No FILE ownership transfer until Init has finished all synchronous output.
+    if(attempted || !InitThreadExited())return;
+    attempted=true;
+    const bool pinned=g_mainAffinity.Apply(g_cfg.mainThreadCpu);
+    if(g_log && g_cfg.asyncLog) {
+        auto* worker=new highfps::threading::ProcessTextLog(g_log);
+        if(worker->Start(g_mainAffinity.WorkerMask()))g_asyncLog.store(worker,std::memory_order_release);
+    }
+    Log("[threads] main=%lu policy=%d affinityOk=%u pinnedMask=0x%llX previousMask=0x%llX asyncLog=%u workerMask=0x%llX",
+        GetCurrentThreadId(),g_cfg.mainThreadCpu,unsigned(pinned),
+        static_cast<unsigned long long>(g_mainAffinity.PinnedMask()),
+        static_cast<unsigned long long>(g_mainAffinity.OriginalMask()),
+        unsigned(g_asyncLog.load()!=nullptr),static_cast<unsigned long long>(g_mainAffinity.WorkerMask()));
 }
 
 inline uint8_t* Addr(uintptr_t staticVa) {
@@ -128,12 +178,17 @@ void FreezeOtherThreads() {
     g_frozenCount = 0;
     const DWORD me  = GetCurrentThreadId();
     const DWORD pid = GetCurrentProcessId();
+    const auto* logWorker=g_asyncLog.load(std::memory_order_acquire);
+    const DWORD logThread=logWorker?logWorker->WorkerThreadId():0;
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
     if (snap == INVALID_HANDLE_VALUE) return;
     THREADENTRY32 te = { sizeof te };
     if (Thread32First(snap, &te)) {
         do {
             if (te.th32OwnerProcessID != pid || te.th32ThreadID == me) continue;
+            // This owned worker runs only queue/CRT/file code, never patched
+            // game functions. Leave it free to finish I/O and release its locks.
+            if(logThread && te.th32ThreadID==logThread)continue;
             HANDLE th = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT, FALSE, te.th32ThreadID);
             if (!th) continue;
             if (SuspendThread(th) == (DWORD)-1) { CloseHandle(th); continue; }
@@ -200,6 +255,7 @@ constexpr double kWrapperPeriod = 1.0 / 60.0;
 constexpr double kTickPeriod    = 1.0 / 30.0;
 
 highfps::FixedTimeline g_simClock;
+highfps::OverloadPolicy g_overloadPolicy;
 double& g_nextWrapper = g_simClock.next;
 double g_lastWrapperTime = 0.0, g_lastTickTime = 0.0;
 // Loading is excluded explicitly, rather than inferred from a slow frame.
@@ -208,6 +264,7 @@ double g_excludedLoadSeconds = 0.0, g_appliedLoadSeconds = 0.0;
 bool g_presentAnchorValid = false;
 bool g_previewEnabled = false;
 uint64_t g_loopFrames = 0, g_wrapperCalls = 0;
+uint64_t g_successfulPresents=0,g_presentSerial=0;
 double g_statWindow = 0.0;
 
 bool g_worldAdvancing = false;
@@ -585,6 +642,10 @@ struct Profile {
     double iterSum = 0, iterMax = 0;
     double updSum  = 0, updMax  = 0;
     double ourSum  = 0, ourMax  = 0;
+    double hiddenSum=0,hiddenMax=0,presentWorkSum=0,presentWorkMax=0,swapSum=0,gcSum=0;
+    uint32_t hiddenCalls=0,presentCalls=0;
+    double nativeVisibleSum=0;
+    uint32_t nativeVisibleCalls=0;
     uint32_t iters = 0, updates = 0, longFrames = 0;
     uint32_t entPeak = 0;
 } g_prof;
@@ -763,6 +824,8 @@ void ConfigurePresentation() {
 
 bool g_endPacingActive = false;
 bool g_hiddenFixedRender = false;
+bool g_promotingCanonical=false,g_skipOuterRender=false;
+uint64_t g_promotionEpoch=0;
 bool g_separateNativeFrames = false;
 highfps::CanonicalPresentationEpoch g_canonicalPresentation;
 bool OverlayPipelineReady();
@@ -906,7 +969,9 @@ void EnsureFixedRenderPipeline() {
     highfps_entity_probe::Host host;
     host.address = &ResolveCacheAddress; host.expect = &Expect; host.poke = &Poke;
     host.writeJump = &WriteRel32Jmp; host.log = &CacheLog; host.insideRender = &InNativeRender;
-    g_entityRenderCache = new highfps_entity_probe::Runtime(host);
+    host.cacheShaderLocations=g_cfg.cacheShaderLocations;
+    host.profileLocations=g_cfg.diag;
+    g_entityRenderCache = new highfps_entity_probe::Runtime(host,{g_cfg.cacheEntries,std::size_t(g_cfg.cacheMiB)*1024*1024});
     highfps_shader_params::Host shaderHost;
     shaderHost.address = &ResolveCacheAddress; shaderHost.expect = &Expect; shaderHost.poke = &Poke;
     shaderHost.writeJump = &WriteRel32Jmp; shaderHost.log = &CacheLog; shaderHost.insideRender = &InNativeRender;
@@ -987,19 +1052,25 @@ void PacePresentation() {
 BOOL WINAPI HookedSwapBuffers(HDC dc) {
     // A catch-up tick completes its native render/callback lifecycle, but the
     // obsolete image has no display deadline and must not update the sample clock.
-    if (g_hiddenFixedRender && GetCurrentThreadId() == g_gameThreadId) return TRUE;
+    const bool ours = g_gameThreadId && GetCurrentThreadId() == g_gameThreadId;
+    if (ours && (g_hiddenFixedRender ||
+        (g_promotingCanonical && g_promotionEpoch!=g_lifecycleEpoch))) return TRUE;
     // Only this game's main rendering thread is paced. Loading helpers and
     // another GL context must not consume its presentation deadlines.
-    const bool ours = g_gameThreadId && GetCurrentThreadId() == g_gameThreadId;
+    const double swapStarted=ours?Now():0;
     if (ours) PacePresentation();
     const BOOL result = g_realSwapBuffers(dc);
     if (ours) {
         const double presented = Now();
-        if (g_cfg.diag && g_presentDiagLines++ < 12000)
-            Log("[present-frame] t=%.6f dt=%.6f gf=%u", presented,
-                g_lastPresent > 0 ? presented-g_lastPresent : 0, GameFrame());
-        g_lastPresent = presented;
-        g_presentAnchorValid = true;
+        g_prof.swapSum+=presented-swapStarted;
+        if(result) {
+            ++g_successfulPresents;++g_presentSerial;
+            if (g_cfg.frameTiming || (g_cfg.diag && g_presentDiagLines++ < 12000))
+                Log("[present-frame] t=%.6f dt=%.6f gf=%u", presented,
+                    g_lastPresent > 0 ? presented-g_lastPresent : 0, GameFrame());
+            g_lastPresent = presented;
+            g_presentAnchorValid = true;
+        } else {g_presentAnchorValid=false;Log("[present-error] SwapBuffers failed");}
     }
     return result;
 }
@@ -1158,9 +1229,11 @@ double ApplyLifecycleTime() {
 
 
 int __cdecl HookedUpdateWrapper() {
+    g_skipOuterRender=false;
     g_renderPassesDue = 0;
     ConfigurePresentation();
     if (!g_gameThreadId) g_gameThreadId = GetCurrentThreadId();
+    ConfigureThreading();
     EnsureFixedRenderPipeline();
 
     // Closes the render window from the other side. If the composite hook never fires —
@@ -1178,11 +1251,32 @@ int __cdecl HookedUpdateWrapper() {
         g_simClock.next = wallNow;
         g_lastWrapperTime = g_lastTickTime = wallNow;
     }
+    const bool useOverloadPolicy=g_cfg.overloadFallback && g_separateNativeFrames;
+    highfps::OverloadPolicy::Frame overloadFrame;
+    if(useOverloadPolicy)overloadFrame=g_overloadPolicy.BeginFrame(wallNow,g_simClock);
+    const bool nativeVisible=useOverloadPolicy && g_overloadPolicy.ShouldNative();
+    if(overloadFrame.transition!=highfps::OverloadPolicy::Transition::None) {
+        Log("[overload] mode=%s cause=%u t=%.6f discardedScheduleMs=%.3f next=%.6f",
+            nativeVisible?"native-visible":"adaptive",unsigned(overloadFrame.cause),wallNow,
+            overloadFrame.discardedScheduleSeconds*1000,g_simClock.next);
+        g_presentAnchorValid=false;g_nextPresent=0;
+        if(!nativeVisible) {
+            // Native-visible output used authoritative poses. Do not interpolate
+            // backwards into an older display history when high refresh resumes.
+            __try {RollbackPreviews();} __except(EXCEPTION_EXECUTE_HANDLER) {g_previewEnabled=false;}
+            memset(g_track,0,sizeof g_track);g_trackStamp=0;g_cam={};
+#ifdef HIGHFPS_BUILD_19715
+            g_menuHistory.Invalidate();g_carouselHistory.Invalidate();
+#endif
+            g_canonicalPresentation.valid=false;
+            g_lastWrapperTime=g_lastTickTime=wallNow;
+        }
+    }
     // Lua GC and renderer cleanup can run AFTER SwapBuffers. Their variable
     // cost must not move the sampled render timeline by a millisecond or two
     // on alternating frames. Anchor this frame to the previous presentation.
     // Simulation consumes only deadlines at or before that timestamp.
-    double now = g_endPacingActive && g_presentAnchorValid && g_lastPresent > 0.0 && wallNow - g_lastPresent < 0.25
+    double now = !nativeVisible && g_endPacingActive && g_presentAnchorValid && g_lastPresent > 0.0 && wallNow - g_lastPresent < 0.25
         ? g_lastPresent : wallNow;
     ++g_loopFrames;
 
@@ -1210,8 +1304,8 @@ int __cdecl HookedUpdateWrapper() {
         const double iterAvg = g_prof.iters   ? g_prof.iterSum / g_prof.iters   : 0.0;
         const double updAvg  = g_prof.updates ? g_prof.updSum  / g_prof.updates : 0.0;
         const double ourAvg  = g_prof.iters   ? g_prof.ourSum  / g_prof.iters   : 0.0;
-        // Whatever the iteration cost that was neither the engine's update nor ours is
-        // the render pass, which runs every iteration.
+        // Residual wall time includes hidden passes, presentation, pacing and
+        // bookkeeping. It is NOT a GPU timer or the total cost of this DLL.
         const double renderAvg = iterAvg - ourAvg - (updAvg * g_prof.updates) / (g_prof.iters ? g_prof.iters : 1);
 
         const LONG hits = InterlockedExchange(&g_probeHits, 0);
@@ -1231,10 +1325,8 @@ int __cdecl HookedUpdateWrapper() {
                 "overlay, %ld composites%s", luaSup, ovScopes, ovBlits,
                 g_overlayFailed ? "  [overlay DISABLED]" : "");
 
-        // vsync is in here because it is the one thing that silently undoes the whole mod:
-        // we remove the engine's limiter but never touch the GL swap interval, so with vsync
-        // on the loop is pinned to the refresh rate no matter what we patched. When it is on,
-        // loop/s IS the refresh rate, which is the other half of the same diagnosis.
+        // Loop counts remain diagnostic only: native overload waiting can run an
+        // outer iteration without a presentation. FPS uses successful real swaps.
         #ifdef HIGHFPS_BUILD_19715
         const bool vsync = g_presentConfigured ? g_presentVsync : *Addr(0x00BD5795) != 0;
 #else
@@ -1251,12 +1343,22 @@ int __cdecl HookedUpdateWrapper() {
             renderAvg * 1000.0,
             ourAvg * 1000.0, g_prof.ourMax * 1000.0,
             g_prof.entPeak, g_prof.longFrames);
+        Log("[render-cost] hiddenCalls=%u hiddenMs=%.3f hiddenMaxMs=%.3f presentCalls=%u presentWorkMs=%.3f presentWorkMaxMs=%.3f swapWaitMs=%.3f gcMs=%.3f windowMs=%.3f",
+            g_prof.hiddenCalls,g_prof.hiddenSum*1000,g_prof.hiddenMax*1000,
+            g_prof.presentCalls,g_prof.presentWorkSum*1000,g_prof.presentWorkMax*1000,
+            g_prof.swapSum*1000,g_prof.gcSum*1000,(now-g_statWindow)*1000);
+        Log("[presentation-count] successful=%llu nativeVisibleCalls=%u nativeVisibleWorkMs=%.3f windowMs=%.3f overload=%u",
+            g_successfulPresents,g_prof.nativeVisibleCalls,g_prof.nativeVisibleSum*1000,
+            (now-g_statWindow)*1000,unsigned(nativeVisible));
+        if(auto* worker=g_asyncLog.load())Log("[log-worker] accepted=%ld written=%ld dropped=%ld truncated=%ld",
+            worker->Accepted(),worker->Written(),worker->Dropped(),worker->Truncated());
 
         // Hand the measured rate to Lua. Mods cannot count frames for themselves any more,
         // because the callback they would count is exactly the one we pin to 60.
-        g_pushRate = LONG(double(g_loopFrames) / (now - g_statWindow) + 0.5);
+        g_pushRate = LONG(double(g_successfulPresents) / (now - g_statWindow) + 0.5);
 
         g_loopFrames = g_wrapperCalls = 0;
+        g_successfulPresents=0;
         g_prof = Profile{};
         g_statWindow = now;
 
@@ -1270,6 +1372,12 @@ int __cdecl HookedUpdateWrapper() {
     }
 
     if (!g_simClock.Due(now)) {
+        if(nativeVisible) {
+            // Under overload, an idle outer loop must not pay for another full
+            // pure render. Keep pumping native messages until the next tick.
+            g_skipOuterRender=true;g_luaFrameIntermediate=0;g_inRenderPhase=0;
+            Sleep(1);return 0;
+        }
         // The render following this return shows a frame vanilla never drew, so the
         // Lua gate swallows every engine->Lua dispatch in it.
         g_luaFrameIntermediate = 1;
@@ -1325,7 +1433,11 @@ int __cdecl HookedUpdateWrapper() {
     int result = 0;
     unsigned catchupSteps = 0;
     bool crossedLifecycle = false;
+    bool promotedSuccessfully=false;
     do {
+        const double fixedStarted=Now(),fixedSwapBefore=g_prof.swapSum;
+        const double fixedLoadBefore=g_excludedLoadSeconds;
+        if(useOverloadPolicy && !g_overloadPolicy.BeginFixedStep(fixedStarted))break;
         const double scheduledWrapper = g_simClock.Consume(now);
 
         // Hand the engine authoritative positions, always. It only rolls previews back on
@@ -1373,7 +1485,13 @@ int __cdecl HookedUpdateWrapper() {
 #ifdef HIGHFPS_BUILD_19715
         if (g_separateNativeFrames) g_inputResultCache->BeginTick();
 #endif
+#ifdef HIGHFPS_BUILD_19715
+        if(g_entityRenderCache)g_entityRenderCache->BeginUpdateQueries();
+        __try {result = g_wrapperTrampoline();}
+        __finally {if(g_entityRenderCache)g_entityRenderCache->EndUpdateQueries();}
+#else
         result = g_wrapperTrampoline();
+#endif
         ++g_renderPassesDue;
         if (logicPhase) {
             g_lastGameFrame = GameFrame();
@@ -1402,21 +1520,31 @@ int __cdecl HookedUpdateWrapper() {
 #ifdef HIGHFPS_BUILD_19715
         if (renderHidden) {
             const auto renderEpoch = g_lifecycleEpoch;
+            const auto serialBefore=g_presentSerial;
             PrepareOverlay();
             g_luaFrameIntermediate = 0;
             g_inRenderPhase = 1;
-            g_hiddenFixedRender = true;
+            g_hiddenFixedRender = !nativeVisible;
+            g_promotingCanonical=nativeVisible;g_promotionEpoch=renderEpoch;
             BeginNativeRender(true);
+            const double hiddenStarted=Now();
+            const double renderSwapBefore=g_prof.swapSum;
             __try {
                 reinterpret_cast<void(__cdecl*)()>(Addr(0x94D340))();
             } __finally {
+                const double elapsed=Now()-hiddenStarted-(g_prof.swapSum-renderSwapBefore);
+                if(nativeVisible){g_prof.nativeVisibleSum+=elapsed;++g_prof.nativeVisibleCalls;}
+                else {g_prof.hiddenSum+=elapsed;++g_prof.hiddenCalls;
+                    if(elapsed>g_prof.hiddenMax)g_prof.hiddenMax=elapsed;}
                 g_hiddenFixedRender = false;
+                g_promotingCanonical=false;
                 g_inRenderPhase = 0;
             }
             SampleMenuPresentation();
             SampleCarouselPresentation();
             GarbageCollect19715();
             g_canonicalPresentation.Complete(renderEpoch, g_lifecycleEpoch);
+            promotedSuccessfully=nativeVisible && renderEpoch==g_lifecycleEpoch && g_presentSerial!=serialBefore;
             if (ApplyLifecycleTime() > 0) {
                 now = Now();
                 crossedLifecycle = true;
@@ -1455,9 +1583,21 @@ int __cdecl HookedUpdateWrapper() {
             if (ours > g_prof.ourMax) g_prof.ourMax = ours;
         }
 
-        // Keep 60 simulation steps per second even when rendering temporarily falls
-        // below 60. Each step restores previews before entering authoritative code.
-    } while (!crossedLifecycle && ++catchupSteps < 16 && g_simClock.Due(now));
+        if(useOverloadPolicy) {
+            double work=Now()-fixedStarted-(g_prof.swapSum-fixedSwapBefore)-(g_excludedLoadSeconds-fixedLoadBefore);
+            if(work<0)work=0;
+            g_overloadPolicy.ObserveFixedCost(work,!crossedLifecycle && epochBefore==g_lifecycleEpoch);
+        }
+        // Keep ordinary debt, but never knowingly spend multiple heavy native
+        // frames before returning to presentation/input. Mode changes take effect
+        // on the NEXT outer iteration, not midway through a hidden render.
+    } while (!nativeVisible && !crossedLifecycle && ++catchupSteps < 16 && g_simClock.Due(now) &&
+             (!useOverloadPolicy || g_overloadPolicy.CanStartFixedStep(Now())));
+
+    if(nativeVisible && promotedSuccessfully) {
+        g_skipOuterRender=true;g_inRenderPhase=0;g_luaFrameIntermediate=0;
+        return result; // native R cleanup and its GC have already completed
+    }
 
     if (g_cfg.diag && !g_separateNativeFrames) {
         const double a = (now - g_lastTickTime) / kTickPeriod;
@@ -1500,11 +1640,13 @@ int __cdecl HookedUpdateWrapper() {
 unsigned g_pendingGcTicks = 0;
 void __cdecl GarbageCollect19715() {
     if (!GameObj()) { g_pendingGcTicks = 0; return; }
+    const double started=Now();
     using Fn = void(__cdecl*)();
     while (g_pendingGcTicks) {
         --g_pendingGcTicks;
         reinterpret_cast<Fn>(Addr(0x00865540))();
     }
+    g_prof.gcSum+=Now()-started;
 }
 
 // J374 calls stdcall Manager::Update(bool) directly, unlike J460's cdecl wrapper.
@@ -1540,6 +1682,10 @@ uint64_t PureGameplayHash19715() {
     return h;
 }
 void __cdecl Render19715() {
+    if(g_skipOuterRender) {
+        g_skipOuterRender=false;g_inRenderPhase=0;g_luaFrameIntermediate=0;
+        return;
+    }
     if (g_separateNativeFrames && !g_canonicalPresentation.Ready(g_lifecycleEpoch)) {
         // Keep the previously presented frame until a full canonical render has
         // captured this lifetime. Do not expose a half-restored room without its
@@ -1551,6 +1697,10 @@ void __cdecl Render19715() {
         return;
     }
     uint64_t before = 0;
+    const double presentationStarted=Now(),swapBefore=g_prof.swapSum;
+    const auto presentationEpoch=g_lifecycleEpoch;
+    const auto presentationSerialBefore=g_presentSerial;
+    const double presentationLoadBefore=g_excludedLoadSeconds;
     const bool audit = g_cfg.diag && g_separateNativeFrames;
     if (audit) before = PureGameplayHash19715();
     highfps::menu_presentation::Scope menuScope;
@@ -1617,6 +1767,15 @@ void __cdecl Render19715() {
             Log("[warn] menu viewport restore faulted; interpolation disabled");
         }
         g_inRenderPhase=0;g_luaFrameIntermediate=0;
+        const double elapsed=Now()-presentationStarted-(g_prof.swapSum-swapBefore);
+        g_prof.presentWorkSum+=elapsed;++g_prof.presentCalls;
+        if(elapsed>g_prof.presentWorkMax)g_prof.presentWorkMax=elapsed;
+        if(g_cfg.overloadFallback && g_separateNativeFrames && !g_overloadPolicy.ShouldNative()) {
+            const double load=g_excludedLoadSeconds-presentationLoadBefore;
+            const double work=elapsed>load?elapsed-load:0;
+            g_overloadPolicy.ObservePureCost(work,Now(),g_simClock,
+                presentationEpoch==g_lifecycleEpoch && load==0 && g_presentSerial!=presentationSerialBefore);
+        }
     }
     if (audit && before != PureGameplayHash19715()) {
         static unsigned reported = 0;
@@ -2695,9 +2854,94 @@ bool InstallLuaGate() {
     return true;
 }
 
+// Opt-in instrumented vanilla. This path patches ONE executable import slot,
+// calls the pre-existing target exactly once and observes its completion. It
+// never enters the high-FPS wrapper, limiter, pacing, Lua, cache or GL adapters.
+std::atomic<SwapBuffersFn> g_nativeMeasureSwap{nullptr};
+std::atomic<DWORD> g_nativeMeasureThread{0};
+BOOL WINAPI NativeMeasureSwapBuffers(HDC dc) {
+    const BOOL result = g_nativeMeasureSwap.load(std::memory_order_acquire)(dc);
+    const DWORD nativeError = GetLastError();
+    if(!result){Log("[present-error] native measurement SwapBuffers failed");SetLastError(nativeError);return result;}
+    const double presented = Now();
+    DWORD owner = g_nativeMeasureThread.load(std::memory_order_acquire);
+    const DWORD me = GetCurrentThreadId();
+    if(!owner) {
+        DWORD empty=0;
+        g_nativeMeasureThread.compare_exchange_strong(empty,me,std::memory_order_acq_rel);
+        owner=g_nativeMeasureThread.load(std::memory_order_acquire);
+    }
+    if(owner==me && InitThreadExited()) {
+        // Init has finished its synchronous logging before the FILE is handed
+        // to a worker. policy -1 does not change the native thread's affinity.
+        ConfigureThreading();
+        static bool announced=false;
+        static double last=0,reportAt=0;
+        if(!announced) {
+            announced=true;
+            Log("[native-measure] ready=1 iat_only=1 pacing=0 affinity_policy=-1 thread=%lu asyncLog=%u",
+                me,unsigned(g_asyncLog.load(std::memory_order_acquire)!=nullptr));
+        }
+        Log("[present-frame] t=%.6f dt=%.6f gf=%u",presented,last>0?presented-last:0,GameFrame());
+        last=presented;
+        if(presented>=reportAt) {
+            reportAt=presented+1;
+            if(auto* worker=g_asyncLog.load(std::memory_order_acquire))
+                Log("[log-worker] accepted=%ld written=%ld dropped=%ld truncated=%ld",
+                    worker->Accepted(),worker->Written(),worker->Dropped(),worker->Truncated());
+        }
+    }
+    SetLastError(nativeError);
+    return result;
+}
+
+bool InstallNativeTimingProbe() {
+#ifndef HIGHFPS_BUILD_19715
+    Log("[native-measure] rejected: probe requires the checked J374 build");
+    return false;
+#else
+    // Keep Enabled=0's original scheduling, including the thread mask. Async
+    // output is compulsory for this probe so file flushes do not time the game.
+    g_cfg.mainThreadCpu=-1;
+    g_cfg.asyncLog=true;
+    const auto*dos=reinterpret_cast<const IMAGE_DOS_HEADER*>(g_base);
+    const auto*nt=reinterpret_cast<const IMAGE_NT_HEADERS32*>(g_base+dos->e_lfanew);
+    const auto&dir=nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+    if(!dir.VirtualAddress)return false;
+    auto*desc=reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR*>(g_base+dir.VirtualAddress);
+    for(;desc->Name;++desc) {
+        if(_stricmp(reinterpret_cast<const char*>(g_base+desc->Name),"gdi32.dll")!=0)continue;
+        // No guessing at import-by-name if the original name table is absent.
+        if(!desc->OriginalFirstThunk)return false;
+        auto*name=reinterpret_cast<IMAGE_THUNK_DATA32*>(g_base+desc->OriginalFirstThunk);
+        auto*iat=reinterpret_cast<IMAGE_THUNK_DATA32*>(g_base+desc->FirstThunk);
+        for(;name->u1.AddressOfData;++name,++iat) {
+            if(name->u1.Ordinal&IMAGE_ORDINAL_FLAG32)continue;
+            const auto*byName=reinterpret_cast<const IMAGE_IMPORT_BY_NAME*>(g_base+name->u1.AddressOfData);
+            if(std::strcmp(byName->Name,"SwapBuffers")!=0)continue;
+            auto**slot=reinterpret_cast<void**>(&iat->u1.Function);
+            void*previous=*slot;
+            if(!previous || previous==reinterpret_cast<void*>(&NativeMeasureSwapBuffers))return false;
+            DWORD protection=0;
+            if(!VirtualProtect(slot,sizeof(*slot),PAGE_READWRITE,&protection))return false;
+            // Publish the actual prior IAT target before installing the hook;
+            // an immediate first call cannot race a null/export-only trampoline.
+            g_nativeMeasureSwap.store(reinterpret_cast<SwapBuffersFn>(previous),std::memory_order_release);
+            const bool installed=InterlockedCompareExchangePointer(slot,
+                reinterpret_cast<void*>(&NativeMeasureSwapBuffers),previous)==previous;
+            DWORD unused=0;VirtualProtect(slot,sizeof(*slot),protection,&unused);
+            if(!installed)return false;
+            Log("[native-measure] installed=1 enabled=0 probe=1; instrumented vanilla, SwapBuffers IAT only");
+            return true;
+        }
+    }
+    return false;
+#endif
+}
+
 DWORD WINAPI Init(LPVOID) {
     LoadConfig();
-    if (!g_cfg.enabled) return 0;
+    if (!g_cfg.enabled && !g_cfg.nativeTimingProbe) return 0;
 
     // The mod ships under two names so that a loader which will not pick up one of them
     // can be given the other. Somebody will inevitably install both "to be safe", and two
@@ -2737,7 +2981,8 @@ DWORD WINAPI Init(LPVOID) {
         Log("[FATAL] unsupported executable: this DLL requires 1.9.7.15.J374");
         return 0;
     }
-    Log("1.9.7.15.J374: scheduled interpolation and version-specific KAGE adapters");
+    Log(g_cfg.enabled ? "1.9.7.15.J374: scheduled interpolation and version-specific KAGE adapters"
+                      : "1.9.7.15.J374: opt-in native presentation measurement");
 #endif
     LARGE_INTEGER f;
     QueryPerformanceFrequency(&f);
@@ -2764,6 +3009,11 @@ DWORD WINAPI Init(LPVOID) {
     }
     Log("g_Manager = 0x%08X, frameCount = %u", (unsigned)mgr,
         *reinterpret_cast<uint32_t*>(mgr + isaac::kMgrFrameCount));
+
+    if(!g_cfg.enabled) {
+        if(!InstallNativeTimingProbe())Log("[native-measure] installed=0; native code and scheduling retained");
+        return 0;
+    }
 
     g_nextWrapper = Now();
     g_statWindow = Now();

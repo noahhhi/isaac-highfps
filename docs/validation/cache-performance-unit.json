@@ -1,0 +1,130 @@
+{
+  "scope": "Standalone CPU/ABI verification of bounded draw-cache indexing and generic observer fast path; no game launch or FPS claim",
+  "base_commit": "0d95dc6847aefd4f73ef711124c1b2e5406ddc96",
+  "source_sha256": {
+    "src/entity_draw_cache_probe.h": "a77ada4ad815282edf957302219e00f7ae0fb9445b0d197ab1fc098a82f893c3",
+    "src/entity_draw_cache_j374_runtime.h": "ed00c5f875b5899e3bcfbab4be7783372af1406e1fc37f6d81faa003f8748017",
+    "tests/entity_draw_cache_probe_test.cpp": "cff36162de0da8ce5b82ea8c73e0c4a82be43a1a38cc7eaa1d7ec700770a5399",
+    "tests/entity_draw_cache_runtime_test.cpp": "a58a73a417bac9c1f5d6e70b7bb9f22cc026f3f8c7a1d3ca33e6d5aca5e399d1"
+  },
+  "cache_design": {
+    "default_entries": 16384,
+    "maximum_entries": 32768,
+    "default_retained_byte_budget": 67108864,
+    "maximum_retained_byte_budget": 134217728,
+    "lookup": "Expected O(1) hash indexes with bounded cardinality; capture-age and lineage links reside in stable nodes.",
+    "admission": "Do not evict entries already captured in this canonical frame. Reject excess admissions; evict older captures when needed.",
+    "bytes": "Vector capacities and conservative metadata/reference allowances are charged. This is retained CPU-data accounting, not process RSS or GPU/native image memory. A bounded in-progress capture is additional.",
+    "no_op": "Compact metadata, no state payload. Successful replay performs one exact lookup, no lineage lookup and no backend ReadState/ApplyState. Canonical entry/exit state checks remain.",
+    "lineage": "Queried on replay failure only; maintained incrementally through replacement/eviction.",
+    "resources": "Final per-image state selection is indexed, references remain retained until replacement/eviction/Clear on the existing game-thread path.",
+    "native_effect_pool": "Unchanged. 1024 native effect identities may yield more than 1024 draw-cache keys across passes."
+  },
+  "cache_same_workload_benchmark": {
+    "environment": "Desktop WSL compiler, x86 Windows executable through interop, optimized MSVC ABI; single-run microbenchmark, not Steam Deck gameplay",
+    "workload": "8 canonical capture sweeps; two full pure sweeps per canonical frame; unchanged no-op backend; native generation formula; 1024 entity identities with additional passes.",
+    "rows": [
+      {
+        "keys": 128,
+        "old_ms": 0.343,
+        "new_ms": 0.143,
+        "old_hits": 2048,
+        "old_misses": 0,
+        "new_hits": 2048,
+        "new_misses": 0,
+        "state_reads_each": 2048
+      },
+      {
+        "keys": 1024,
+        "old_ms": 54.55,
+        "new_ms": 1.167,
+        "old_hits": 8192,
+        "old_misses": 8192,
+        "new_hits": 16384,
+        "new_misses": 0,
+        "state_reads_each": 16384
+      },
+      {
+        "keys": 1200,
+        "old_ms": 64.046,
+        "new_ms": 1.363,
+        "old_hits": 8192,
+        "old_misses": 11008,
+        "new_hits": 19200,
+        "new_misses": 0,
+        "state_reads_each": 19200
+      }
+    ],
+    "measurement_note": "This paired benchmark preceded only the capture-flag mirror addition; final integrated probe regressions below were rerun with that flag addition."
+  },
+  "final_probe_checks": {
+    "result": "passed",
+    "1200_keys": {
+      "pure_hits": 19200,
+      "misses": 0,
+      "equality_comparisons": 19888,
+      "lineage_lookups_on_hits": 0,
+      "tracked_bytes": 428672,
+      "eight_sweeps_ms": 1.319
+    },
+    "16384_keys": {
+      "pure_hits": 262144,
+      "equality_comparisons": 395136,
+      "tracked_bytes": 4194304,
+      "additional_same_frame_keys_rejected": 32,
+      "all_previous_entries_retained": true
+    },
+    "recycled_pointer": {
+      "different_native_seed_generation_keys": 4096,
+      "equality_comparisons": 4582
+    },
+    "other_checks": [
+      "Old-frame eviction and latest-lineage replacement/removal",
+      "Resetting canonical-frame history clears stale lineage",
+      "Byte-budget pressure releases native references",
+      "A single impossible-size entry does not evict unrelated old captures",
+      "A rejected replacement cannot replay its stale prior drawing",
+      "Existing deferred-vertex, final-resource, failure-restoration and unsafe-capture tests"
+    ]
+  },
+  "observer_design": {
+    "non_lazy_inactive": "Push flags, compare a stable atomic capture byte, restore flags and jump to the same displaced-native/original target. No C++ Notify or FXSAVE/FXRSTOR.",
+    "active": "Restore incoming flags and execute the complete prior observer path.",
+    "lazy": "Always execute Notify, including outside capture, so frameUnsafe invalidation remains.",
+    "lifetime": "The flag lives in a retained gate allocation, not the Cache object. Begin/End/Clear mirror capture; Cache destruction sets it to zero.",
+    "unchanged": "Original native operations always execute. Specialized texture hooks and their lifetime tracking are not bypassed."
+  },
+  "observer_tests": {
+    "result": "passed",
+    "coverage": [
+      "Off/on stdcall and fastcall",
+      "Displaced prologue execution",
+      "All GPRs including ESP and arithmetic EFLAGS",
+      "XMM7 and x87 float stack",
+      "Real foreign thread forwards the native target without mutating capture reasons",
+      "Lazy frameUnsafe outside capture",
+      "Retired gate still calls native after Cache destruction"
+    ],
+    "microbenchmark_ms": [
+      {
+        "path": "outside capture",
+        "calls": 200000,
+        "old": 12.408,
+        "fast": 0.955
+      },
+      {
+        "path": "empty active captures",
+        "calls": 128000,
+        "old": 8.019,
+        "fast": 8.793
+      }
+    ],
+    "interpretation": "The inactive path improves; active capture retains full observation and pays the added branch. This does not predict total game FPS."
+  },
+  "limits": [
+    "No isolated/live game was launched by this agent. Root owns exact-DLL gameplay performance and image/cadence regression.",
+    "Native update/render cost and actual graphics queries may remain bottlenecks.",
+    "Hash lookup is expected constant time, not an adversarial worst-case proof.",
+    "The native effect pool, Lua callback semantics, graphic dependency validation and unsupported-operation policy are not relaxed."
+  ]
+}

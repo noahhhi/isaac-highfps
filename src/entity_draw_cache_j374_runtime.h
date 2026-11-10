@@ -1,6 +1,8 @@
 #pragma once
 #include "entity_draw_cache_j374_ref.h"
 #include "entity_draw_cache_j374_hooks.h"
+#include "render_ordinal_index.h"
+#include "shader_location_cache.h"
 #if defined(_WIN32) && (defined(__i386__) || defined(_M_IX86))
 #include <windows.h>
 #include <algorithm>
@@ -16,6 +18,8 @@ struct Host {
     void (*writeJump)(std::uint8_t*,const void*)=nullptr;
     void (*log)(const char*)=nullptr;
     bool (*insideRender)()=nullptr;
+    bool cacheShaderLocations=true;
+    bool profileLocations=false; // diagnostic counters only; no per-query logging
 };
 class NativeBackend final:public Backend {
     friend struct NativeBackendTestAccess;
@@ -324,8 +328,7 @@ public:
 class Runtime {
     friend struct RuntimeTestAccess;
     Host host_;NativeBackend backend_;Cache cache_;
-    struct Ordinal{std::uintptr_t entity;unsigned callback,pass,next;};
-    std::vector<Ordinal> ordinals_;
+    highfps::RenderOrdinalIndex ordinals_;
     std::uint64_t epoch_=~std::uint64_t(0),canonicalFrame_=0;unsigned externalPass_=0;
     std::array<unsigned,64> detailedMisses_{};unsigned totalDetailedMisses_=0,windowDetailedMisses_=0,bloodOriginTraces_=0;
     struct Patch{std::uintptr_t va;std::vector<std::uint8_t> bytes;};
@@ -335,8 +338,240 @@ class Runtime {
     bool installed_=false,frameUnsafe_=false;
     std::array<std::uint64_t,512> reasons_{};
     std::array<std::uint64_t,64> canonicalCounts_{},hitCounts_{},missCounts_{},outsideCounts_{};
+    std::array<std::uint64_t,64> absentCanonicalCounts_{},absentPureCounts_{};
     ULONGLONG nextReport_=0;
     inline static Runtime* active_=nullptr;
+    using LocationKind=highfps::shader_locations::Kind;
+    highfps::shader_locations::Cache locations_;
+    // Separate from generic observer gates: no gate may wrap these hooks again.
+    struct LocationSlot {const char*name;std::uintptr_t slot,lazy;};
+    inline static constexpr LocationSlot locationSpecs_[]={
+        {"glGetAttribLocation",0xBCEC50,0xA2A950},{"glGetUniformLocation",0xBCECA8,0xA2E0E0},
+        {"glLinkProgram",0xBCECD8,0xA30370},{"glDeleteProgram",0xBCECE8,0xA26F50},
+        {"glProgramBinary",0xBCC204,0xA353B0},{"glLinkProgramARB",0xBCC4F8,0xA303A0},
+        {"glProgramBinaryOES",0xBCDDB0,0xA353E0},
+        {"wglMakeCurrent",0xAD0368,0},{"wglDeleteContext",0xAD036C,0},{"wglShareLists",0xAD0374,0},
+        {"glDeleteObjectARB",0xBCCFD0,0xA26EB0}
+    };
+    static constexpr unsigned locationSlotCount_=sizeof(locationSpecs_)/sizeof(locationSpecs_[0]);
+    inline static std::atomic<void*> locationTargets_[locationSlotCount_]{};
+    inline static std::atomic<std::uint32_t> locationMutationSerial_{0},locationMutationsActive_{0};
+    // Deleting a bound GL program is deferred until unbind. Never re-admit a
+    // deleted numeric name, even after Link/BeginFrame: a positive query between
+    // DeleteProgram and final unbind must not become a stale post-delete hit.
+    // Process-lifetime tombstones deliberately trade later name-reuse hits for
+    // correctness; overflow disables only this optional optimization.
+    inline static std::atomic<unsigned> locationDeleted_[128]{};
+    inline static std::atomic<unsigned> locationDeletedCount_{0};
+    inline static std::atomic<bool> locationDeletedFull_{false};
+    std::atomic<bool> locationHealthy_{false};
+    void** locationSlots_[locationSlotCount_]{};
+    std::uintptr_t locationBuiltinObjects_[7]{},locationKnownCallers_[5]{},locationLazyAddresses_[locationSlotCount_]{};
+    void* locationHookAddresses_[locationSlotCount_]{};
+    const std::uint8_t* locationLastBuiltin_=nullptr;
+    using LocationContextFn=HGLRC(WINAPI*)();
+    LocationContextFn locationContext_=nullptr;
+    std::uint32_t locationSerialSeen_=0;
+    std::uintptr_t locationContextSeen_=0;
+    unsigned locationUpdateDepth_=0;
+    std::uint64_t locationProfile_[4][7]{};
+    std::atomic<std::uint32_t> locationProfileForeign_{0};
+    void ProfileLocation(unsigned kind,std::uintptr_t caller){
+        const unsigned phase=locationUpdateDepth_?0u:(host_.insideRender&&host_.insideRender()? (J374Hooks::canonical?1u:2u):3u);
+        unsigned index=kind?6u:5u;
+        for(unsigned i=0;i<5;++i)if(caller==locationKnownCallers_[i]){index=i;break;}
+        ++locationProfile_[phase][index];
+    }
+    void ReportLocationProfile(){
+        if(!host_.profileLocations)return;
+        const char*phaseNames[]={"update","canonical-render","pure-render","outside"};
+        for(unsigned phase=0;phase<4;++phase){
+            auto*count=locationProfile_[phase];std::uint64_t sum=0;for(unsigned i=0;i<7;++i)sum+=count[i];
+            if(sum){char line[384];std::snprintf(line,sizeof line,
+                "[shader-query-source] phase=%s thread=main a15cff=%llu a15e19=%llu a0ccec=%llu a15e8b=%llu a15ea9=%llu unknownAttr=%llu unknownUniform=%llu",
+                phaseNames[phase],static_cast<unsigned long long>(count[0]),static_cast<unsigned long long>(count[1]),
+                static_cast<unsigned long long>(count[2]),static_cast<unsigned long long>(count[3]),static_cast<unsigned long long>(count[4]),
+                static_cast<unsigned long long>(count[5]),static_cast<unsigned long long>(count[6]));Message(line);}
+            for(unsigned i=0;i<7;++i)count[i]=0;
+        }
+        const auto foreign=locationProfileForeign_.exchange(0);
+        if(foreign){char line[96];std::snprintf(line,sizeof line,"[shader-query-source] thread=foreign calls=%u",foreign);Message(line);}
+    }
+    std::uint64_t locationCalls_=0,locationHits_=0,locationForwards_=0,locationBypass_=0,locationLazy_=0,locationNegative_=0;
+    using LocationFn=int(WINAPI*)(unsigned,const char*);
+    static bool LocationName(const char*input,char(&copy)[highfps::shader_locations::Cache::NameBytes],std::size_t&length) {
+        length=0;if(!input)return false;
+#if defined(_MSC_VER)
+        __try {
+            for(std::size_t i=0;i<sizeof(copy);++i){copy[i]=input[i];if(!copy[i]){length=i;return i!=0;}}
+        } __except(EXCEPTION_EXECUTE_HANDLER){return false;}
+#else
+        for(std::size_t i=0;i<sizeof(copy);++i){SIZE_T n=0;if(!ReadProcessMemory(GetCurrentProcess(),input+i,copy+i,1,&n)||n!=1)return false;if(!copy[i]){length=i;return i!=0;}}
+#endif
+        return false;
+    }
+    // Resolve immutable image addresses once. Only the object address is MRU:
+    // initialized and program ID are read live, even on the hottest repeat hit.
+    void PrepareLocationAddresses(){
+        const std::uintptr_t builtins[]={0xBD56F8,0xBD5724,0xBD5750,0xBD296C,0xBD2A74,0xBD2890,0xBD2788};
+        const std::uintptr_t callers[]={0xA15D05,0xA15E1F,0xA0CCF2,0xA15E91,0xA15EAF};
+        for(unsigned i=0;i<7;++i)locationBuiltinObjects_[i]=host_.address(builtins[i]);
+        for(unsigned i=0;i<5;++i)locationKnownCallers_[i]=host_.address(callers[i]);
+        for(unsigned i=0;i<locationSlotCount_;++i){locationLazyAddresses_[i]=locationSpecs_[i].lazy?host_.address(locationSpecs_[i].lazy):0;locationHookAddresses_[i]=LocationHook(i);}
+        locationLastBuiltin_=nullptr;
+    }
+    bool LocationBuiltin(unsigned program) {
+        if(!program)return false;
+#if defined(_MSC_VER)
+        __try {
+#endif
+            const auto*last=locationLastBuiltin_;
+            if(last && *reinterpret_cast<const volatile std::uint8_t*>(last+4)==1 &&
+               *reinterpret_cast<const volatile std::uint32_t*>(last+0x28)==program)return true;
+            for(auto address:locationBuiltinObjects_){
+                const auto*p=reinterpret_cast<const std::uint8_t*>(address);
+                if(p && p!=last && *reinterpret_cast<const volatile std::uint8_t*>(p+4)==1 &&
+                   *reinterpret_cast<const volatile std::uint32_t*>(p+0x28)==program){locationLastBuiltin_=p;return true;}
+            }
+#if defined(_MSC_VER)
+        } __except(EXCEPTION_EXECUTE_HANDLER){locationLastBuiltin_=nullptr;return false;}
+#endif
+        return false;
+    }
+    bool LocationCaller(unsigned kind,std::uintptr_t caller)const {
+        if(kind==0)return caller==locationKnownCallers_[0]||caller==locationKnownCallers_[1];
+        return caller==locationKnownCallers_[2]||caller==locationKnownCallers_[3]||caller==locationKnownCallers_[4];
+    }
+    static void* LocationHook(unsigned index) {
+        switch(index){
+        case 0:return reinterpret_cast<void*>(&AttributeLocation);case 1:return reinterpret_cast<void*>(&UniformLocation);
+        case 2:return reinterpret_cast<void*>(&LinkProgram);case 3:return reinterpret_cast<void*>(&DeleteProgram);
+        case 4:return reinterpret_cast<void*>(&ProgramBinary);case 5:return reinterpret_cast<void*>(&LinkProgramARB);
+        case 6:return reinterpret_cast<void*>(&ProgramBinaryOES);case 7:return reinterpret_cast<void*>(&MakeCurrent);
+        case 8:return reinterpret_cast<void*>(&DeleteContext);case 9:return reinterpret_cast<void*>(&ShareLists);
+        case 10:return reinterpret_cast<void*>(&DeleteObjectARB);
+        default:return nullptr;}
+    }
+    bool LocationSlotsIntact() {
+        for(unsigned i=0;i<locationSlotCount_;++i)
+            if(!locationSlots_[i]||*locationSlots_[i]!=locationHookAddresses_[i]){locationHealthy_.store(false);return false;}
+        return true;
+    }
+    static void LocationRearm(Runtime*r,unsigned index,void*called) {
+        if(!r||!locationSpecs_[index].lazy||reinterpret_cast<std::uintptr_t>(called)!=r->locationLazyAddresses_[index])return;
+        auto**slot=r->locationSlots_[index];if(!slot){r->locationHealthy_.store(false);return;}
+        auto*next=*slot;if(next==LocationHook(index))return;
+        const auto value=reinterpret_cast<std::uintptr_t>(next);
+        if(value<=3||value==~std::uintptr_t(0)||next==called){r->locationHealthy_.store(false);return;}
+        // Only a known native resolver may replace its own slot. Never adopt an
+        // arbitrary later hook chain (which might call us and recurse).
+        locationTargets_[index].store(next,std::memory_order_release);
+        if(InterlockedCompareExchangePointer(slot,LocationHook(index),next)!=next)r->locationHealthy_.store(false);
+    }
+    int LocationQuery(unsigned kind,unsigned program,const char*name,std::uintptr_t caller) {
+        auto*target=locationTargets_[kind].load(std::memory_order_acquire);
+        auto original=reinterpret_cast<LocationFn>(target);
+        const bool main=GetCurrentThreadId()==J374Hooks::gameThreadId;
+        if(main){++locationCalls_;if(host_.profileLocations)ProfileLocation(kind,caller);}
+        else if(host_.profileLocations)locationProfileForeign_.fetch_add(1,std::memory_order_relaxed);
+        const bool lazy=reinterpret_cast<std::uintptr_t>(target)==locationLazyAddresses_[kind];
+        if(main&&lazy)++locationLazy_;
+        char stableName[highfps::shader_locations::Cache::NameBytes];std::size_t nameLength=0;
+        std::uintptr_t context=0;std::uint32_t serial=0;bool eligible=false;
+        if(main&&locationHealthy_.load(std::memory_order_acquire)&&
+           (locationUpdateDepth_ || (host_.insideRender&&host_.insideRender()))&&
+           LocationSlotsIntact()&&LocationCaller(kind,caller)&&LocationBuiltin(program)&&LocationName(name,stableName,nameLength)&&locationContext_) {
+            serial=locationMutationSerial_.load(std::memory_order_acquire);
+            context=reinterpret_cast<std::uintptr_t>(locationContext_());
+            if(serial!=locationSerialSeen_||context!=locationContextSeen_){locations_.Clear();locationSerialSeen_=serial;locationContextSeen_=context;}
+            eligible=context && !lazy && !locationMutationsActive_.load(std::memory_order_acquire) && !LocationWasDeleted(program);
+            int result=-1;
+            if(eligible&&locations_.FindValidated(context,program,LocationKind(kind),stableName,nameLength,result)&&
+               !locationMutationsActive_.load(std::memory_order_acquire)&&serial==locationMutationSerial_.load(std::memory_order_acquire)){
+                ++locationHits_;return result;
+            }
+        }
+        if(main){++locationForwards_;if(!eligible)++locationBypass_;}
+        const int result=original(program,name); // Invalid/negative queries retain native GL errors.
+        if(main&&result<0)++locationNegative_;
+        LocationRearm(this,kind,target);
+        if(eligible && result>=0 && !LocationWasDeleted(program) && locationHealthy_.load(std::memory_order_acquire)&&LocationSlotsIntact()&&
+           !locationMutationsActive_.load(std::memory_order_acquire)&&serial==locationMutationSerial_.load(std::memory_order_acquire)&&
+           context==reinterpret_cast<std::uintptr_t>(locationContext_()))locations_.StoreValidated(context,program,LocationKind(kind),stableName,nameLength,result);
+        return result;
+    }
+    static int WINAPI AttributeLocation(unsigned program,const char*name){auto*r=active_;if(r)return r->LocationQuery(0,program,name,reinterpret_cast<std::uintptr_t>(_ReturnAddress()));return reinterpret_cast<LocationFn>(locationTargets_[0].load())(program,name);}
+    static int WINAPI UniformLocation(unsigned program,const char*name){auto*r=active_;if(r)return r->LocationQuery(1,program,name,reinterpret_cast<std::uintptr_t>(_ReturnAddress()));return reinterpret_cast<LocationFn>(locationTargets_[1].load())(program,name);}
+    static unsigned DeletedHash(unsigned program){program^=program>>16;program*=0x7feb352du;program^=program>>15;return program&127u;}
+    static bool LocationWasDeleted(unsigned program){
+        for(unsigned i=DeletedHash(program),n=0;n<128;++n,i=(i+1)&127u){
+            const auto value=locationDeleted_[i].load(std::memory_order_acquire);
+            if(value==program)return true;if(!value)return false;
+        }return true;
+    }
+    static void LocationRememberDeleted(unsigned program){
+        if(!program)return;
+        for(unsigned i=DeletedHash(program),n=0;n<128;++n,i=(i+1)&127u){
+            unsigned value=locationDeleted_[i].load(std::memory_order_acquire);
+            if(value==program)return;
+            if(!value){
+                if(locationDeleted_[i].compare_exchange_strong(value,program,std::memory_order_acq_rel)){locationDeletedCount_.fetch_add(1);return;}
+                if(value==program)return;
+            }
+        }
+        locationDeletedFull_.store(true);if(active_)active_->locationHealthy_.store(false);
+    }
+    static void LocationMutationBegin(){
+        locationMutationsActive_.fetch_add(1,std::memory_order_acq_rel);
+        locationMutationSerial_.fetch_add(1,std::memory_order_acq_rel);
+        if(active_&&active_->locationHealthy_.load(std::memory_order_acquire)&&GetCurrentThreadId()==J374Hooks::gameThreadId)active_->cache_.Unsafe(508);
+    }
+    static void LocationMutationEnd(){locationMutationSerial_.fetch_add(1,std::memory_order_acq_rel);locationMutationsActive_.fetch_sub(1,std::memory_order_release);}
+    static void LocationUnary(unsigned index,unsigned program){
+        auto*r=active_;auto*target=locationTargets_[index].load();LocationMutationBegin();
+        if(index==3||index==10)LocationRememberDeleted(program);
+        // OpenGL dispatch is C ABI and nonthrowing; no game/Lua function is called.
+        reinterpret_cast<void(WINAPI*)(unsigned)>(target)(program);
+        LocationRearm(r,index,target);LocationMutationEnd();
+    }
+    static void WINAPI LinkProgram(unsigned p){LocationUnary(2,p);}
+    static void WINAPI DeleteProgram(unsigned p){LocationUnary(3,p);}
+    static void WINAPI DeleteObjectARB(unsigned object){LocationUnary(10,object);}
+    static void WINAPI LinkProgramARB(unsigned p){LocationUnary(5,p);}
+    static void LocationBinary(unsigned index,unsigned p,unsigned format,const void*bytes,int length){
+        auto*r=active_;auto*target=locationTargets_[index].load();LocationMutationBegin();
+        reinterpret_cast<void(WINAPI*)(unsigned,unsigned,const void*,int)>(target)(p,format,bytes,length);
+        LocationRearm(r,index,target);LocationMutationEnd();
+    }
+    static void WINAPI ProgramBinary(unsigned p,unsigned f,const void*b,int n){LocationBinary(4,p,f,b,n);}
+    static void WINAPI ProgramBinaryOES(unsigned p,unsigned f,const void*b,int n){LocationBinary(6,p,f,b,n);}
+    static BOOL WINAPI MakeCurrent(HDC dc,HGLRC context){LocationMutationBegin();const BOOL result=reinterpret_cast<BOOL(WINAPI*)(HDC,HGLRC)>(locationTargets_[7].load())(dc,context);LocationMutationEnd();return result;}
+    static BOOL WINAPI DeleteContext(HGLRC context){LocationMutationBegin();const BOOL result=reinterpret_cast<BOOL(WINAPI*)(HGLRC)>(locationTargets_[8].load())(context);LocationMutationEnd();return result;}
+    static BOOL WINAPI ShareLists(HGLRC a,HGLRC b){LocationMutationBegin();const BOOL result=reinterpret_cast<BOOL(WINAPI*)(HGLRC,HGLRC)>(locationTargets_[9].load())(a,b);LocationMutationEnd();return result;}
+    bool ValidateLocationCache();
+    bool InstallLocationCache() {
+        if(!host_.cacheShaderLocations||locationDeletedFull_.load())return false;
+        if(!ValidateLocationCache())return false;
+        auto gl=GetModuleHandleA("opengl32.dll");
+        locationContext_=gl?reinterpret_cast<LocationContextFn>(GetProcAddress(gl,"wglGetCurrentContext")):nullptr;
+        if(!locationContext_)return false;
+        PrepareLocationAddresses();
+        const auto checkpoint=patches_.size();bool ok=true;
+        for(unsigned i=0;i<locationSlotCount_;++i){
+            auto**slot=reinterpret_cast<void**>(host_.address(locationSpecs_[i].slot));const auto value=reinterpret_cast<std::uintptr_t>(*slot);
+            if(value<=3||value==~std::uintptr_t(0)||*slot==LocationHook(i)){ok=false;break;}
+            locationSlots_[i]=slot;locationTargets_[i].store(*slot,std::memory_order_release);
+            const auto replacement=reinterpret_cast<std::uintptr_t>(LocationHook(i));
+            if(!Write(locationSpecs_[i].slot,reinterpret_cast<const std::uint8_t*>(&replacement),4)){ok=false;break;}
+        }
+        if(!ok){
+            // Optional failure must not take down the existing rendering pipeline.
+            // Any hook whose rollback fails remains a transparent forwarder.
+            while(patches_.size()>checkpoint){auto&patch=patches_.back();if(!host_.poke(patch.va,patch.bytes.data(),patch.bytes.size()))break;patches_.pop_back();}
+            return false;
+        }
+        locationHealthy_.store(true,std::memory_order_release);return true;
+    }
     using DeleteTexturesFn=void(WINAPI*)(int,const unsigned*);
     inline static std::atomic<DeleteTexturesFn> deleteTarget_{nullptr};
     void** deleteSlot_=nullptr;
@@ -472,6 +707,9 @@ class Runtime {
         J374Hooks::Unsupported(code&0xffffu);
     }
     static void OutsideEvent(unsigned cb){if(active_ && cb<64)++active_->outsideCounts_[cb];}
+    static void NoSubscribers(unsigned cb,bool canonical){
+        if(active_ && cb<64)++(canonical?active_->absentCanonicalCounts_:active_->absentPureCounts_)[cb];
+    }
     static void Event(unsigned cb,bool canonical,bool hit){
         if(!active_ || cb>=64)return;
         if(canonical)++active_->canonicalCounts_[cb];
@@ -533,9 +771,7 @@ class Runtime {
         return !r.frameUnsafe_ && r.NextOrdinal(key);
     }
     bool NextOrdinal(Key& key){
-        for(auto& o:ordinals_)if(o.entity==key.entity && o.callback==key.callback && o.pass==key.pass){key.ordinal=o.next++;return true;}
-        if(ordinals_.size()>8192)return false;
-        ordinals_.push_back({key.entity,key.callback,key.pass,1});key.ordinal=0;return true;
+        return ordinals_.Next(key.entity,key.callback,key.pass,key.ordinal);
     }
 
     void Message(const char*s){if(host_.log)host_.log(s);}
@@ -564,12 +800,30 @@ class Runtime {
     // EBP is a temporary stack anchor only while PUSHAD owns the original value.
     std::uint8_t* ObserverGate(void* target,std::uint32_t code,const std::uint8_t* displaced=nullptr,std::size_t n=0){
         auto*p=Allocate();if(!p)return nullptr;
+        std::size_t i=0,fastJump=0;
+        if(!(code&0x80000000u)) {
+            // Non-lazy Notify has no effect outside capture. A separate stable
+            // allocation remains readable even after Shutdown/Cache destruction.
+            auto*flag=cache_.ObserverFlag();
+            if(!flag){auto*storage=Allocate();if(!storage)return nullptr;flag=new(storage) Cache::ObserverCaptureFlag(0);cache_.BindObserverFlag(flag);}
+            // PUSHFD; CMP byte [flag],0; JNE slow; POPFD; JMP original;
+            // slow: POPFD, then the complete original observer. No GPR, x87 or
+            // SSE register is used by the fast check, and both paths restore the
+            // incoming flags before executing any displaced native instruction.
+            p[i++]=0x9c;p[i++]=0x80;p[i++]=0x3d;
+            *reinterpret_cast<std::uint32_t*>(p+i)=std::uint32_t(reinterpret_cast<std::uintptr_t>(flag));i+=4;
+            p[i++]=0;p[i++]=0x75;p[i++]=6;p[i++]=0x9d;
+            fastJump=i;i+=5;p[i++]=0x9d;
+        }
+        // Lazy resolver calls always Notify: frameUnsafe must be set even when
+        // no callback is being captured. Specialized texture hooks are separate.
         const std::uint8_t prefix[]={0x9c,0x60,0x89,0xe5,0x81,0xec,0x10,0x02,0,0,0x83,0xe4,0xf0,0x0f,0xae,0x04,0x24};
-        std::size_t i=0;std::memcpy(p,prefix,sizeof prefix);i+=sizeof prefix;
+        std::memcpy(p+i,prefix,sizeof prefix);i+=sizeof prefix;
         p[i++]=0x68;*reinterpret_cast<std::uint32_t*>(p+i)=code;i+=4;
         p[i++]=0xE8;*reinterpret_cast<std::int32_t*>(p+i)=std::int32_t(reinterpret_cast<std::uintptr_t>(&Notify)-(reinterpret_cast<std::uintptr_t>(p+i)+4));i+=4;
         const std::uint8_t suffix[]={0x83,0xc4,0x04,0x0f,0xae,0x0c,0x24,0x89,0xec,0x61,0x9d};
         std::memcpy(p+i,suffix,sizeof suffix);i+=sizeof suffix;
+        if(fastJump)host_.writeJump(p+fastJump,p+i);
         if(n){std::memcpy(p+i,displaced,n);i+=n;}host_.writeJump(p+i,target);
         FlushInstructionCache(GetCurrentProcess(),p,i+5);return p;
     }
@@ -615,11 +869,24 @@ class Runtime {
     void Report(){
         const auto now=GetTickCount64();if(now<nextReport_)return;nextReport_=now+1000;windowDetailedMisses_=0;
         if(!host_.log)return;
+        ReportLocationProfile();
+        {char line[512];const auto stats=locations_.GetStats();
+         std::snprintf(line,sizeof line,"[shader-locations] enabled=%u calls=%llu hit=%llu forward=%llu bypass=%llu lazy=%llu entries=%u negative=%llu full=%llu mutationSerial=%u outstanding=%u deletedNames=%u frontHit=%llu",
+            unsigned(locationHealthy_.load()),static_cast<unsigned long long>(locationCalls_),static_cast<unsigned long long>(locationHits_),
+            static_cast<unsigned long long>(locationForwards_),static_cast<unsigned long long>(locationBypass_),static_cast<unsigned long long>(locationLazy_),unsigned(locations_.Size()),
+            static_cast<unsigned long long>(locationNegative_),static_cast<unsigned long long>(stats.rejectedFull),locationMutationSerial_.load(),locationMutationsActive_.load(),locationDeletedCount_.load(),static_cast<unsigned long long>(stats.frontHits));Message(line);
+         locationCalls_=locationHits_=locationForwards_=locationBypass_=locationLazy_=locationNegative_=0;locations_.ResetStats();}
         const auto counts=cache_.GetCounts();LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);
+        const auto operations=cache_.GetOperations();const auto limits=cache_.GetLimits();
         char line[512];std::snprintf(line,sizeof line,"[entity-cache] entries=%u valid=%u commands=%u refs=%u glReads=%llu glReadMs=%.3f shaderReject=%llu retainReject=%llu",
             unsigned(counts.entries),unsigned(counts.valid),unsigned(counts.commands),unsigned(counts.refs),
             static_cast<unsigned long long>(backend_.stats.stateReads),1000.0*backend_.stats.stateQpc/freq.QuadPart,
             static_cast<unsigned long long>(backend_.stats.describeReject),static_cast<unsigned long long>(backend_.stats.retainReject));Message(line);
+        std::snprintf(line,sizeof line,"[cache-index] noOps=%u bytes=%u entryLimit=%u byteLimit=%u exact=%llu lineage=%llu comparisons=%llu evictions=%llu rejected=%llu",
+            unsigned(counts.noOps),unsigned(counts.bytes),unsigned(limits.entries),unsigned(limits.bytes),
+            static_cast<unsigned long long>(operations.exactLookups),static_cast<unsigned long long>(operations.lineageLookups),
+            static_cast<unsigned long long>(operations.comparisons),static_cast<unsigned long long>(operations.evictions),
+            static_cast<unsigned long long>(operations.rejected));Message(line);cache_.ResetOperations();
         std::snprintf(line,sizeof line,"[entity-cache-format] noop=%llu init=%llu changed=%llu replay=%llu",
             static_cast<unsigned long long>(J374Hooks::formatNoop),static_cast<unsigned long long>(J374Hooks::formatInit),
             static_cast<unsigned long long>(J374Hooks::formatChange),static_cast<unsigned long long>(backend_.stats.formatReplay));Message(line);
@@ -636,6 +903,10 @@ class Runtime {
             static_cast<unsigned long long>(mutationDependent_),static_cast<unsigned long long>(mutationUnknown_));Message(line);
         mutationAllowed_=mutationNoop_=mutationDependent_=mutationUnknown_=0;
         for(unsigned cb:{2u,25u,28u,32u,36u,41u,45u,49u,52u,56u,59u}){
+            if(absentCanonicalCounts_[cb]||absentPureCounts_[cb]){
+                std::snprintf(line,sizeof line,"[entity-unregistered] callback=%u canonical=%llu presentation=%llu",cb,
+                    static_cast<unsigned long long>(absentCanonicalCounts_[cb]),static_cast<unsigned long long>(absentPureCounts_[cb]));Message(line);
+            }
             if(!canonicalCounts_[cb]&&!hitCounts_[cb]&&!missCounts_[cb]&&!outsideCounts_[cb])continue;
             std::snprintf(line,sizeof line,"[entity-cache] callback=%u canonical=%llu replayHit=%llu replayMiss=%llu",cb,
                static_cast<unsigned long long>(canonicalCounts_[cb]),static_cast<unsigned long long>(hitCounts_[cb]),static_cast<unsigned long long>(missCounts_[cb]));Message(line);
@@ -649,10 +920,15 @@ class Runtime {
             std::snprintf(line,sizeof line,"[entity-cache] unsafe reason=%u name=%s count=%llu",i,name,static_cast<unsigned long long>(*it));Message(line);*it=0;
         }
         reasons_.fill(0);canonicalCounts_.fill(0);hitCounts_.fill(0);missCounts_.fill(0);outsideCounts_.fill(0);backend_.stats={};
+        absentCanonicalCounts_.fill(0);absentPureCounts_.fill(0);
     }
 
 public:
-    explicit Runtime(Host host):host_(host),backend_(host.address),cache_(backend_){}
+    explicit Runtime(Host host,Cache::Limits limits=Cache::Limits{}):host_(host),backend_(host.address),cache_(backend_,limits){}
+    // Optional location queries only: does not change Lua/draw-cache ownership.
+    // Host must pair these around native Update using its exception-safe finally.
+    void BeginUpdateQueries(){if(GetCurrentThreadId()==J374Hooks::gameThreadId){++locationUpdateDepth_;locations_.BeginFrame();}}
+    void EndUpdateQueries(){if(GetCurrentThreadId()==J374Hooks::gameThreadId&&locationUpdateDepth_){--locationUpdateDepth_;locations_.Clear();}}
     // Allocate Runtime for process lifetime or call Shutdown while engine is live.
     // Do not destroy it after the native image manager has been torn down.
     void BeginRender(std::uint64_t epoch,bool canonical,unsigned passTag=0){
@@ -661,7 +937,9 @@ public:
         for(unsigned i=0;i<glGuards_.size();++i)if(!RearmGl(glGuards_[i],128+i))frameUnsafe_=true;
         Report();
         if(canonical)++canonicalFrame_;cache_.SetCanonicalFrame(canonicalFrame_);
-        externalPass_=passTag;ordinals_.clear();J374Hooks::canonical=canonical;
+        locations_.BeginFrame();
+        if(locationHealthy_.load())LocationSlotsIntact();
+        externalPass_=passTag;ordinals_.Clear();J374Hooks::canonical=canonical;
     }
     // Use at the ORIGINAL native POST_RENDER point. No FBO target switch, no
     // fake entity pointer and no Lua execution on a pure presentation.
@@ -684,6 +962,8 @@ public:
     }
     bool Install();
     void Shutdown(){
+        locationHealthy_.store(false);locationUpdateDepth_=0;locations_.Clear();
+        J374Hooks::Subscribers=nullptr;J374Hooks::OnNoSubscribers=nullptr;subscribers19715::Disable();
         cache_.Clear();J374Hooks::cache=nullptr;J374Hooks::MakeKey=nullptr;J374Hooks::OnEvent=nullptr;J374Hooks::OnMiss=nullptr;J374Hooks::InsideRender=nullptr;J374Hooks::OnOutsideRender=nullptr;
         for(auto it=patches_.rbegin();it!=patches_.rend();++it)host_.poke(it->va,it->bytes.data(),it->bytes.size());
         patches_.clear();installed_=false;active_=nullptr;
@@ -693,6 +973,72 @@ public:
 
 
 
+inline bool Runtime::ValidateLocationCache(){
+    // Optional guards intentionally avoid Host::expect's fatal-build diagnostic.
+    // Main pipeline validation is independent; failure here only disables caching.
+    static constexpr std::uint8_t resolver[7][34]={
+{0x55,0x8b,0xec,0x68,0x60,0xec,0xae,0x00,0xba,0xf0,0xa1,0xad,0x00,0xb9,0xe9,0x22,0xae,0x00,0xe8,0x79,0x3a,0xff,0xff,0x83,0xc4,0x04,0xa3,0x50,0xec,0xbc,0x00,0x5d,0xff,0xe0},
+{0x55,0x8b,0xec,0x68,0xac,0xfe,0xae,0x00,0xba,0x40,0xf4,0xae,0x00,0xb9,0x66,0x45,0xae,0x00,0xe8,0xe9,0x02,0xff,0xff,0x83,0xc4,0x04,0xa3,0xa8,0xec,0xbc,0x00,0x5d,0xff,0xe0},
+{0x55,0x8b,0xec,0x68,0x78,0xf5,0xae,0x00,0xba,0xb0,0xac,0xad,0x00,0xb9,0x43,0x56,0xae,0x00,0xe8,0x59,0xe0,0xfe,0xff,0x83,0xc4,0x04,0xa3,0xd8,0xec,0xbc,0x00,0x5d,0xff,0xe0},
+{0x55,0x8b,0xec,0x68,0x84,0xda,0xad,0x00,0xba,0x20,0xbb,0xad,0x00,0xb9,0x74,0x05,0xae,0x00,0xe8,0x79,0x74,0xff,0xff,0x83,0xc4,0x04,0xa3,0xe8,0xec,0xbc,0x00,0x5d,0xff,0xe0},
+{0x55,0x8b,0xec,0x68,0x0c,0xbd,0xad,0x00,0xba,0x50,0xd7,0xad,0x00,0xb9,0x2f,0x7c,0xae,0x00,0xe8,0x19,0x90,0xfe,0xff,0x83,0xc4,0x04,0xa3,0x04,0xc2,0xbc,0x00,0x5d,0xff,0xe0},
+{0x55,0x8b,0xec,0x68,0xb0,0x98,0xad,0x00,0xba,0xb0,0x94,0xad,0x00,0xb9,0x51,0x56,0xae,0x00,0xe8,0x29,0xe0,0xfe,0xff,0x83,0xc4,0x04,0xa3,0xf8,0xc4,0xbc,0x00,0x5d,0xff,0xe0},
+{0x55,0x8b,0xec,0x68,0x14,0xff,0xae,0x00,0xba,0x70,0x95,0xad,0x00,0xb9,0x3f,0x7c,0xae,0x00,0xe8,0xe9,0x8f,0xfe,0xff,0x83,0xc4,0x04,0xa3,0xb0,0xdd,0xbc,0x00,0x5d,0xff,0xe0}
+    };
+#if defined(_MSC_VER)
+    __try {
+#endif
+        for(unsigned i=0;i<7;++i){
+            std::uint8_t expected[34];std::memcpy(expected,resolver[i],34);
+            for(unsigned offset:{4u,9u,14u,27u}){std::uint32_t value;std::memcpy(&value,expected+offset,4);value=std::uint32_t(host_.address(value));std::memcpy(expected+offset,&value,4);}
+            if(std::memcmp(reinterpret_cast<const void*>(host_.address(locationSpecs_[i].lazy)),expected,34)!=0)return false;
+        }
+        // ARB deletion uses a compact resolver: name ADE128 + uint16(23E0),
+        // not an absolute string pointer. Its GLhandleARB is a 32-bit Win32 name.
+        {std::uint8_t stub[]={0x55,0x8b,0xec,0xba,0xe0,0x23,0x0,0x0,0xb9,0x62,0x0,0x0,0x0,0xe8,0x6e,0xb4,0xff,0xff,0xa3,0xd0,0xcf,0xbc,0x0,0x5d,0xff};
+         std::uint8_t helper[]={0x55,0x8b,0xec,0x83,0xec,0x10,0x89,0x4d,0xf4,0x8d,0x45,0xfc,0xf,0xb7,0xca,0x66,0x89,0x55,0xfc,0x81,0xc1,0x28,0xe1,0xad,0x0,0x50,0x8d,0x55,0xf4,0xc7,0x45,0xf8,0x0,0x0,0x0,0x0,0xe8,0x87,0xc0,0xff,0xff,0x83,0xc4,0x4,0x8b,0xe5,0x5d,0xc3};
+         const auto slot=std::uint32_t(host_.address(0xBCCFD0)),names=std::uint32_t(host_.address(0xADE128));
+         std::memcpy(stub+19,&slot,4);std::memcpy(helper+21,&names,4);
+         if(std::memcmp(reinterpret_cast<const void*>(host_.address(0xA26EB0)),stub,sizeof stub)!=0 ||
+            std::memcmp(reinterpret_cast<const void*>(host_.address(0xA22330)),helper,sizeof helper)!=0 ||
+            std::memcmp(reinterpret_cast<const void*>(host_.address(0xAE0508)),"glDeleteObjectARB",sizeof("glDeleteObjectARB"))!=0)return false;}
+        // Successful native link marks Shader+4 initialized; Shutdown clears it
+        // while leaving +28's numeric name stale. Never cache that stale object.
+        {const std::uint8_t init[]={0xc6,0x47,0x04,0x01};const std::uint8_t clear[]={0xc6,0x43,0x04,0x00};
+         if(std::memcmp(reinterpret_cast<const void*>(host_.address(0xA15BAB)),init,4)!=0 ||
+            std::memcmp(reinterpret_cast<const void*>(host_.address(0xA16307)),clear,4)!=0 ||
+            std::memcmp(reinterpret_cast<const void*>(host_.address(0xA16315)),clear,4)!=0)return false;}
+        for(auto call:{0xA15CFFu,0xA15E19u,0xA0CCECu,0xA15E8Bu,0xA15EA9u}){
+            std::uint8_t expected[]={0xff,0x15,0,0,0,0};const auto slot=std::uint32_t(host_.address(call==0xA15CFF||call==0xA15E19?0xBCEC50:0xBCECA8));
+            std::memcpy(expected+2,&slot,4);if(std::memcmp(reinterpret_cast<const void*>(host_.address(call)),expected,6)!=0)return false;
+        }
+        // Prove the three IAT locations by their import names, never their current
+        // provider addresses; another legitimate prior import hook is preserved.
+        const auto base=host_.address(0x400000);const auto*dos=reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+        if(dos->e_magic!=IMAGE_DOS_SIGNATURE||dos->e_lfanew<=0||dos->e_lfanew>0x10000)return false;
+        const auto*nt=reinterpret_cast<const IMAGE_NT_HEADERS32*>(base+dos->e_lfanew);
+        if(nt->Signature!=IMAGE_NT_SIGNATURE)return false;
+        const auto&r=nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];if(!r.VirtualAddress)return false;
+        const auto*desc=reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>(base+r.VirtualAddress);unsigned found=0;
+        for(;desc->Name;++desc){
+            if(_stricmp(reinterpret_cast<const char*>(base+desc->Name),"opengl32.dll")!=0)continue;
+            if(!desc->OriginalFirstThunk)return false;
+            const auto*names=reinterpret_cast<const IMAGE_THUNK_DATA32*>(base+desc->OriginalFirstThunk);
+            const auto*iat=reinterpret_cast<const IMAGE_THUNK_DATA32*>(base+desc->FirstThunk);
+            for(;names->u1.AddressOfData;++names,++iat){
+                if(names->u1.Ordinal&IMAGE_ORDINAL_FLAG32)continue;
+                const auto*name=reinterpret_cast<const IMAGE_IMPORT_BY_NAME*>(base+names->u1.AddressOfData);
+                for(unsigned i=7;i<10;++i)if(std::strcmp(name->Name,locationSpecs_[i].name)==0){
+                    if(reinterpret_cast<std::uintptr_t>(&iat->u1.Function)!=host_.address(locationSpecs_[i].slot))return false;
+                    found|=1u<<(i-7);
+                }
+            }
+        }
+        return found==7;
+#if defined(_MSC_VER)
+    } __except(EXCEPTION_EXECUTE_HANDLER){return false;}
+#endif
+}
 inline bool Runtime::Install(){
     if(installed_)return true;
     if(active_ || !host_.address || !host_.expect || !host_.poke || !host_.writeJump || !host_.insideRender || !backend_.Ready())return false;
@@ -1531,6 +1877,11 @@ inline bool Runtime::Install(){
     if(!ObserveGl("glUniformSubroutinesuiv",0xbcbe70,0xa3db30))return fail();
     if(!ObserveGl("glUseProgram",0xbcece4,0xa3dd10))return fail();
     if(!ObserveGl("glViewport",0xbcbd0c,0xa42040))return fail();
+    if(subscribers19715::Enable(host_.address,host_.expect)) {
+        J374Hooks::Subscribers=&subscribers19715::Query;J374Hooks::OnNoSubscribers=&NoSubscribers;
+        Message("[entity-cache] live native subscription gates enabled");
+    } else Message("[entity-cache] subscription gate unavailable; full capture retained");
+    Message(InstallLocationCache()?"[shader-locations] native positive query cache enabled":"[shader-locations] optional query cache off; original queries retained");
     installed_=true;Message("[entity-cache] 10 fixed-cadence entity callbacks and guarded native quad replay installed");return true;
 }
 } // namespace highfps_entity_probe

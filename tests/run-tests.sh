@@ -59,7 +59,7 @@ run_windows() {
 }
 run_core() {
   local name source
-  for name in render_timing_test camera_presentation_test menu_presentation_test carousel_presentation_test clock_lifecycle_test native_render_clock_test native_ui_replay_test entity_draw_cache_probe_test; do
+  for name in render_timing_test overload_policy_test shader_location_cache_test camera_presentation_test menu_presentation_test carousel_presentation_test clock_lifecycle_test native_render_clock_test native_ui_replay_test entity_draw_cache_probe_test render_ordinal_index_test; do
     source="$repo_dir/tests/$name.cpp"
     printf '\n[core] %s (%s)\n' "$name" "$backend"
     if [[ "$backend" == native ]]; then
@@ -73,6 +73,15 @@ run_core() {
   done
 }
 run_abi() {
+  printf '\n[abi] shader_location_runtime_test\n'
+  build_windows "$repo_dir/tests/shader_location_runtime_test.cpp" shader_location_runtime_test
+  run_windows "$output_dir/shader_location_runtime_test.exe"
+  printf '\n[abi] entity_render_subscribers_test\n'
+  build_windows "$repo_dir/tests/entity_render_subscribers_test.cpp" entity_render_subscribers_test
+  run_windows "$output_dir/entity_render_subscribers_test.exe"
+  printf '\n[abi] threading_support_test\n'
+  build_windows "$repo_dir/tests/threading_support_test.cpp" threading_support_test
+  run_windows "$output_dir/threading_support_test.exe"
   printf '\n[abi] entity_draw_cache_runtime_test\n'
   build_windows "$repo_dir/tests/entity_draw_cache_runtime_test.cpp" entity_draw_cache_runtime_test
   run_windows "$output_dir/entity_draw_cache_runtime_test.exe"

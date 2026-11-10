@@ -4,6 +4,8 @@ This fork of [hunchcldev/isaac-highfps](https://github.com/hunchcldev/isaac-high
 
 The main update stays at 60 Hz, full world updates stay at 30 Hz, and presentation follows the configured display or frame cap. Native entity and room-scroll previews provide intermediate positions. Audited native render-side animation updates and supported Lua drawing run on the fixed timeline, with their results reused for additional presentations.
 
+**0.13.0-j374.7 — performance work in progress.** The draw cache now uses indexed lookups and a bounded 16,384-entry / 64 MiB default budget. The main game thread can stay on one logical CPU, while copied log records are written by a separate worker. Empty entity callbacks avoid capture work; positive built-in shader locations are reused within guarded update/render scopes. Sustained overload shows complete native frames instead of repeatedly executing expensive hidden catch-up renders. This fallback can run below 60 FPS when native work is overloaded; it is not a claim of stable 90 FPS. See the [performance findings and remaining work](docs/validation/performance-progress.md).
+
 **0.13.0-j374.6 — character-selection carousel.** The wheel now interpolates the native per-character positions and scales during extra display frames, then restores them before the next update. It preserves selection, held-key repeat and native rotation timing, including wrap and reversal; it does not call the rotation updater at the display rate. See the [carousel evidence](docs/validation/character-carousel.json). This uses up to one 60 Hz interval of display history; input processing is unchanged.
 
 **0.13.0-j374.5 — Lua mod drawing and render-triggered continuation.** Ordinary ANM2 sprites now use their verified native shader/layout contracts, with resource lifetime tracking for image reloads and first texture uploads. This restores missing mod overlays without running their Lua callbacks at the display rate. A synchronous start/continue accounts for its complete blocking work; a render that changes the room/run cannot expose the new scene until a complete canonical frame is available. See the [mod image regressions](docs/validation/mod-image-regressions.md) and the individually scoped reports below.
@@ -56,6 +58,14 @@ To disable the mod, set `Enabled=0` and restart. To remove it, exit the game, re
 | `LuaOverlay` | `1` | Legacy configuration name that enables supported draw capture/replay in this pipeline. |
 | `Log` | `1` | Write `%TEMP%\isaac-highfps.log`, with a game-directory fallback. |
 | `Diag` | `0` | Detailed timing/cache diagnostics; enable for controlled tests or bug reports. |
+| `MainThreadCpu` | `-2` | Pin the main game thread to its current allowed logical CPU; `-1` disables pinning, `0..31` selects an allowed group-0 CPU. Other engine threads retain their affinities. |
+| `AsyncLog` | `1` | Write copied log records on a lower-priority worker; no game/Lua/GL work is moved to it. |
+| `CacheEntries` | `16384` | Draw-cache entry budget, clamped to 1024–32768. |
+| `CacheMiB` | `64` | Retained CPU draw-cache budget, clamped to 16–128 MiB; native image/GPU storage and transient capture are additional. |
+| `CacheShaderLocations` | `1` | Reuse positive built-in shader locations within guarded native update/render scopes. |
+| `OverloadFallback` | `1` | Temporarily show native frames when sustained work exceeds the fixed budget; recover without fast-forwarding overload debt. |
+| `FrameTiming` | `0` | Log successful presentation timestamps for isolated measurements. |
+| `NativeTimingProbe` | `0` | With `Enabled=0` only, instrument native SwapBuffers for comparison; leaves native update/render/limiter and thread affinity unchanged. |
 
 Keep both Lua options enabled for the tested pipeline. In this fork, `LuaOverlay=1` no longer describes the old per-callback FBO overlay approach: the active pipeline captures supported native draw commands and replays them. Turning either option off leaves the tested compatibility path and is not a recommended fix for a rendering fault.
 
@@ -73,7 +83,7 @@ Capture is bounded and checks draw layout, resource ownership and render state. 
 
 Input filtering preserves every native update/canonical query, including nested updates. Extra display frames reuse the last scalar MC_INPUT_ACTION result for that entity, hook and action in the current fixed tick. Handled `false` differs from a nil result; nil and unsampled queries leave the caller's output untouched and use its native raw-input branch. Unsampled cases are logged. Input queries are not limited to 60 calls per second. See the [input design/tests](docs/validation/input-cache-unit.json) and [engine controller exercise](docs/validation/controller-input-compatibility.json).
 
-The Lua globals `HIGH_FPS_NATIVE`, `HIGH_FPS_VERSION` and `HIGH_FPS_RATE` remain available. `HIGH_FPS_RATE` reports measured output-loop cadence; counting `MC_POST_RENDER` is not an output-FPS measurement in the fixed pipeline.
+The Lua globals `HIGH_FPS_NATIVE`, `HIGH_FPS_VERSION` and `HIGH_FPS_RATE` remain available. `HIGH_FPS_RATE` reports successful presentation cadence; counting `MC_POST_RENDER` is not an output-FPS measurement in the fixed pipeline.
 
 ## Validation status
 

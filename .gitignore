@@ -12,3 +12,5 @@ src/dbghelp.def
 *.lib
 *.pdb
 *.ilk
+__pycache__/
+*.pyc

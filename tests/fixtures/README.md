@@ -23,3 +23,9 @@ Some report fixtures were configured for a specific transition or unique rewind 
 `source-hashes.json` lists these committed fixture sources. No game executable, system/game DLL, save, prefix, screenshot or private account identifier is included. Logs may contain transient entity IDs for pairing; public summaries normalize those identities and omit full machine paths/mod lists.
 
 An offline fake-API rewind harness is available through `tests/run-tests.sh lua-fixture` with a supplied local Lua runtime. It validates the fixture's state machine without running this script inside a game. It does not establish that a live game replaced its Lua VM during a rewind.
+
+### Saved-run performance regression
+
+`user-baseline-stress.lua` is an isolated Continue-only fixture. Supply a separate copy of the recorded run and its exact mod data; it refuses a new run or a different seed. It inventories the player's items and stats, records entity births/removals and requests native directional shooting through MC_INPUT_ACTION. It never creates or removes projectiles or changes inventory.
+
+Vanilla Continue can choose a random entrance when EnterDoor is unset. At the first authoritative update the fixture therefore records the original position and places the single player at `(80, 280)` with zero velocity, once. The `ready` record proves the controlled starting state. Input-phase labels describe requested input, not guaranteed cessation of fire: Marked continues shooting after release. The archive and the real game are never mutated by this fixture; deploy it only through a silent, guarded isolated launcher. Save files and proprietary game assets must not be committed.

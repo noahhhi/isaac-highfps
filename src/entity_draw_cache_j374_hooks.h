@@ -1,5 +1,6 @@
 #pragma once
 #include "entity_draw_cache_probe.h"
+#include "entity_render_subscribers_j374.h"
 #if defined(_WIN32) && (defined(__i386__) || defined(_M_IX86))
 #include <windows.h>
 namespace highfps_entity_probe {
@@ -12,6 +13,8 @@ struct J374Hooks {
     inline static Cache* cache=nullptr;
     inline static bool canonical=true;
     inline static bool (*InsideRender)()=nullptr;
+    inline static subscribers19715::State (*Subscribers)(unsigned)=nullptr;
+    inline static void (*OnNoSubscribers)(unsigned,bool)=nullptr;
     inline static void (*OnOutsideRender)(unsigned)=nullptr;
     inline static DWORD gameThreadId=0;
     inline static void (*OnEvent)(unsigned,bool,bool)=nullptr;
@@ -47,6 +50,14 @@ struct J374Hooks {
     static void Entity(unsigned callback,EntityFn original,void* entity,const float* offset) {
         if(GetCurrentThreadId()!=gameThreadId){original(entity,offset);return;}
         if(InsideRender && !InsideRender()){original(entity,offset);if(OnOutsideRender)OnOutsideRender(callback);return;}
+        // The original wrapper itself returns before Lua/drawing when this live
+        // bit is clear. Avoid key building, GL state queries and empty captures.
+        // Preserve its authoritative invocation; pure presentation never calls Lua.
+        if(Subscribers && Subscribers(callback)==subscribers19715::State::Absent) {
+            if(canonical)original(entity,offset);
+            if(OnNoSubscribers)OnNoSubscribers(callback,canonical);
+            return;
+        }
         Key key;key.entity=reinterpret_cast<std::uintptr_t>(entity);key.callback=callback;
         if(!cache || !MakeKey || !MakeKey(entity,callback,key)) {
             // A missing generation/pass key must never execute Lua at high rate.

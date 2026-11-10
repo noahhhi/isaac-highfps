@@ -2,11 +2,13 @@
 // Standalone prototype, not installed. No hooks are installed by this file.
 // Host adapters must prove full draw coverage and render-context compatibility.
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <memory>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 namespace highfps_entity_probe {
 struct Color { float rgba[4]; std::int32_t extra; };
@@ -87,44 +89,147 @@ struct Backend {
     virtual std::uint8_t* Submit(const Quad& quad)=0;
 };
 class Cache {
-    struct Entry { Key key; State entryState; State exitState; bool valid=false,noOp=false; const char* reject="none";std::uint32_t unsafeCode=0;std::uint64_t canonicalFrame=0; std::vector<Command> commands; };
-    Backend& backend_;
-    std::vector<Entry> entries_;
-    Entry current_{};
-    std::uint8_t* pending_=nullptr;
-    bool capturing_=false, replaying_=false, bad_=false;
-    static constexpr std::size_t kEntries=512, kCommands=128;
-    std::uint64_t canonicalFrame_=0;
-    void Seal() {
-        if (!pending_) return;
-        auto& c=current_.commands.back();
-        // Call before any buffer resize/flush/free. An unsupported allocator must
-        // invoke Unsafe BEFORE invalidating the returned pointer, never afterwards.
-        c.vertices.assign(pending_,pending_+4u*c.layout.stride);
-        pending_=nullptr;
-    }
 public:
+    using ObserverCaptureFlag=std::atomic<std::uint8_t>;
+    static_assert(sizeof(ObserverCaptureFlag)==1,"observer gate reads one atomic byte");
+    struct Limits { std::size_t entries=16384, bytes=64u*1024u*1024u; };
+    struct Operations {std::uint64_t hashes=0, comparisons=0, exactLookups=0, lineageLookups=0, writes=0, evictions=0, rejected=0;};
+    struct Counts {std::size_t entries=0,valid=0,commands=0,refs=0,noOps=0,bytes=0;};
     struct ReplayInfo {const char* reason="none";const char* captureReject="none";std::uint32_t unsafeCode=0;bool entitySeen=false;std::uint64_t lastFrame=0;std::uint32_t priorPass=0,priorOrdinal=0;};
 private:
-    ReplayInfo lastReplay_{};
-    void FindPrior(const Key&key){
-        for(const auto&e:entries_)if(e.key.epoch==key.epoch && e.key.entity==key.entity && e.key.seed==key.seed && e.key.type==key.type && e.key.variant==key.variant){
-            if(!lastReplay_.entitySeen || e.canonicalFrame>=lastReplay_.lastFrame){lastReplay_.entitySeen=true;lastReplay_.lastFrame=e.canonicalFrame;lastReplay_.priorPass=e.key.pass;lastReplay_.priorOrdinal=e.key.ordinal;}
+    struct Payload {State entryState,exitState;std::vector<Command> commands;std::vector<std::size_t> finalResources;};
+    struct Capture {Key key;State entryState,exitState;bool valid=false,noOp=false;const char*reject="none";std::uint32_t unsafeCode=0;std::uint64_t canonicalFrame=0;std::vector<Command>commands;std::vector<std::size_t>finalResources;};
+    struct Entry {
+        Key key;bool valid=false,noOp=false;const char*reject="none";std::uint32_t unsafeCode=0;std::uint64_t canonicalFrame=0;
+        std::unique_ptr<Payload> data;std::size_t bytes=0,refs=0;
+        Entry *older=nullptr,*newer=nullptr,*lineageOlder=nullptr,*lineageNewer=nullptr;
+    };
+    struct Hash {
+        Operations*ops;
+        std::size_t operator()(const Key&k)const {
+            ++ops->hashes;
+            std::uint64_t h=k.epoch ^ (k.generation*0xa0761d6478bd642full) ^ (std::uint64_t(k.entity)*0xd6e8feb86659fd93ull);
+            h^=(std::uint64_t(k.callback)<<32)|k.pass;h^=std::uint64_t(k.ordinal)*0xa0761d6478bd642full;
+            h^=(std::uint64_t(k.seed)<<32)|k.type;h^=std::uint64_t(k.variant)*0xe7037ed1a0b428dbull;
+            h=(h^(h>>30))*0xbf58476d1ce4e5b9ull;h=(h^(h>>27))*0x94d049bb133111ebull;h^=h>>31;
+            return std::size_t(h^(h>>32));
         }
+    };
+    struct Equal {Operations*ops;bool operator()(const Key&a,const Key&b)const{++ops->comparisons;return a==b;}};
+    Backend& backend_;Limits limits_;Operations operations_;Counts counts_;
+    std::unordered_map<Key,Entry,Hash,Equal> entries_;
+    std::unordered_map<Key,Entry*,Hash,Equal> lineage_;
+    Entry*oldest_=nullptr,*newest_=nullptr;
+    std::size_t bucketBytes_=0;
+    Capture current_{};std::uint8_t*pending_=nullptr;
+    bool capturing_=false,replaying_=false,bad_=false;
+    ObserverCaptureFlag*observerFlag_=nullptr;
+    void MarkCapturing(bool value){capturing_=value;if(observerFlag_)observerFlag_->store(value?1:0,std::memory_order_release);}
+    static constexpr std::size_t kCommands=128;
+    std::uint64_t canonicalFrame_=0;ReplayInfo lastReplay_{};
+    static Key Lineage(Key k){k.generation=0;k.callback=k.pass=k.ordinal=0;return k;}
+    void FindPrior(const Key&key){
+        ++operations_.lineageLookups;const auto it=lineage_.find(Lineage(key));
+        if(it!=lineage_.end()&&it->second){const auto&e=*it->second;lastReplay_.entitySeen=true;lastReplay_.lastFrame=e.canonicalFrame;lastReplay_.priorPass=e.key.pass;lastReplay_.priorOrdinal=e.key.ordinal;}
+    }
+    bool Fail(const Key&key,const char*reason){lastReplay_.reason=reason;FindPrior(key);return false;}
+    void Seal(){if(!pending_)return;auto&c=current_.commands.back();c.vertices.assign(pending_,pending_+4u*c.layout.stride);pending_=nullptr;}
+    static std::size_t Charge(const Entry&e){
+        // Conservative CPU allocation accounting: node/key/list links, payload
+        // capacities and native-reference control blocks. GPU image bytes are
+        // owned by the engine and cannot be inferred from a retained pointer.
+        std::size_t n=sizeof(Entry)+2*sizeof(Key)+12*sizeof(void*);
+        if(e.data){n+=sizeof(Payload)+e.data->commands.capacity()*sizeof(Command)+e.data->finalResources.capacity()*sizeof(std::size_t);
+            for(const auto&c:e.data->commands)n+=c.vertices.capacity()+c.layout.attributes.capacity()+(c.imageLease?64:0);
+        }return n;
+    }
+    void Account(const Entry&e,bool add){
+        Counts n;n.entries=1;n.valid=e.valid;n.noOps=e.noOp&&e.valid;n.bytes=e.bytes;n.refs=e.refs;n.commands=e.data?e.data->commands.size():0;
+#define HF_COUNT(field) if(add)counts_.field+=n.field;else counts_.field-=n.field
+        HF_COUNT(entries);HF_COUNT(valid);HF_COUNT(noOps);HF_COUNT(bytes);HF_COUNT(refs);HF_COUNT(commands);
+#undef HF_COUNT
+    }
+    void Detach(Entry&e,bool keepLineage=false){
+        if(e.older)e.older->newer=e.newer;else oldest_=e.newer;
+        if(e.newer)e.newer->older=e.older;else newest_=e.older;
+        if(e.lineageOlder)e.lineageOlder->lineageNewer=e.lineageNewer;
+        if(e.lineageNewer)e.lineageNewer->lineageOlder=e.lineageOlder;
+        else {auto it=lineage_.find(Lineage(e.key));if(e.lineageOlder||keepLineage)it->second=e.lineageOlder;else lineage_.erase(it);}
+        e.older=e.newer=e.lineageOlder=e.lineageNewer=nullptr;
+    }
+    void Attach(Entry&e){
+        e.older=newest_;if(newest_)newest_->newer=&e;else oldest_=&e;newest_=&e;
+        auto result=lineage_.try_emplace(Lineage(e.key),nullptr);e.lineageOlder=result.first->second;
+        if(e.lineageOlder)e.lineageOlder->lineageNewer=&e;result.first->second=&e;
+    }
+    void Evict(Entry&e){Key key=e.key;Detach(e);Account(e,false);entries_.erase(key);++operations_.evictions;}
+    void Publish(){
+        Entry candidate;candidate.key=current_.key;candidate.valid=current_.valid;candidate.noOp=current_.noOp;candidate.reject=current_.reject;
+        candidate.unsafeCode=current_.unsafeCode;candidate.canonicalFrame=current_.canonicalFrame;
+        if(candidate.valid&&!candidate.noOp){candidate.data=std::make_unique<Payload>();candidate.data->entryState=current_.entryState;candidate.data->exitState=current_.exitState;
+            candidate.data->commands=std::move(current_.commands);candidate.data->finalResources=std::move(current_.finalResources);
+            for(const auto&c:candidate.data->commands)candidate.refs+=bool(c.imageLease);
+        }
+        candidate.bytes=Charge(candidate);++operations_.writes;
+        bool rejected=false;
+        const auto reject=[&](){
+            if(!rejected)++operations_.rejected;rejected=true;
+            candidate.data.reset();candidate.refs=0;candidate.valid=candidate.noOp=false;
+            candidate.reject="cache-capacity-or-byte-budget";candidate.bytes=Charge(candidate);
+        };
+        // An entry that cannot fit even an empty cache must not evict unrelated
+        // history while trying. Publish a small invalid record if space permits.
+        if(candidate.bytes>limits_.bytes-bucketBytes_)reject();
+        auto prior=entries_.find(candidate.key);
+        // Replace a prior result even if the new capture is rejected: retaining
+        // yesterday's visible draw for a changed callback would be incorrect.
+        if(prior!=entries_.end()){Detach(prior->second,true);Account(prior->second,false);}
+        const auto fits=[&](){return counts_.entries<limits_.entries&&candidate.bytes<=limits_.bytes-counts_.bytes;};
+        while(!fits()&&oldest_&&oldest_->canonicalFrame<canonicalFrame_)Evict(*oldest_);
+        if(!fits()){
+            reject();
+            // Fresh captures in this frame are pinned. Reject excess admissions
+            // instead of evicting this frame's front and thrashing every pass.
+            if(!fits()){
+                if(prior!=entries_.end()){
+                    auto group=lineage_.find(Lineage(prior->first));if(group!=lineage_.end()&&!group->second)lineage_.erase(group);
+                    entries_.erase(prior);
+                }return;
+            }
+        }
+        if(prior==entries_.end())prior=entries_.try_emplace(candidate.key).first;
+        prior->second=std::move(candidate);Attach(prior->second);Account(prior->second,true);
     }
 public:
-    explicit Cache(Backend& backend):backend_(backend) {}
-    void SetCanonicalFrame(std::uint64_t frame){canonicalFrame_=frame;}
-    const ReplayInfo& LastReplay()const{return lastReplay_;}
-    struct Counts {std::size_t entries=0,valid=0,commands=0,refs=0;};
-    Counts GetCounts() const {Counts n;n.entries=entries_.size();for(const auto&e:entries_){n.valid+=e.valid;n.commands+=e.commands.size();for(const auto&c:e.commands)n.refs+=bool(c.imageLease);}return n;}
-    bool Capturing() const { return capturing_; }
-    bool Replaying() const { return replaying_; }
-    void Clear() { pending_=nullptr; capturing_=false; entries_.clear(); current_=Entry{}; }
-    bool Begin(const Key& key) {
-        if (capturing_ || replaying_) { Unsafe(); if(capturing_)current_.reject="nested-scope";return false; }
-        current_=Entry{}; current_.key=key; current_.canonicalFrame=canonicalFrame_;current_.entryState=backend_.ReadState();
-        capturing_=true; bad_=false; return true;
+    explicit Cache(Backend&backend):Cache(backend,Limits{}){}
+    Cache(Backend&backend,Limits limits):backend_(backend),limits_(limits),entries_(0,Hash{&operations_},Equal{&operations_}),lineage_(0,Hash{&operations_},Equal{&operations_}){
+        if(!limits_.entries)limits_.entries=1;if(limits_.entries>32768)limits_.entries=32768;
+        if(limits_.bytes>128u*1024u*1024u)limits_.bytes=128u*1024u*1024u;
+        entries_.reserve(limits_.entries);lineage_.reserve(limits_.entries);
+        bucketBytes_=(entries_.bucket_count()+lineage_.bucket_count())*sizeof(void*);
+        // A tiny test/host byte limit still accounts for its fixed index buckets.
+        if(limits_.bytes<bucketBytes_)limits_.bytes=bucketBytes_;counts_.bytes=bucketBytes_;
+    }
+    ~Cache(){MarkCapturing(false);}
+    // The observer owns this process-lifetime flag allocation; generated gates
+    // may outlive Cache/Runtime teardown. Never expose the Cache object's storage.
+    ObserverCaptureFlag* ObserverFlag()const{return observerFlag_;}
+    void BindObserverFlag(ObserverCaptureFlag*flag){
+        if(observerFlag_&&observerFlag_!=flag)observerFlag_->store(0,std::memory_order_release);
+        observerFlag_=flag;MarkCapturing(capturing_);
+    }
+    Cache(const Cache&)=delete;Cache&operator=(const Cache&)=delete;
+    void SetCanonicalFrame(std::uint64_t frame){if(frame<canonicalFrame_)Clear();canonicalFrame_=frame;}
+    const ReplayInfo&LastReplay()const{return lastReplay_;}
+    Counts GetCounts()const{return counts_;}
+    const Operations&GetOperations()const{return operations_;}
+    void ResetOperations(){operations_={};}
+    Limits GetLimits()const{return limits_;}
+    bool Capturing()const{return capturing_;}bool Replaying()const{return replaying_;}
+    void Clear(){pending_=nullptr;MarkCapturing(false);current_=Capture{};lineage_.clear();entries_.clear();oldest_=newest_=nullptr;counts_={};counts_.bytes=bucketBytes_;}
+    bool Begin(const Key&key){
+        if(capturing_||replaying_){Unsafe();if(capturing_)current_.reject="nested-scope";return false;}
+        current_=Capture{};current_.key=key;current_.canonicalFrame=canonicalFrame_;current_.entryState=backend_.ReadState();MarkCapturing(true);bad_=false;return true;
     }
     // Called immediately BEFORE the native quad submit. Must still call native even
     // if false: a rejected capture must not damage the authoritative render.
@@ -161,21 +266,17 @@ public:
         if (!capturing_) return;
         Seal();
         if(!bad_ && backend_.HasResourceState()) {
-            // One final resource command per retained image, only if its final
-            // state differs from its last captured use. Iterate the original
-            // command count; appended state commands must not extend this loop.
+            // Index each image's last draw once. Preserve last-use order while
+            // sampling its final resource state; no quadratic suffix scans.
+            std::unordered_map<void*,std::size_t> last;
+            for(std::size_t i=0;i<current_.commands.size();++i)last[current_.commands[i].quad.image]=i;
             const auto count=current_.commands.size();
-            for(std::size_t i=0;i<count && !bad_;++i) {
-                const auto image=current_.commands[i].quad.image;
-                bool later=false;
-                for(std::size_t j=i+1;j<count;++j)if(current_.commands[j].quad.image==image){later=true;break;}
-                if(later)continue;
-                Command final;final.quad.image=image;final.resourceOnly=true;
-                final.imageLease=current_.commands[i].imageLease;
-                if(!backend_.DescribeResource(image,final.layout,final.state)) {
-                    bad_=true;current_.reject="unsupported-final-image-state";break;
-                }
-                if(!backend_.SameResource(current_.commands[i],final))current_.commands.push_back(std::move(final));
+            for(std::size_t i=0;i<count&&!bad_;++i){
+                auto image=current_.commands[i].quad.image;if(last.find(image)->second!=i)continue;
+                Command final;final.quad.image=image;final.resourceOnly=true;final.imageLease=current_.commands[i].imageLease;
+                if(!backend_.DescribeResource(image,final.layout,final.state)){bad_=true;current_.reject="unsupported-final-image-state";break;}
+                if(!backend_.SameResource(current_.commands[i],final)){current_.finalResources.push_back(current_.commands.size());current_.commands.push_back(std::move(final));}
+                else current_.finalResources.push_back(i);
             }
         }
         current_.exitState=backend_.ReadState();
@@ -185,28 +286,25 @@ public:
             if(!bad_)current_.reject=backend_.ContextCompatible(current_.exitState,current_.entryState)?"unsupported-exit-state":"context-changed-in-callback";
             current_.commands.clear();
         }
-        capturing_=false;
-        for (auto& e:entries_) if (e.key==current_.key) { e=std::move(current_); return; }
-        if (entries_.size()==kEntries) entries_.erase(entries_.begin());
-        entries_.push_back(std::move(current_));
+        MarkCapturing(false);Publish();
     }
     // No fallback Lua on extra render frames. False means no cached drawing; the
     // next canonical tick will execute Lua and rebuild. Log this compatibility gap.
     bool Replay(const Key& key) {
-        lastReplay_={};FindPrior(key);
-        if (capturing_ || replaying_) {lastReplay_.reason="scope-busy";return false;}
-        Entry* found=nullptr;
-        for (auto& e:entries_) if (e.key==key) { found=&e; break; }
-        if(!found){lastReplay_.reason="missing-key";return false;}
-        if(!found->valid){lastReplay_.reason="invalid-capture";lastReplay_.captureReject=found->reject;lastReplay_.unsafeCode=found->unsafeCode;return false;}
-        if(found->noOp)return true; // Nothing drawn and native state unchanged.
-        if(found->commands.empty() && !backend_.ContextCompatible(backend_.ReadState(),found->entryState)){lastReplay_.reason="context-changed";return false;}
-        if(!backend_.StateRepresentable(found->exitState)){lastReplay_.reason="exit-shader-generation-or-contract";return false;}
-        // Fixed sampled positions are intentional; no guessed entity translation.
-        for (const auto& c:found->commands) if (!backend_.CanReplay(c)){lastReplay_.reason=backend_.ReplayFailure();return false;}
+        lastReplay_={};
+        if(capturing_||replaying_)return Fail(key,"scope-busy");
+        ++operations_.exactLookups;auto it=entries_.find(key);
+        if(it==entries_.end())return Fail(key,"missing-key");
+        Entry*found=&it->second;
+        if(!found->valid){lastReplay_.captureReject=found->reject;lastReplay_.unsafeCode=found->unsafeCode;return Fail(key,"invalid-capture");}
+        if(found->noOp)return true; // One lookup; no lineage or backend state work.
+        auto&data=*found->data;
+        if(data.commands.empty()&&!backend_.ContextCompatible(backend_.ReadState(),data.entryState))return Fail(key,"context-changed");
+        if(!backend_.StateRepresentable(data.exitState))return Fail(key,"exit-shader-generation-or-contract");
+        for(const auto&c:data.commands)if(!backend_.CanReplay(c))return Fail(key,backend_.ReplayFailure());
         const State saved=backend_.ReadState(); replaying_=true;
         bool ok=true;
-        for (const auto& c:found->commands) {
+        for (const auto& c:data.commands) {
             if(!backend_.PrepareResource(c)){ok=false;lastReplay_.reason="resource-prepare-failed";break;}
             if(c.resourceOnly)continue;
             backend_.ApplyState(c.state);
@@ -223,14 +321,9 @@ public:
             // A failed native submission must not strand a shared image in an
             // intermediate format. Restore each image's captured final resource
             // state (its last command, including an explicit trailing change).
-            for(std::size_t i=0;i<found->commands.size();++i) {
-                bool later=false;
-                for(std::size_t j=i+1;j<found->commands.size();++j)
-                    if(found->commands[j].quad.image==found->commands[i].quad.image){later=true;break;}
-                if(!later)backend_.PrepareResource(found->commands[i]);
-            }
+            for(auto i:data.finalResources)backend_.PrepareResource(data.commands[i]);
         }
-        backend_.ApplyState(ok ? found->exitState : saved); replaying_=false; return ok;
+        backend_.ApplyState(ok ? data.exitState : saved); replaying_=false;if(!ok)FindPrior(key);return ok;
     }
 };
 // Identified J374 addresses. Verify exact prologues before installing any detour.
