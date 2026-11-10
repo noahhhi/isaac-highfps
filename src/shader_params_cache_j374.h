@@ -115,7 +115,7 @@ public:
 private:
  friend struct RuntimeTestAccess;
  Host host_;LuaApi lua_;TableCache cache_;Original original_=nullptr;DWORD thread_=0;
- bool installed_=false,canonical_=true;std::uint64_t epoch_=0;
+ bool installed_=false,canonical_=true,entryPatched_=false,closePatched_=false;std::uint64_t epoch_=0;
  std::vector<std::pair<std::string,unsigned>> ordinals_;
  std::uint8_t originalBytes_[5]{};std::uint8_t* trampoline_=nullptr;
  Stats stats_;ULONGLONG nextLog_=0;
@@ -143,12 +143,12 @@ private:
   stats_={};
  }
  static void __cdecl CloseHook(void* state){
-  if(active_){if(active_->cache_.BeforeClose(state))active_->ordinals_.clear();++active_->stats_.closes;}
+  if(active_ && active_->installed_){if(active_->cache_.BeforeClose(state))active_->ordinals_.clear();++active_->stats_.closes;}
   closeChain_(state);
  }
  static LuaRef* __stdcall Hook(LuaRef*out,const void*name){return active_->Get(out,name);}
  LuaRef* Get(LuaRef*out,const void* raw){
-  if(GetCurrentThreadId()!=thread_ || !host_.insideRender())return original_(out,raw);
+  if(!installed_ || GetCurrentThreadId()!=thread_ || !host_.insideRender())return original_(out,raw);
   std::string name;
   if(!Name(raw,name)){++stats_.rejected;if(canonical_)return original_(out,raw);*out={CurrentVm(),NilRef};return out;}
   const unsigned ordinal=Ordinal(name);
@@ -179,15 +179,26 @@ public:
   std::uint8_t patch[5]={0xE9};*reinterpret_cast<std::int32_t*>(patch+1)=std::int32_t(reinterpret_cast<std::uintptr_t>(&Hook)-(host_.address(0x865210)+5));
   const auto closeTarget=reinterpret_cast<std::uintptr_t>(&CloseHook);
   if(!host_.poke(0xAD01D0,reinterpret_cast<const std::uint8_t*>(&closeTarget),4)){active_=nullptr;return false;}
-  if(!host_.poke(0x865210,patch,5)){const auto restore=reinterpret_cast<std::uintptr_t>(closeChain_);host_.poke(0xAD01D0,reinterpret_cast<const std::uint8_t*>(&restore),4);active_=nullptr;return false;}
-  installed_=true;Log("[shader-cache] J374 callback21 snapshots and verified lua_close lifetime observer installed");return true;
+  closePatched_=true;
+  if(!host_.poke(0x865210,patch,5)){Shutdown();return false;}
+  entryPatched_=true;installed_=true;Log("[shader-cache] J374 callback21 snapshots and verified lua_close lifetime observer installed");return true;
  }
  void BeginRender(std::uint64_t epoch,bool canonical){
-  if(GetCurrentThreadId()!=thread_)return;epoch_=epoch;canonical_=canonical;ordinals_.clear();cache_.Begin(epoch,CurrentVm());Report();
+  if(!installed_ || GetCurrentThreadId()!=thread_)return;epoch_=epoch;canonical_=canonical;ordinals_.clear();cache_.Begin(epoch,CurrentVm());Report();
  }
  void Shutdown(){
-  if(!installed_)return;cache_.Clear(CurrentVm());host_.poke(0x865210,originalBytes_,5);const auto restore=reinterpret_cast<std::uintptr_t>(closeChain_);host_.poke(0xAD01D0,reinterpret_cast<const std::uint8_t*>(&restore),4);installed_=false;active_=nullptr;
-  // Trampoline memory remains allocated to avoid releasing an unwinding caller.
+  // A completed patch owns its reachable hook even if a later patch/cleanup
+  // failed. Disable caching first; failed restores retain a forwarding owner.
+  const bool wasInstalled=installed_;installed_=false;canonical_=true;
+  if(wasInstalled){cache_.Clear(CurrentVm());ordinals_.clear();}
+  if(entryPatched_ && host_.poke(0x865210,originalBytes_,5))entryPatched_=false;
+  const auto restore=reinterpret_cast<std::uintptr_t>(closeChain_);
+  if(closePatched_ && host_.poke(0xAD01D0,reinterpret_cast<const std::uint8_t*>(&restore),4))closePatched_=false;
+  if(!entryPatched_ && !closePatched_){if(active_==this)active_=nullptr;}
+  else Log("[shader-cache] shutdown restore incomplete; retained hooks forward native calls");
+  // Runtime and trampoline must remain process-lifetime when either patch is
+  // retained. Never destroy the owner merely because Install returned false.
+  // Trampoline memory also remains allocated for an unwinding caller.
  }
 };
 }

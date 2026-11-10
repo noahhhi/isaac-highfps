@@ -7,7 +7,7 @@ boundaries and callback cadence are recorded in [the evidence](attack-work-progr
 The archived base combination includes Cricket's Body, Marked, Lead Pencil and
 three Twisted Pair copies. The triple-item stress adds Technology Zero,
 Trisagion and Parasite simultaneously. Every run uses the same isolated save
-and seven enabled mods, with Character Enhance 1.28's reticle protection enabled.
+and seven enabled mods, with Character Enhance 1.28's reticle protection enabled unless the case explicitly uses 1.29 for resource preloading.
 
 | Case | Sustained presentation rate | p99 interval | Maximum interval |
 | --- | ---: | ---: | ---: |
@@ -93,6 +93,22 @@ volley: all 45 observed Haemolacria child requests passed, all attack/poof denia
 counts were zero, and pressure remained off. That altered inventory is not used
 as a performance comparison for the original combination.
 
+## Final R14 and Character Enhance 1.29 check
+
+The final 52-second light-counter triple-item soak measured **89.96 FPS**, p99
+**12.13 ms** and maximum **22.35 ms**, with two intervals above 16.7 ms and none
+above 33 ms. The first-shot boundary was **22.20 ms**. World and main callback
+rates remained **30.002 / 60.003 Hz**. This is one final-candidate soak, not a
+matched native/CE1.29 comparison or a guarantee for every scene.
+
+Character Enhance 1.29 optionally retains ten attack sprites at actual new/continued
+run start when related items are carried. A controlled Continue pair measured
+82.25 ms with preloading off and 22.08 ms on at the first-shot boundary. Fresh
+runs with no related items skipped it; a controlled Marked grant loaded ten
+resources. Both language menus, saved toggles and normal save/exit passed.
+R14 only changes failed shader-hook rollback ownership relative to R13; it does
+not add parallel native gameplay. All final tests used silent isolated profiles.
+
 ## CPU, GPU and threading
 
 The protected native triple-item reference used approximately 98% of one CPU
@@ -112,9 +128,6 @@ workers by these gates.
 
 ## Remaining validation
 
-Broader natural-combat behavior, first-shot stalls, additional low-load coverage, physical VRR and
-the final combined regression run remain outstanding. One R11 launch timed out
-before fixture execution; that failed attempt is retained separately and is
-not counted as a pass. The completed runs saved through the native pause menu
+Broader natural-combat behavior, additional low-load coverage and physical VRR remain unverified. Resource preloading reduces the observed first-shot stall but does not eliminate all long frames. Two R11/R13 launches timed out after 90 seconds before fixture execution; those attempts are retained separately and are not counted as passes. Ten later startup/menu-exit checks passed without establishing the cause or a fix for the intermittent stalls. The completed runs saved through the native pause menu
 and exited through a verified `WM_DELETE_WINDOW` request with native shutdown
 evidence.

@@ -47,6 +47,10 @@ Variable presentation intervals are supported by the scheduler. VRR still depend
 
 To disable the mod, set `Enabled=0` and restart. To remove it, exit the game, remove this fork's DLL and restore any previous DLL/configuration and launch option from your backup. The mod does not patch the executable on disk.
 
+For the experimental triple-item stress settings, use [the FPS-priority preset](isaac-highfps.fps-priority.ini.example). Back up the active INI, copy the preset beside `winmm.dll` as `isaac-highfps.ini`, then set `Enabled=1` and restart when ready. The preset ships with `Enabled=0`; the ordinary defaults above leave attack limits disabled. Its `MainThreadCpu=6` matches the tested Deck; use `-2` on other machines to choose the main thread's current allowed CPU.
+
+This preset trades attack output for frame rate: the controlled-target test retained about **30% of native total damage**. Split-child and laser-work limits reduce CPU creation/search work; a separate poof budget reduces cosmetic work. These settings do not diagnose GPU saturation or independently control all GPU costs. Native game, RNG, Lua and GL work remain on the game thread; the worker handles copied log records. See the [measured CPU/GPU scope and attack tradeoffs](docs/validation/attack-work-progress.md).
+
 ## Configuration
 
 | Setting | Default | Meaning |
@@ -139,7 +143,7 @@ bash build-wsl.sh
 
 The script defines `HIGHFPS_BUILD_19715`, uses `/MT` for the static CRT, and writes `build/winmm.dll`. `WINMM_SOURCE` is parsed locally to generate forwarding exports; do not distribute or commit that system DLL. GNU-ABI MinGW is not a substitute for this build's x86 SEH/MSVC ABI requirements. The unmodified upstream `build.bat` path is not the documented J374 build.
 
-Startup cache installation waits for the initializer thread to exit, and required-hook readiness is published only after successful patching. If the required full pipeline is unavailable, the fork falls back to 60 FPS with native Lua execution. One earlier test exceeded a 45-second startup budget; its cause was not established and retry succeeded. See the [port notes](docs/port-1.9.7.15.md) for that limit.
+Startup cache installation waits for the initializer thread to exit, and required-hook readiness is published only after successful patching. If installation reports failure, the fork falls back to 60 FPS with native Lua execution. Two retained R11/R13 attempts timed out after 90 seconds before fixture execution; their cause remains unresolved. Ten later startup/menu-exit smoke tests passed, which does not establish that the intermittent hang is fixed. Earlier startup limits are retained in the [port notes](docs/port-1.9.7.15.md).
 
 Build details and rollback notes are in [docs/port-1.9.7.15.md](docs/port-1.9.7.15.md).
 

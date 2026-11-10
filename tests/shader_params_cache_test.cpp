@@ -38,6 +38,50 @@ struct RuntimeTestAccess {
   std::puts("exact same VM address reuse cannot unref a new generation: passed");
  }
 
+ static void TestRollback(TestLua& t){
+  static std::uint8_t engine[0x20],entry[16]={0x55,0x8B,0xEC,0x6A,0xFF};
+  static std::uintptr_t enginePtr=reinterpret_cast<std::uintptr_t>(engine);
+  static unsigned closeCalls=0,pokeCalls=0;static unsigned failMask=0;
+  static Runtime::CloseFn nativeClose=[](void*){++closeCalls;};
+  *reinterpret_cast<void**>(engine+0x18)=t.state;
+  Host h;h.address=[](std::uintptr_t a)->std::uintptr_t{
+   if(a==0xC0C08C)return reinterpret_cast<std::uintptr_t>(&enginePtr);
+   if(a==0xAD01D0)return reinterpret_cast<std::uintptr_t>(&nativeClose);
+   if(a==0x865210 || a==0x865215)return reinterpret_cast<std::uintptr_t>(entry)+(a-0x865210);
+   assert(false);return 0;
+  };
+  h.expect=[](std::uintptr_t,const std::uint8_t*,std::size_t,const char*){return true;};
+  h.writeJump=[](std::uint8_t*,const void*){};
+  h.insideRender=[](){return inRender;};
+  h.poke=[](std::uintptr_t,const std::uint8_t*,std::size_t){return (failMask & (1u<<pokeCalls++))==0;};
+  activeLua=&t;inRender=true;auto name=Name("rollback");LuaRef out;
+  // Complete installation, then a coordinator health failure rejects BOTH
+  // restores. Retained entry must forward without inspecting even a bad name.
+  Runtime r(h);failMask=0;pokeCalls=0;assert(r.Install());assert(pokeCalls==2);
+  r.original_=Original;r.BeginRender(21,true);Runtime::Hook(&out,&name);t.Release(out);
+  assert(r.cache_.LiveRefs()==1);failMask=~0u;pokeCalls=0;r.Shutdown();
+  assert(!r.installed_ && r.entryPatched_ && r.closePatched_ && Runtime::active_==&r);
+  assert(r.cache_.LiveRefs()==0);const auto calls=originalCalls;const auto epoch=r.epoch_;
+  r.BeginRender(999,false);assert(r.epoch_==epoch);
+  Runtime::Hook(&out,reinterpret_cast<void*>(1));t.Release(out);assert(originalCalls==calls+1);
+  const auto closes=closeCalls;Runtime::CloseHook(t.state);assert(closeCalls==closes+1);
+  assert(r.stats_.closes==0 && !r.Install());
+  // Partial restoration still retains the owner until the final reachable hook
+  // is restored. A second Shutdown retries only the still-owned patch.
+  pokeCalls=0;failMask=2;r.Shutdown();assert(!r.entryPatched_ && r.closePatched_ && Runtime::active_==&r);
+  pokeCalls=0;failMask=0;r.Shutdown();assert(pokeCalls==1 && Runtime::active_==nullptr);
+  // Entry installation failed after successful close-hook installation and the
+  // close rollback failed too. Install(false) must retain its forwarding owner.
+  Runtime partial(h);pokeCalls=0;failMask=6;assert(!partial.Install());
+  assert(!partial.entryPatched_ && partial.closePatched_ && Runtime::active_==&partial);
+  const auto partialCloses=closeCalls;Runtime::CloseHook(t.state);assert(closeCalls==partialCloses+1);
+  partial.BeginRender(1,false);assert(partial.epoch_==0 && partial.cache_.LiveRefs()==0);
+  pokeCalls=0;failMask=0;partial.Shutdown();assert(pokeCalls==1 && Runtime::active_==nullptr);
+  Runtime rejected(h);pokeCalls=0;failMask=1;assert(!rejected.Install());
+  assert(!rejected.entryPatched_ && !rejected.closePatched_ && Runtime::active_==nullptr);
+  std::puts("shader rollback failures retain native-forwarding hook ownership, retry safely, and never run caches: passed");
+ }
+
  static void Test(TestLua& t){
   static std::uint8_t engine[0x20];static std::uintptr_t enginePtr=reinterpret_cast<std::uintptr_t>(engine);*reinterpret_cast<void**>(engine+0x18)=t.state;
   Host h;h.address=[](std::uintptr_t a){assert(a==0xC0C08C);return reinterpret_cast<std::uintptr_t>(&enginePtr);};h.insideRender=[](){return inRender;};
@@ -83,7 +127,7 @@ int main(int argc,char** argv){
  auto deep=t.Eval("local root={};local p=root;for i=1,12 do p.child={};p=p.child end;return root");assert(!cache.Store("deep",0,deep));assert(cache.LastReject()==Reject::Limit);t.Release(deep);
  assert(cache.Store("nil",0,LuaRef{t.state,NilRef}));assert(cache.Acquire("nil",0,out)&&out.ref==NilRef);
  auto a=t.Eval("return {enabled=7}");assert(cache.Store("A",0,a));t.Release(a);cache.Begin(2,t.state);assert(!cache.Acquire("A",0,out));assert(cache.LiveRefs()==0);
- RuntimeTestAccess::TestAddressReuse();RuntimeTestAccess::Test(t);
+ RuntimeTestAccess::TestAddressReuse();RuntimeTestAccess::Test(t);RuntimeTestAccess::TestRollback(t);
  cache.Clear(t.state);t.close(t.state);t.state=t.newstate();t.openlibs(t.state);cache.Begin(3,t.state);assert(!cache.Acquire("A",0,out));cache.Clear(t.state);t.close(t.state);
  std::puts("real Lua DLL immutable deep copy, caller refs, stack balance, metatable/cycle/type/bounds rejection, nil and VM epoch: passed");
 }

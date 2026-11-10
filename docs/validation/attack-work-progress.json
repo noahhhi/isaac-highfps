@@ -2568,5 +2568,171 @@
         "gf": 15452
       }
     ]
+  },
+  "r14_ce129_final": {
+    "case": "ce129-r14-triple-final-soak",
+    "config": {
+      "enabled": true,
+      "target_hz": 90,
+      "main_thread_cpu": 6,
+      "async_log": true,
+      "diag": false,
+      "fire_ticks": 1560,
+      "native_timing_probe": false,
+      "extra": "all",
+      "cache_shader_locations": true,
+      "cache_attribute_ends": false,
+      "spawn_work_budget": true,
+      "spawn_children": 6,
+      "spawn_searches": 1,
+      "spawn_tris": 1,
+      "poof_work_budget": true,
+      "spawn_poofs": 1,
+      "tear_limit": 128,
+      "laser_limit": 8,
+      "poof_limit": 32,
+      "overload_fallback": true,
+      "rolling_recovery": true,
+      "extra_split_budget": true,
+      "adaptive_work_budget": true,
+      "observe_aim": false,
+      "ce_reticle_mode": "on",
+      "ce_preload_mode": "on",
+      "ce_source_override": true,
+      "combat": false,
+      "startup_only": false
+    },
+    "dll_sha256": "5c22e5857119f9baa242a6b01fc3bfc391b5738444ec757aa9cb07998716e69e",
+    "actual_presentation": {
+      "completed_swap_records": 4677,
+      "measured_seconds": 51.977788000000004,
+      "completed_swap_hz": 89.96150432565541,
+      "interval_ms": {
+        "count": 4676,
+        "min": 5.586999999998454,
+        "mean": 11.115865697177075,
+        "p50": 11.110000000002174,
+        "p95": 11.185999999995033,
+        "p99": 12.129500000000348,
+        "max": 22.349000000005503
+      },
+      "over_16_7_ms": 2,
+      "over_33_ms": 0,
+      "over_100_ms": 0,
+      "logged_dt_mismatches": 0,
+      "physical_scanout_verified": false,
+      "entering_boundary": {
+        "ending_gf": 15440,
+        "previous_gf": 15439,
+        "logged_dt_ms": 22.196,
+        "measured_dt_ms": 22.196999999998468,
+        "logged_dt_consistent": true,
+        "over_16_7_ms": true,
+        "over_33_ms": false,
+        "over_100_ms": false,
+        "interval_fully_inside_segment": false
+      },
+      "exiting_boundary": {
+        "ending_gf": 17000,
+        "previous_gf": 16999,
+        "logged_dt_ms": 11.075,
+        "measured_dt_ms": 11.074999999991064,
+        "logged_dt_consistent": true,
+        "over_16_7_ms": false,
+        "over_33_ms": false,
+        "over_100_ms": false,
+        "interval_fully_inside_segment": false
+      },
+      "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+    },
+    "whole_active_presentation": {
+      "start_gf": 15351,
+      "end_gf_exclusive": 17150,
+      "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+      "metrics": {
+        "completed_swap_records": 5391,
+        "measured_seconds": 59.928556,
+        "completed_swap_hz": 89.94042839944282,
+        "interval_ms": {
+          "count": 5390,
+          "min": 4.85299999999711,
+          "mean": 11.118470500927645,
+          "p50": 11.110000000002174,
+          "p95": 11.187000000003522,
+          "p99": 12.08128000000036,
+          "max": 22.349000000005503
+        },
+        "over_16_7_ms": 4,
+        "over_33_ms": 0,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15351,
+          "previous_gf": 15350,
+          "logged_dt_ms": 38.192,
+          "measured_dt_ms": 38.19199999999867,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 17150,
+          "previous_gf": 17149,
+          "logged_dt_ms": 11.056,
+          "measured_dt_ms": 11.055999999996402,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": false,
+          "over_33_ms": false,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      }
+    },
+    "canonical_callback_cadence": {
+      "u_hz": 30.0017308690886,
+      "r_hz": 60.0034617381772,
+      "ui_hz": 60.0034617381772,
+      "gf_hz": 30.0017308690886
+    },
+    "log_worker": {
+      "samples": 71,
+      "max_dropped": 0.0,
+      "max_truncated": 0.0,
+      "peak_accepted_minus_written": 12.0
+    },
+    "census_coverage": {
+      "measured_windows": 0,
+      "unmeasured_windows": 61,
+      "status": "not_measured",
+      "omission_reasons": [
+        "light_counter_profile_no_entity_census"
+      ]
+    },
+    "rejections": [],
+    "normal_shutdown": {
+      "saved": true,
+      "manager": 1,
+      "page": 3,
+      "pause_exit_selection": 3,
+      "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+      "game_exited": true,
+      "native_shutdown_marker": true
+    },
+    "scope": "Single final-candidate light-counter soak, not a matched native/CE1.29 comparison. Physical scanout not measured."
+  },
+  "ce129_validation": {
+    "version": "1.29.0",
+    "module_sha256": "5f0a44d17c9cd3d824370bff8aa1618c5fece32d251d404ee520f5395c93d3cf",
+    "continue_off_first_shot_ms": 82.249,
+    "continue_on_first_shot_ms": 22.077,
+    "fresh_no_related_items": "zero preload summaries; continued=false",
+    "fresh_controlled_marked": "exactly one summary attempted=10 retained=10 failed=0; continued=false",
+    "menu": "English/Chinese ON/OFF visible; persisted toggle and original language/settings restored; no additional preload during toggles",
+    "exit": "all final cases native save/exit and WM_DELETE shutdown verified",
+    "hot_reload": "adoption deferral unit-tested; no new live reload claim"
   }
 }
