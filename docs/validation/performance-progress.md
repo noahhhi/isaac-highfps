@@ -22,7 +22,7 @@ Additional individual stress items, measured separately from that baseline:
 
 | Extra item | Instrumented native FPS | Prototype FPS | Prototype |
 | --- | ---: | ---: | --- |
-| Technology Zero | 36.66 | 47.78 | R6, main CPU 6 |
+| Technology Zero | 36.66 | 49.54 | R8, main CPU 6 |
 | Trisagion | 30.55 | 38.28 | R6, main CPU 6 |
 | Parasite | 56.15 | 55.26 | R5, main CPU 6 |
 | Parasite | 56.15 | 56.91 | R6, unpinned experiment |
@@ -33,6 +33,6 @@ Separate R3 runs measured 60.07 and 79.90 FPS with world updates near 30 Hz and 
 
 ## Current profiling boundary
 
-An isolated main-thread CPU profile of the native Technology Zero case found repeated shader-location calls forcing Mesa synchronization. A positive-result cache with exact context/program/kind/name identity, frame resets, live builtin validation, dispatch ownership checks, mutation tracking and deferred-delete tombstones reduced this path. A later R6 profile attributed 467 of 2,179 samples to this fork, including 226 in location-cache lookup/hash; 246 were in Gallium and 684 in game text. These are CPU sample counts, not GPU time or frame-time percentages. Further lookup optimization is being tested.
+An isolated main-thread CPU profile of the native Technology Zero case found repeated shader-location calls forcing Mesa synchronization. A positive-result cache with exact context/program/kind/name identity, frame resets, live builtin validation, dispatch ownership checks, mutation tracking and deferred-delete tombstones reduced this path. A later R6 profile attributed 467 of 2,179 samples to this fork, including 226 in location-cache lookup/hash; 246 were in Gallium and 684 in game text. These are CPU sample counts, not GPU time or frame-time percentages. The R8 front index covers the actual shipped attribute names and hits on approximately 99.96% of successful location-cache queries in the measured heavy windows. Technology Zero rises to 49.54 FPS, still below the requested target.
 
 Technology Zero's sampled lasers had two source points. Auditing the sampled subtype-4 rendering path found one body quad per adjacent pair, not length-dependent tessellation. Those source points are also used for damage. No collision samples, damaging lasers or projectiles have been removed, and no safe useful beam-density reduction has yet been established.
