@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include "render_timing.h"
@@ -11,7 +12,7 @@ class OverloadPolicy {
 public:
     enum class Mode { Adaptive, Native };
     enum class Transition { None, EnterNative, RecoverAdaptive };
-    enum class Cause { None, FixedCost, CombinedWorkAndDebt, CheapRecovery };
+    enum class Cause { None, FixedCost, CombinedWorkAndDebt, CheapRecovery, RollingRecovery };
     struct Config {
         double frameBudgetSeconds=FixedTimeline::period;
         double heavyStepSeconds=FixedTimeline::period;
@@ -19,6 +20,15 @@ public:
         unsigned heavyStepsToEnter=3;
         unsigned cheapStepsToRecover=60;
         unsigned maxAdaptiveSteps=16;
+        // Explicit experiment opt-in. Default preserves the original60-consecutive
+        // cheap-step recovery. No changes to entry thresholds or clock pacing.
+        bool rollingRecovery=false;
+        unsigned recoveryWindowSteps=60;
+        unsigned recoveryAllowedSlowSteps=6;
+        double recoveryTailStepSeconds=0.012;
+        double minimumNativeSeconds=1.0;
+        double successfulAdaptiveSeconds=2.0;
+        double maximumRecoveryBackoffSeconds=8.0;
     };
     struct Frame {
         Mode mode=Mode::Adaptive;
@@ -33,6 +43,7 @@ public:
         std::uint64_t pureCostSamples=0,combinedPressureSamples=0,combinedPressureEntries=0;
         std::uint64_t fixedSteps=0,nativeSteps=0,ineligibleSamples=0,invalidSamples=0;
         unsigned maxStepsInFrame=0;
+        std::uint64_t recoveryWindowChecks=0,rollingRecoveryRequests=0,recoveryBackoffs=0;
         double discardedScheduleSeconds=0;
     };
 private:
@@ -46,6 +57,32 @@ private:
     bool haveStepStart_=false,frameValid_=false,stepActive_=false;
     bool trustedFixedCost_=false,pureObservedThisFrame_=false;
     double lastEligibleFixedCost_=0,lastCombinedCost_=0,lastObservedDebt_=0;
+    static constexpr unsigned kRecoveryCapacity=120;
+    std::array<double,kRecoveryCapacity> recoveryCosts_{};
+    unsigned recoveryCount_=0,recoveryCursor_=0,recoverySlow_=0;
+    double recoverySum_=0,nativeSince_=0,recoveryDwell_=1.0,lastRecoveryAt_=0;
+    bool haveRecoveryAt_=false;
+    void ClearRecoveryWindow(){recoveryCount_=recoveryCursor_=recoverySlow_=0;recoverySum_=0;}
+    double RecoveryPeak()const{
+        double peak=0;for(unsigned i=0;i<recoveryCount_;++i)peak=(std::max)(peak,recoveryCosts_[i]);return peak;
+    }
+    bool RollingRecoveryReady(double cost){
+        const auto count=config_.recoveryWindowSteps;
+        if(recoveryCount_==count){
+            const auto old=recoveryCosts_[recoveryCursor_];recoverySum_-=old;
+            if(old>=config_.recoveryTailStepSeconds)--recoverySlow_;
+        }else ++recoveryCount_;
+        recoveryCosts_[recoveryCursor_]=cost;recoveryCursor_=(recoveryCursor_+1)%count;
+        recoverySum_+=cost;if(cost>=config_.recoveryTailStepSeconds)++recoverySlow_;
+        if(recoveryCount_!=count)return false;
+        ++counters_.recoveryWindowChecks;
+        // Mean AND tail guards: a few9ms samples must not veto cheap4ms work,
+        // but average-heavy work, repeatedslowsteps or a full-cycle stall do.
+        return lastStepStart_-nativeSince_+1e-9>=recoveryDwell_
+            && recoverySum_/count+1e-12<config_.recoveryStepSeconds
+            && recoverySlow_<=config_.recoveryAllowedSlowSteps
+            && RecoveryPeak()<=config_.heavyStepSeconds;
+    }
     static bool FiniteNonnegative(double x){return std::isfinite(x)&&x>=0;}
     void Rebase(double now,FixedTimeline& clock,Frame& result){
         // Never schedule an early extra update after recovery. Native pacing is
@@ -67,6 +104,15 @@ public:
         if(!config_.heavyStepsToEnter)config_.heavyStepsToEnter=3;
         if(!config_.cheapStepsToRecover)config_.cheapStepsToRecover=60;
         if(!config_.maxAdaptiveSteps||config_.maxAdaptiveSteps>16)config_.maxAdaptiveSteps=16;
+        if(config_.recoveryWindowSteps<4||config_.recoveryWindowSteps>kRecoveryCapacity)config_.recoveryWindowSteps=60;
+        config_.recoveryAllowedSlowSteps=(std::min)(config_.recoveryAllowedSlowSteps,config_.recoveryWindowSteps/4);
+        if(!FiniteNonnegative(config_.recoveryTailStepSeconds)||config_.recoveryTailStepSeconds<=config_.recoveryStepSeconds||config_.recoveryTailStepSeconds>config_.heavyStepSeconds)
+            config_.recoveryTailStepSeconds=(config_.recoveryStepSeconds+config_.heavyStepSeconds)*.5;
+        if(!FiniteNonnegative(config_.minimumNativeSeconds)||config_.minimumNativeSeconds<=0||config_.minimumNativeSeconds>30)config_.minimumNativeSeconds=1.0;
+        if(!FiniteNonnegative(config_.successfulAdaptiveSeconds)||config_.successfulAdaptiveSeconds<=0||config_.successfulAdaptiveSeconds>60)config_.successfulAdaptiveSeconds=2.0;
+        if(!FiniteNonnegative(config_.maximumRecoveryBackoffSeconds)||config_.maximumRecoveryBackoffSeconds<config_.minimumNativeSeconds||config_.maximumRecoveryBackoffSeconds>60)
+            config_.maximumRecoveryBackoffSeconds=(std::max)(8.0,config_.minimumNativeSeconds);
+        recoveryDwell_=config_.minimumNativeSeconds;
     }
     // Call once per outer iteration, with fresh monotonic WALL time. An overload
     // transition is committed only here, keeping render mode stable for a frame.
@@ -78,8 +124,20 @@ public:
         if(pending_!=Transition::None){
             result.transition=pending_;result.cause=pendingCause_;
             if(pendingCause_==Cause::CombinedWorkAndDebt)++counters_.combinedPressureEntries;
-            if(pending_==Transition::EnterNative){mode_=Mode::Native;++counters_.enteredNative;}
-            else {mode_=Mode::Adaptive;++counters_.recoveredAdaptive;}
+            if(pending_==Transition::EnterNative){
+                mode_=Mode::Native;++counters_.enteredNative;
+                if(config_.rollingRecovery){
+                    if(haveRecoveryAt_&&wallNow>=lastRecoveryAt_&&wallNow-lastRecoveryAt_<config_.successfulAdaptiveSeconds){
+                        recoveryDwell_=(std::min)(config_.maximumRecoveryBackoffSeconds,recoveryDwell_*2);
+                        ++counters_.recoveryBackoffs;
+                    }else recoveryDwell_=config_.minimumNativeSeconds;
+                    nativeSince_=wallNow;
+                }
+            }else {
+                mode_=Mode::Adaptive;++counters_.recoveredAdaptive;
+                if(config_.rollingRecovery){lastRecoveryAt_=wallNow;haveRecoveryAt_=true;}
+            }
+            ClearRecoveryWindow();
             pending_=Transition::None;pendingCause_=Cause::None;heavyRun_=cheapRun_=pressureRun_=0;
             Rebase(wallNow,clock,result);
         }else if(mode_==Mode::Native){
@@ -120,10 +178,10 @@ public:
         stepActive_=false;
         if(!FiniteNonnegative(workSeconds)){
             ++counters_.invalidSamples;frameWork_=config_.frameBudgetSeconds;
-            heavyRun_=cheapRun_=pressureRun_=0;trustedFixedCost_=false;lastCost_=config_.frameBudgetSeconds;return pending_;
+            heavyRun_=cheapRun_=pressureRun_=0;ClearRecoveryWindow();trustedFixedCost_=false;lastCost_=config_.frameBudgetSeconds;return pending_;
         }
         frameWork_+=workSeconds;lastCost_=workSeconds;
-        if(!classificationEligible){++counters_.ineligibleSamples;heavyRun_=cheapRun_=pressureRun_=0;trustedFixedCost_=false;return pending_;}
+        if(!classificationEligible){++counters_.ineligibleSamples;heavyRun_=cheapRun_=pressureRun_=0;ClearRecoveryWindow();trustedFixedCost_=false;return pending_;}
         trustedFixedCost_=true;lastEligibleFixedCost_=workSeconds;
         if(pending_!=Transition::None)return pending_;
         if(mode_==Mode::Adaptive){
@@ -131,7 +189,12 @@ public:
             if(heavyRun_>=config_.heavyStepsToEnter){pending_=Transition::EnterNative;pendingCause_=Cause::FixedCost;}
         }else{
             cheapRun_=workSeconds<config_.recoveryStepSeconds?cheapRun_+1:0;
-            if(cheapRun_>=config_.cheapStepsToRecover){pending_=Transition::RecoverAdaptive;pendingCause_=Cause::CheapRecovery;}
+            if(config_.rollingRecovery){
+                if(RollingRecoveryReady(workSeconds)){
+                    pending_=Transition::RecoverAdaptive;pendingCause_=Cause::RollingRecovery;
+                    ++counters_.rollingRecoveryRequests;
+                }
+            }else if(cheapRun_>=config_.cheapStepsToRecover){pending_=Transition::RecoverAdaptive;pendingCause_=Cause::CheapRecovery;}
         }
         return pending_;
     }
@@ -147,7 +210,7 @@ public:
         if(!frameValid_||stepActive_||pureObservedThisFrame_){++counters_.invalidSamples;return pending_;}
         pureObservedThisFrame_=true;
         if(!classificationEligible){
-            ++counters_.ineligibleSamples;heavyRun_=cheapRun_=pressureRun_=0;trustedFixedCost_=false;return pending_;
+            ++counters_.ineligibleSamples;heavyRun_=cheapRun_=pressureRun_=0;ClearRecoveryWindow();trustedFixedCost_=false;return pending_;
         }
         if(!FiniteNonnegative(pureWorkSeconds)||!FiniteNonnegative(wallNow)||!FiniteNonnegative(clock.next)||wallNow<frameStart_){
             ++counters_.invalidSamples;pressureRun_=0;trustedFixedCost_=false;return pending_;
@@ -163,6 +226,11 @@ public:
         if(pressureRun_>=config_.heavyStepsToEnter){pending_=Transition::EnterNative;pendingCause_=Cause::CombinedWorkAndDebt;}
         return pending_;
     }
+    unsigned RecoveryWindowSamples()const{return recoveryCount_;}
+    unsigned RecoveryWindowSlowSteps()const{return recoverySlow_;}
+    double RecoveryWindowMeanSeconds()const{return recoveryCount_?recoverySum_/recoveryCount_:0;}
+    double RecoveryWindowPeakSeconds()const{return RecoveryPeak();}
+    double RecoveryDwellSeconds()const{return recoveryDwell_;}
     unsigned PressureRun()const{return pressureRun_;}
     double LastCombinedCostSeconds()const{return lastCombinedCost_;}
     double LastObservedDebtSeconds()const{return lastObservedDebt_;}

@@ -1,7 +1,7 @@
 -- ISOLATED CONTINUE-ONLY performance probe. Never deploy into the real game.
 -- Launcher must clone the exact saved run AND mod data, and mute isolated music,
 -- SFX and voice output before launch. Characters/seeds are never changed.
--- Items stay unchanged unless cfg.extraCollectible explicitly requests one addition.
+-- Items stay unchanged unless cfg.extraCollectible(s) explicitly requests additions.
 -- At the first world update, normalize the single player once to (80,280),
 -- velocity zero: vanilla Continue chooses different entry doors across launches.
 -- No effect/tear/laser is directly spawned, removed, capped or modified here.
@@ -9,7 +9,7 @@
 local probe=RegisterMod("HighFPS saved-run natural-fire census",1)
 local json=require("json")
 local game=Game()
-local cfg={expectedSeed="XM33 7GZY",settle=90,fire=360,drain=150,maxWallMs=150000,normalizeFirstUpdatePosition={80,280},extraCollectible=nil,observeAim=false}
+local cfg={expectedSeed="XM33 7GZY",settle=90,fire=360,drain=150,maxWallMs=150000,normalizeFirstUpdatePosition={80,280},extraCollectible=nil,extraCollectibles=nil,observeAim=false}
 local active,done=false,false
 local origin,startWall,windowWall=0,0,0
 local updates,renders,inputQueries=0,0,0
@@ -24,6 +24,7 @@ local shotBirths=0
 -- J374 GetAimDirection is a cached vector getter (42D4D0: lea eax,[ecx+1630];ret).
 -- GetShootingJoystick may query MC_INPUT_ACTION, so keep its original census-only use.
 local aimTraceCount,aimTraceSuppressed=0,0
+local targetTraceCount,targetTraceSuppressed=0,0
 local lastAimSignature,lastUpdateFireDelay=nil,nil
 local debugShotParents={}
 local targetVariant=type(EffectVariant)=="table" and EffectVariant.TARGET or nil
@@ -58,6 +59,23 @@ local function bump(t,key) t[key]=(t[key]or 0)+1 end
 local function key(typ,var,sub)return typ..":"..var..":"..sub end
 local function count(group,k) bump(total[group],k);bump(window[group],k) end
 local function safe(fn) local ok,value=pcall(fn);if ok then return value end;return nil end
+local function observeTargetLifecycle(event,e)
+    if not cfg.observeAim or not active or done or type(targetVariant)~="number"
+        or e.Type~=EntityType.ENTITY_EFFECT or e.Variant~=targetVariant then return end
+    if targetTraceCount>=128 then targetTraceSuppressed=targetTraceSuppressed+1;return end
+    targetTraceCount=targetTraceCount+1
+    local dontOverwrite=type(EntityFlag)=="table" and EntityFlag.FLAG_DONT_OVERWRITE or nil
+    local protected=nil
+    if dontOverwrite~=nil then protected=safe(function()return e:HasEntityFlags(dontOverwrite)end) end
+    emit("target_lifecycle",{event=event,index=e.Index,ptr_hash=GetPtrHash(e),init_seed=e.InitSeed,
+        frame=e.FrameCount,position={e.Position.X,e.Position.Y},velocity={e.Velocity.X,e.Velocity.Y},
+        spawner_type=e.SpawnerType,spawner_variant=e.SpawnerVariant,
+        dont_overwrite_available=dontOverwrite~=nil,dont_overwrite_flag_type=type(dontOverwrite),
+        dont_overwrite=protected,dont_overwrite_read_ok=type(protected)=="boolean",
+        last_update_gf=lastUpdateGF,last_update_ui=lastUpdateUI,last_main_gf=lastMainGF,last_main_ui=lastMainUI,
+        aim=safe(function()local v=Isaac.GetPlayer(0):GetAimDirection();return{v.X,v.Y}end),
+        shot_births_total=shotBirths,input_queries=inputQueries,read_only=true})
+end
 local function players()
     local rows={};local itemConfig=Isaac.GetItemConfig();local limit=itemConfig:GetCollectibles().Size
     for i=0,game:GetNumPlayers()-1 do
@@ -94,6 +112,7 @@ local function aimContext(entities)
                     frame=e.FrameCount,position={e.Position.X,e.Position.Y},velocity={e.Velocity.X,e.Velocity.Y},
                     spawner_type=e.SpawnerType,spawner_variant=e.SpawnerVariant,
                     parent_seed=safe(function()local parent=e.Parent;return parent and parent.InitSeed or nil end)}
+                if isTarget then list[#list].dont_overwrite=safe(function()return e:HasEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE)end) end
             end
         end
     end
@@ -163,6 +182,7 @@ local function finish(status)
     if done then return end
     flush(true);emit("done",{status=status,phase=phase(),total=total,shot_births=shotBirths,input_queries=inputQueries,
         aim_trace_records=cfg.observeAim and aimTraceCount or nil,aim_trace_suppressed=cfg.observeAim and aimTraceSuppressed or nil,
+        target_trace_records=cfg.observeAim and targetTraceCount or nil,target_trace_suppressed=cfg.observeAim and targetTraceSuppressed or nil,
         births_by_spawner=cfg.observeAim and debugShotParents or nil})
     active=false;done=true
     Isaac.DebugString("[HFTEST] DONE user-baseline-stress "..status)
@@ -208,6 +228,7 @@ end)
 probe:AddCallback(ModCallbacks.MC_POST_EFFECT_INIT,function(_,e)
     if not active or done then return end
     count("init",key(e.Type,e.Variant,e.SubType));observeEffectVariant(e.Variant)
+    observeTargetLifecycle("init",e)
     local gf,ui=game:GetFrameCount(),Isaac.GetFrameCount()
     local bracket=(gf==lastMainGF and ui==lastMainUI)and"same_tick_after_main"or
         (gf==lastUpdateGF and ui==lastUpdateUI)and"same_tick_after_update"or"other_native_interval"
@@ -216,7 +237,10 @@ probe:AddCallback(ModCallbacks.MC_POST_EFFECT_INIT,function(_,e)
         spawner_type=e.SpawnerType,spawner_variant=e.SpawnerVariant,age=e.FrameCount,bracket=bracket,last_update_gf=lastUpdateGF,last_update_ui=lastUpdateUI,last_main_gf=lastMainGF,last_main_ui=lastMainUI} end
 end)
 probe:AddCallback(ModCallbacks.MC_POST_ENTITY_REMOVE,function(_,e)
-    if active and not done and(e.Type==2 or e.Type==7 or e.Type==8 or e.Type==1000)then count("remove",key(e.Type,e.Variant,e.SubType))end
+    if active and not done and(e.Type==2 or e.Type==7 or e.Type==8 or e.Type==1000)then
+        count("remove",key(e.Type,e.Variant,e.SubType))
+        observeTargetLifecycle("remove",e)
+    end
 end)
 probe:AddCallback(ModCallbacks.MC_POST_UPDATE,function()
     if not active or done then return end
@@ -228,12 +252,16 @@ probe:AddCallback(ModCallbacks.MC_POST_UPDATE,function()
         p.Position=Vector(cfg.normalizeFirstUpdatePosition[1],cfg.normalizeFirstUpdatePosition[2])
         p.Velocity=Vector.Zero
         local appliedExtra={requested=false}
-        if cfg.extraCollectible~=nil then
-            local id=cfg.extraCollectible
+        local requested=cfg.extraCollectibles or (cfg.extraCollectible and {cfg.extraCollectible}) or {}
+        if type(requested)~="table" or #requested>3 then finish("invalid_extra_collectible_list");return end
+        local seen,added={},{}
+        for _,id in ipairs(requested) do
+            if seen[id] then finish("duplicate_extra_collectible");return end
             if type(id)~="number" or id~=math.floor(id) or id<=0 or id>=Isaac.GetItemConfig():GetCollectibles().Size or not Isaac.GetItemConfig():GetCollectible(id) then
                 emit("extra_rejected",{reason="invalid_collectible_id",requested=tostring(id)})
                 finish("invalid_extra_collectible");return
             end
+            seen[id]=true
             local countBefore=p:GetCollectibleNum(id)
             p:AddCollectible(id,0,true)
             local countAfter=p:GetCollectibleNum(id)
@@ -242,10 +270,12 @@ probe:AddCallback(ModCallbacks.MC_POST_UPDATE,function()
                 emit("extra_rejected",{reason="expected_exactly_one_addition",applied_extra=appliedExtra})
                 finish("extra_collectible_count_mismatch");return
             end
+            added[#added+1]=appliedExtra
         end
+        if #added>1 then appliedExtra={requested=true,items=added,count=#added} end
         emit("ready",{normalized_once=true,original_position=before,original_velocity=beforeVelocity,
             players=players(),census=census(),time_counter=game.TimeCounter,applied_extra=appliedExtra,
-            normalization_scope="single player position and velocity once; optional explicitly requested single collectible addition"})
+            normalization_scope="single player position and velocity once; optional explicitly requested collectible additions"})
     end
     if game:GetLevel():GetCurrentRoomIndex()~=roomIndex or game:GetSeeds():GetStartSeed()~=startSeed then finish("room_or_run_changed");return end
     observeAim("update")

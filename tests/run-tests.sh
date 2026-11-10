@@ -59,7 +59,7 @@ run_windows() {
 }
 run_core() {
   local name source
-  for name in render_timing_test overload_policy_test shader_location_cache_test camera_presentation_test menu_presentation_test carousel_presentation_test clock_lifecycle_test native_render_clock_test native_ui_replay_test entity_draw_cache_probe_test render_ordinal_index_test; do
+  for name in frame_work_budget_test render_timing_test overload_policy_test shader_location_cache_test camera_presentation_test menu_presentation_test carousel_presentation_test clock_lifecycle_test native_render_clock_test native_ui_replay_test entity_draw_cache_probe_test render_ordinal_index_test; do
     source="$repo_dir/tests/$name.cpp"
     printf '\n[core] %s (%s)\n' "$name" "$backend"
     if [[ "$backend" == native ]]; then
@@ -73,6 +73,12 @@ run_core() {
   done
 }
 run_abi() {
+  local name
+  for name in native_spawn_budget_j374_test native_poof_spawn_j374_test native_extra_split_budget_j374_test; do
+    printf '\n[abi] %s\n' "$name"
+    build_windows "$repo_dir/tests/$name.cpp" "$name"
+    run_windows "$output_dir/$name.exe"
+  done
   printf '\n[abi] shader_location_runtime_test\n'
   build_windows "$repo_dir/tests/shader_location_runtime_test.cpp" shader_location_runtime_test
   run_windows "$output_dir/shader_location_runtime_test.exe"

@@ -1,0 +1,903 @@
+{
+  "schema": "isaac-attack-work-progress-v1",
+  "status": "experimental-fixed-budget; not final adaptive-pressure acceptance",
+  "cases": [
+    {
+      "case": "stacked-three-native-ce128-r11ref",
+      "config": {
+        "enabled": false,
+        "target_hz": 90,
+        "main_thread_cpu": -1,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 360,
+        "native_timing_probe": true,
+        "extra": "all",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": false,
+        "spawn_children": 6,
+        "spawn_searches": 4,
+        "spawn_tris": 4,
+        "poof_work_budget": false,
+        "spawn_poofs": 4,
+        "tear_limit": 128,
+        "laser_limit": 32,
+        "poof_limit": 96,
+        "overload_fallback": true,
+        "observe_aim": true,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true
+      },
+      "dll_sha256": "fd34e26b35c94ff5864cddf0444c010e062ed4a3cc266fa8ac12c4ccfbbda27c",
+      "actual_presentation": {
+        "completed_swap_records": 720,
+        "measured_seconds": 24.926467000000002,
+        "completed_swap_hz": 28.84484191040792,
+        "interval_ms": {
+          "count": 719,
+          "min": 11.020000000002028,
+          "mean": 34.66824339360223,
+          "p50": 34.10499999999672,
+          "p95": 47.19739999999604,
+          "p99": 53.37590000000319,
+          "max": 56.013999999997566
+        },
+        "over_16_7_ms": 718,
+        "over_33_ms": 364,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 96.749,
+          "measured_dt_ms": 96.75000000000011,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 15800,
+          "previous_gf": 15799,
+          "logged_dt_ms": 53.748,
+          "measured_dt_ms": 53.7479999999988,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 15950,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 1198,
+          "measured_seconds": 38.40418299999999,
+          "completed_swap_hz": 31.1684797460735,
+          "interval_ms": {
+            "count": 1197,
+            "min": 2.4650000000008276,
+            "mean": 32.08369507101085,
+            "p50": 28.936000000001627,
+            "p95": 47.159399999996765,
+            "p99": 53.22379999999924,
+            "max": 96.75000000000011
+          },
+          "over_16_7_ms": 1108,
+          "over_33_ms": 513,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 55.86,
+            "measured_dt_ms": 55.85999999999913,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 15950,
+            "previous_gf": 15949,
+            "logged_dt_ms": 50.573,
+            "measured_dt_ms": 50.57299999999998,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 14.420188263568997,
+        "r_hz": 28.840376527137995,
+        "ui_hz": 28.840376527137995,
+        "gf_hz": 14.420188263568997
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      },
+      "terminal_cumulative_budget_counts": {
+        "[spawn-budget]": null,
+        "[extra-split-budget]": null,
+        "[poof-budget]": null
+      }
+    },
+    {
+      "case": "stacked-three-r11-c6l32p96-no-fallback",
+      "config": {
+        "enabled": true,
+        "target_hz": 90,
+        "main_thread_cpu": 6,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 360,
+        "native_timing_probe": false,
+        "extra": "all",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": true,
+        "spawn_children": 6,
+        "spawn_searches": 4,
+        "spawn_tris": 4,
+        "poof_work_budget": true,
+        "spawn_poofs": 4,
+        "tear_limit": 128,
+        "laser_limit": 32,
+        "poof_limit": 96,
+        "overload_fallback": false,
+        "observe_aim": true,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true
+      },
+      "dll_sha256": "e09f1b81a8803c01d58f61487003885c87398173a2de9ed3b0a6f28b9608746f",
+      "actual_presentation": {
+        "completed_swap_records": 862,
+        "measured_seconds": 11.932729000000002,
+        "completed_swap_hz": 72.15449206966821,
+        "interval_ms": {
+          "count": 861,
+          "min": 5.17099999999715,
+          "mean": 13.85915098722416,
+          "p50": 13.888000000001455,
+          "p95": 18.799000000001342,
+          "p99": 25.94899999999711,
+          "max": 53.90200000000078
+        },
+        "over_16_7_ms": 130,
+        "over_33_ms": 2,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 72.67,
+          "measured_dt_ms": 72.66999999999513,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 15800,
+          "previous_gf": 15799,
+          "logged_dt_ms": 20.953,
+          "measured_dt_ms": 20.952999999998667,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": false,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 15950,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 1513,
+          "measured_seconds": 19.934884000000004,
+          "completed_swap_hz": 75.84694247531111,
+          "interval_ms": {
+            "count": 1512,
+            "min": 4.736000000001184,
+            "mean": 13.184447089947092,
+            "p50": 13.124499999999983,
+            "p95": 18.265049999996922,
+            "p99": 22.797360000002303,
+            "max": 72.66999999999513
+          },
+          "over_16_7_ms": 175,
+          "over_33_ms": 3,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 38.087999999999994,
+            "measured_dt_ms": 38.08700000000087,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 15950,
+            "previous_gf": 15949,
+            "logged_dt_ms": 20.591,
+            "measured_dt_ms": 20.59099999999603,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": false,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 30.133087804469742,
+        "r_hz": 60.266175608939484,
+        "ui_hz": 60.266175608939484,
+        "gf_hz": 30.133087804469742
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      },
+      "terminal_cumulative_budget_counts": {
+        "[spawn-budget]": "[spawn-budget] cumulative=1 budgeted=121017 parasiteAdmit=77 parasiteDeny=1090 searchAdmit=746 searchDeny=76271 quadAdmit=49 quadDeny=1731 trisAdmit=331 trisDeny=40722 unsupported=0 reentry=0 exceptions=0",
+        "[extra-split-budget]": null,
+        "[poof-budget]": "[poof-budget] cumulative=1 budgeted=2643 admit=1379 deny=1264 unsupported=1971 exceptions=0"
+      }
+    },
+    {
+      "case": "stacked-three-r11-c6t128l8p32-soak",
+      "config": {
+        "enabled": true,
+        "target_hz": 90,
+        "main_thread_cpu": 6,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 1560,
+        "native_timing_probe": false,
+        "extra": "all",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": true,
+        "spawn_children": 6,
+        "spawn_searches": 1,
+        "spawn_tris": 1,
+        "poof_work_budget": true,
+        "spawn_poofs": 1,
+        "tear_limit": 128,
+        "laser_limit": 8,
+        "poof_limit": 32,
+        "overload_fallback": false,
+        "observe_aim": true,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true
+      },
+      "dll_sha256": "e09f1b81a8803c01d58f61487003885c87398173a2de9ed3b0a6f28b9608746f",
+      "actual_presentation": {
+        "completed_swap_records": 4673,
+        "measured_seconds": 51.930350999999995,
+        "completed_swap_hz": 89.96665553059714,
+        "interval_ms": {
+          "count": 4672,
+          "min": 6.470000000000198,
+          "mean": 11.115229238013697,
+          "p50": 11.111999999997124,
+          "p95": 11.193999999989046,
+          "p99": 11.999059999999982,
+          "max": 27.04599999999857
+        },
+        "over_16_7_ms": 5,
+        "over_33_ms": 0,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 69.605,
+          "measured_dt_ms": 69.6050000000028,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 17000,
+          "previous_gf": 16999,
+          "logged_dt_ms": 13.543,
+          "measured_dt_ms": 13.542000000001053,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": false,
+          "over_33_ms": false,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 17150,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 5387,
+          "measured_seconds": 59.92483500000001,
+          "completed_swap_hz": 89.87926291328127,
+          "interval_ms": {
+            "count": 5386,
+            "min": 4.331999999998004,
+            "mean": 11.126036947642037,
+            "p50": 11.111999999997124,
+            "p95": 11.19400000000148,
+            "p99": 12.099149999993841,
+            "max": 69.6050000000028
+          },
+          "over_16_7_ms": 7,
+          "over_33_ms": 1,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 41.842,
+            "measured_dt_ms": 41.84199999999905,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 17150,
+            "previous_gf": 17149,
+            "logged_dt_ms": 11.388,
+            "measured_dt_ms": 11.387999999996623,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": false,
+            "over_33_ms": false,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 30.033498902622156,
+        "r_hz": 60.06699780524431,
+        "ui_hz": 60.06699780524431,
+        "gf_hz": 30.033498902622156
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      },
+      "terminal_cumulative_budget_counts": {
+        "[spawn-budget]": "[spawn-budget] cumulative=1 budgeted=452981 parasiteAdmit=1202 parasiteDeny=3765 searchAdmit=746 searchDeny=229566 quadAdmit=863 quadDeny=6977 trisAdmit=456 trisDeny=209406 unsupported=0 reentry=0 exceptions=0",
+        "[extra-split-budget]": null,
+        "[poof-budget]": "[poof-budget] cumulative=1 budgeted=1576 admit=1000 deny=576 unsupported=11272 exceptions=0"
+      }
+    },
+    {
+      "case": "stacked-three-r12-rolling-soak",
+      "config": {
+        "enabled": true,
+        "target_hz": 90,
+        "main_thread_cpu": 6,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 1560,
+        "native_timing_probe": false,
+        "extra": "all",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": true,
+        "spawn_children": 6,
+        "spawn_searches": 1,
+        "spawn_tris": 1,
+        "poof_work_budget": true,
+        "spawn_poofs": 1,
+        "tear_limit": 128,
+        "laser_limit": 8,
+        "poof_limit": 32,
+        "overload_fallback": true,
+        "rolling_recovery": true,
+        "extra_split_budget": true,
+        "observe_aim": true,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true
+      },
+      "dll_sha256": "adfa356bdedf4a89abc50be9c80479f50e949c20e02c085becd9cc4aaf05a875",
+      "actual_presentation": {
+        "completed_swap_records": 4673,
+        "measured_seconds": 51.930441,
+        "completed_swap_hz": 89.96649961050782,
+        "interval_ms": {
+          "count": 4672,
+          "min": 6.143000000001564,
+          "mean": 11.11524850171233,
+          "p50": 11.110999999999649,
+          "p95": 11.230999999998303,
+          "p99": 12.27137999999968,
+          "max": 20.01200000000125
+        },
+        "over_16_7_ms": 6,
+        "over_33_ms": 0,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 69.59400000000001,
+          "measured_dt_ms": 69.59400000000215,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 17000,
+          "previous_gf": 16999,
+          "logged_dt_ms": 11.112,
+          "measured_dt_ms": 11.1129999999946,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": false,
+          "over_33_ms": false,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 17150,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 5387,
+          "measured_seconds": 59.926647,
+          "completed_swap_hz": 89.87654523704622,
+          "interval_ms": {
+            "count": 5386,
+            "min": 4.519999999999413,
+            "mean": 11.126373375417751,
+            "p50": 11.110999999999649,
+            "p95": 11.230999999995106,
+            "p99": 12.26829999999949,
+            "max": 69.59400000000215
+          },
+          "over_16_7_ms": 9,
+          "over_33_ms": 1,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 40.014,
+            "measured_dt_ms": 40.01300000000185,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 17150,
+            "previous_gf": 17149,
+            "logged_dt_ms": 12.276,
+            "measured_dt_ms": 12.275999999999954,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": false,
+            "over_33_ms": false,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 30.0346553715826,
+        "r_hz": 60.0693107431652,
+        "ui_hz": 60.0693107431652,
+        "gf_hz": 30.0346553715826
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      },
+      "terminal_cumulative_budget_counts": {
+        "[spawn-budget]": "[spawn-budget] cumulative=1 budgeted=451140 parasiteAdmit=1233 parasiteDeny=3737 searchAdmit=796 searchDeny=229047 quadAdmit=840 quadDeny=7064 trisAdmit=474 trisDeny=207949 unsupported=0 reentry=0 exceptions=0",
+        "[extra-split-budget]": "[extra-split-budget] cumulative=1 budgeted=0 boneAdmit=0 boneDeny=0 lachryAdmit=0 lachryDeny=0 haemoAdmit=0 haemoDeny=0 unsupported=0 exceptions=0",
+        "[poof-budget]": "[poof-budget] cumulative=1 budgeted=1658 admit=1006 deny=652 unsupported=11246 exceptions=0"
+      }
+    },
+    {
+      "case": "split-all-five-native-ce128",
+      "config": {
+        "enabled": false,
+        "target_hz": 90,
+        "main_thread_cpu": -1,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 360,
+        "native_timing_probe": true,
+        "extra": "preset",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": false,
+        "spawn_children": 6,
+        "spawn_searches": 4,
+        "spawn_tris": 4,
+        "poof_work_budget": false,
+        "spawn_poofs": 4,
+        "tear_limit": 128,
+        "laser_limit": 32,
+        "poof_limit": 96,
+        "overload_fallback": true,
+        "rolling_recovery": false,
+        "extra_split_budget": false,
+        "observe_aim": true,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true
+      },
+      "dll_sha256": "adfa356bdedf4a89abc50be9c80479f50e949c20e02c085becd9cc4aaf05a875",
+      "actual_presentation": {
+        "completed_swap_records": 720,
+        "measured_seconds": 13.666670000000003,
+        "completed_swap_hz": 52.609743265916265,
+        "interval_ms": {
+          "count": 719,
+          "min": 2.6640000000028863,
+          "mean": 19.007885952712105,
+          "p50": 16.019000000000005,
+          "p95": 34.50730000000064,
+          "p99": 40.4975600000019,
+          "max": 48.42699999999667
+        },
+        "over_16_7_ms": 358,
+        "over_33_ms": 61,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 57.265,
+          "measured_dt_ms": 57.26399999999643,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 15800,
+          "previous_gf": 15799,
+          "logged_dt_ms": 48.349000000000004,
+          "measured_dt_ms": 48.34900000000175,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 15950,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 1198,
+          "measured_seconds": 22.511562,
+          "completed_swap_hz": 53.17267633405447,
+          "interval_ms": {
+            "count": 1197,
+            "min": 2.6379999999974757,
+            "mean": 18.806651629072682,
+            "p50": 16.669999999997742,
+            "p95": 34.38319999999778,
+            "p99": 42.53196000000085,
+            "max": 57.26399999999643
+          },
+          "over_16_7_ms": 595,
+          "over_33_ms": 97,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 64.91199999999999,
+            "measured_dt_ms": 64.91100000000216,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 15950,
+            "previous_gf": 15949,
+            "logged_dt_ms": 43.441,
+            "measured_dt_ms": 43.44099999999429,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 26.256290569615636,
+        "r_hz": 52.51258113923127,
+        "ui_hz": 52.51258113923127,
+        "gf_hz": 26.256290569615636
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      },
+      "terminal_cumulative_budget_counts": {
+        "[spawn-budget]": null,
+        "[extra-split-budget]": null,
+        "[poof-budget]": null
+      }
+    },
+    {
+      "case": "split-all-five-r12-fixed",
+      "config": {
+        "enabled": true,
+        "target_hz": 90,
+        "main_thread_cpu": 6,
+        "async_log": true,
+        "diag": false,
+        "fire_ticks": 360,
+        "native_timing_probe": false,
+        "extra": "preset",
+        "cache_shader_locations": true,
+        "cache_attribute_ends": false,
+        "spawn_work_budget": true,
+        "spawn_children": 6,
+        "spawn_searches": 1,
+        "spawn_tris": 1,
+        "poof_work_budget": true,
+        "spawn_poofs": 1,
+        "tear_limit": 128,
+        "laser_limit": 8,
+        "poof_limit": 32,
+        "overload_fallback": true,
+        "rolling_recovery": true,
+        "extra_split_budget": true,
+        "observe_aim": true,
+        "ce_reticle_mode": "on",
+        "ce_source_override": true
+      },
+      "dll_sha256": "adfa356bdedf4a89abc50be9c80479f50e949c20e02c085becd9cc4aaf05a875",
+      "actual_presentation": {
+        "completed_swap_records": 1075,
+        "measured_seconds": 11.953944,
+        "completed_swap_hz": 89.84482443618609,
+        "interval_ms": {
+          "count": 1074,
+          "min": 4.682999999999993,
+          "mean": 11.130301675977654,
+          "p50": 11.108499999998855,
+          "p95": 11.189999999999145,
+          "p99": 13.210610000000852,
+          "max": 28.595000000002813
+        },
+        "over_16_7_ms": 4,
+        "over_33_ms": 0,
+        "over_100_ms": 0,
+        "logged_dt_mismatches": 0,
+        "physical_scanout_verified": false,
+        "entering_boundary": {
+          "ending_gf": 15440,
+          "previous_gf": 15439,
+          "logged_dt_ms": 46.023,
+          "measured_dt_ms": 46.02299999999815,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": true,
+          "over_33_ms": true,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "exiting_boundary": {
+          "ending_gf": 15800,
+          "previous_gf": 15799,
+          "logged_dt_ms": 13.059,
+          "measured_dt_ms": 13.058999999998377,
+          "logged_dt_consistent": true,
+          "over_16_7_ms": false,
+          "over_33_ms": false,
+          "over_100_ms": false,
+          "interval_fully_inside_segment": false
+        },
+        "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+      },
+      "whole_active_presentation": {
+        "start_gf": 15351,
+        "end_gf_exclusive": 15950,
+        "scope": "After verified first-update ready through DONE; includes settle, first-shot boundary, sustained fire and post-release Marked firing.",
+        "metrics": {
+          "completed_swap_records": 1788,
+          "measured_seconds": 19.912404,
+          "completed_swap_hz": 89.74305663946956,
+          "interval_ms": {
+            "count": 1787,
+            "min": 4.682999999999993,
+            "mean": 11.142923335198656,
+            "p50": 11.108000000000118,
+            "p95": 11.191999999994096,
+            "p99": 12.977300000002986,
+            "max": 46.02299999999815
+          },
+          "over_16_7_ms": 7,
+          "over_33_ms": 1,
+          "over_100_ms": 0,
+          "logged_dt_mismatches": 0,
+          "physical_scanout_verified": false,
+          "entering_boundary": {
+            "ending_gf": 15351,
+            "previous_gf": 15350,
+            "logged_dt_ms": 54.260000000000005,
+            "measured_dt_ms": 54.26100000000034,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": true,
+            "over_33_ms": true,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "exiting_boundary": {
+            "ending_gf": 15950,
+            "previous_gf": 15949,
+            "logged_dt_ms": 11.075,
+            "measured_dt_ms": 11.074000000000694,
+            "logged_dt_consistent": true,
+            "over_16_7_ms": false,
+            "over_33_ms": false,
+            "over_100_ms": false,
+            "interval_fully_inside_segment": false
+          },
+          "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+        }
+      },
+      "canonical_callback_cadence": {
+        "u_hz": 30.085241517633296,
+        "r_hz": 60.17048303526659,
+        "ui_hz": 60.17048303526659,
+        "gf_hz": 30.085241517633296
+      },
+      "fixture_status": "complete",
+      "rejections": [],
+      "normal_shutdown": {
+        "saved": true,
+        "manager": 1,
+        "page": 3,
+        "pause_exit_selection": 3,
+        "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+        "game_exited": true,
+        "native_shutdown_marker": true
+      },
+      "terminal_cumulative_budget_counts": {
+        "[spawn-budget]": "[spawn-budget] cumulative=1 budgeted=104 parasiteAdmit=21 parasiteDeny=34 searchAdmit=0 searchDeny=0 quadAdmit=18 quadDeny=31 trisAdmit=0 trisDeny=0 unsupported=0 reentry=0 exceptions=0",
+        "[extra-split-budget]": "[extra-split-budget] cumulative=1 budgeted=4962 boneAdmit=114 boneDeny=106 lachryAdmit=242 lachryDeny=690 haemoAdmit=1289 haemoDeny=2521 unsupported=0 exceptions=0",
+        "[poof-budget]": "[poof-budget] cumulative=1 budgeted=1611 admit=468 deny=1143 unsupported=6 exceptions=0"
+      }
+    }
+  ],
+  "notes": [
+    "All runs use archived base save, seven enabled mods, and CE1.28 reticle protection. Native arms retain audited original main-loop bytes.",
+    "52-second triple-item cases are not a matched-duration native comparison; the fresh native reference is 12 simulation seconds of firing.",
+    "R12 triple-item soak includes four seconds of PipeWire/JPEG capture and 15seconds of CPU/DRM observation. R11 corresponding soak has neither successful telemetry nor capture.",
+    "Successful SwapBuffers cadence does not by itself prove distinct images or physical scanout.",
+    "Budget-enabled runs deliberately change player split/laser/cosmetic output. No gameplay-damage equivalence is asserted.",
+    "First-shot intervals and whole-run hitches remain included in metrics, separately from sustained fire.",
+    "One R11 startup attempt timed out before fixture execution; retry completed. Startup failure is not counted as a performance pass."
+  ],
+  "r12_load": {
+    "main_thread": {
+      "samples": 150,
+      "mean_cpu_percent_one_core": 50.72370164814094,
+      "p50": 50.008782186059676,
+      "p95": 60.13344087393055,
+      "max": 70.45602024752829
+    },
+    "process": {
+      "samples": 150,
+      "mean_cpu_percent_one_core": 71.51740531451235,
+      "p50": 70.06272826759877,
+      "p95": 80.49812031798132,
+      "max": 90.0412217682727
+    },
+    "isolated_drm_client_engine_percent": {
+      "amdgpu|0000:04:00.0|3581|gfx": {
+        "samples": 150,
+        "mean": 33.057401476659734,
+        "p50": 32.46860783661986,
+        "p95": 42.58335680621989,
+        "max": 45.873751260319644
+      },
+      "amdgpu|0000:04:00.0|3581|compute": {
+        "samples": 150,
+        "mean": 0.008344588703113212,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 1.2516883054669818
+      }
+    },
+    "gpu_systemwide_percent": {
+      "/sys/class/drm/card0/device/gpu_busy_percent": {
+        "samples": 150,
+        "mean": 63.013333333333335,
+        "p50": 69.0,
+        "p95": 100.0,
+        "max": 100.0
+      }
+    }
+  },
+  "r12_load_scope": "Isolated DRM client counters may be shared with another holder of the same client; systemwide sysfs also includes other programs. Main thread measured on one-core scale."
+}

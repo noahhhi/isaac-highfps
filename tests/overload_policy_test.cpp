@@ -87,5 +87,65 @@ int main(){
     {OverloadPolicy p;FixedTimeline c;double at=0;for(int i=0;i<4;++i){c.next=at;p.BeginFrame(at,c);Step(p,c,at,.013);c.next=at+1;p.ObservePureCost(.010,at+.023,c);CHECK(p.PressureRun()==0);at+=.023;}p.BeginFrame(at,c);p.ObservePureCost(.100,at+.100,c,false);CHECK(p.PressureRun()==0);p.BeginFrame(at+.2,c);c.next=0;p.ObservePureCost(.100,at+.3,c);CHECK(p.PressureRun()==0);CHECK(p.PendingTransition()==OverloadPolicy::Transition::None);}
     // Pressure must be consecutive, not a running count of earlier bad frames.
     {OverloadPolicy p;FixedTimeline c;double at=.5;for(int i=0;i<5;++i){p.BeginFrame(at,c);const double fixed=i==2?.002:.013;const double pure=i==2?.002:.010;Step(p,c,at,fixed);at+=fixed+pure;p.ObservePureCost(pure,at,c);CHECK(p.PendingTransition()==OverloadPolicy::Transition::None);}CHECK(p.PressureRun()==2);p.BeginFrame(at,c);Step(p,c,at,.013);at+=.023;p.ObservePureCost(.010,at,c);CHECK(p.PendingTransition()==OverloadPolicy::Transition::EnterNative);}
-    std::puts("PASS overload: budget,3-heavy entry,next-frame promotion,external debt,one native cycle,hysteresis,60-cheap recovery,no early/burst tick,lifecycle exclusion,combined13+10 pressure,cheap-batch/external-wait protection");return 0;
+    // Opt-in only: one9ms sample each15steps used to reset the consecutive
+    // streak forever. A full cheap rolling window can recover after minimumdwell.
+    {OverloadPolicy legacy;FixedTimeline lc;double old=Enter(legacy,lc);
+        for(int i=0;i<180;++i){old=std::max(old,lc.next);legacy.BeginFrame(old,lc);const double cost=i%15==0?.009:.004;Step(legacy,lc,old,cost);old+=cost;}
+        CHECK(legacy.ShouldNative());CHECK(legacy.PendingTransition()==OverloadPolicy::Transition::None);
+        OverloadPolicy::Config cfg;cfg.rollingRecovery=true;OverloadPolicy p(cfg);FixedTimeline c;double at=Enter(p,c),entered=at,last=at;unsigned steps=0;
+        while(p.PendingTransition()==OverloadPolicy::Transition::None){at=std::max(at,c.next);p.BeginFrame(at,c);last=at;const double cost=steps%15==0?.009:.004;Step(p,c,at,cost);at+=cost;CHECK(++steps<90);}
+        CHECK(steps>=60);CHECK(last-entered+1e-9>=1);CHECK(p.RecoveryWindowSamples()==60);CHECK(p.RecoveryWindowSlowSteps()==0);CHECK(p.RecoveryWindowMeanSeconds()<.005);CHECK(p.ShouldNative());
+        const auto f=p.BeginFrame(at,c);CHECK(f.cause==OverloadPolicy::Cause::RollingRecovery);CHECK(!p.ShouldNative());CHECK(!c.Due(at));Near(c.next,last+FixedTimeline::period);CHECK(p.Stats().rollingRecoveryRequests==1);
+    }
+    // Mean guard independently rejects steady9ms work even though every
+    // sample is below12ms tail and16.7ms hardpeak limits.
+    {OverloadPolicy::Config cfg;cfg.rollingRecovery=true;OverloadPolicy p(cfg);FixedTimeline c;double at=Enter(p,c);
+        for(int i=0;i<180;++i){at=std::max(at,c.next);p.BeginFrame(at,c);Step(p,c,at,.009);at+=.009;}
+        CHECK(p.PendingTransition()==OverloadPolicy::Transition::None);CHECK(p.RecoveryWindowSlowSteps()==0);CHECK(p.RecoveryWindowMeanSeconds()>.008);
+    }
+    // A broad13ms/1ms distribution averages7ms butfails the12ms tailguard.
+    {OverloadPolicy::Config cfg;cfg.rollingRecovery=true;OverloadPolicy p(cfg);FixedTimeline c;double at=Enter(p,c);
+        for(int i=0;i<180;++i){at=std::max(at,c.next);p.BeginFrame(at,c);const double cost=i%2?.013:.001;Step(p,c,at,cost);at+=cost;}
+        CHECK(p.ShouldNative());CHECK(p.PendingTransition()==OverloadPolicy::Transition::None);CHECK(p.RecoveryWindowSlowSteps()==30);
+    }
+    // Normal odd/even9msworld/1msUI costs fitmean/tailguards. A 12ms-tail
+    // threshold avoids recreating the old8ms-streak failure in another form.
+    for(bool periodicTail:{false,true}){
+        OverloadPolicy::Config cfg;cfg.rollingRecovery=true;OverloadPolicy p(cfg);FixedTimeline c;double at=Enter(p,c);unsigned n=0;
+        while(p.PendingTransition()==OverloadPolicy::Transition::None){at=std::max(at,c.next);p.BeginFrame(at,c);double cost=periodicTail?(n%15==0?.013:.004):(n%2?.009:.001);Step(p,c,at,cost);at+=cost;CHECK(++n<90);}
+        CHECK(p.RecoveryWindowSlowSteps()==(periodicTail?4u:0u));CHECK(p.PendingTransition()==OverloadPolicy::Transition::RecoverAdaptive);
+    }
+    // A fresh30ms outlier vetoes recovery for a WHOLEwindow, ratherthanbeing
+    // hidden by a lowmean. It then expires anddoesnotcause permanentstickiness.
+    {OverloadPolicy::Config cfg;cfg.rollingRecovery=true;cfg.minimumNativeSeconds=.1;OverloadPolicy p(cfg);FixedTimeline c;double at=Enter(p,c);
+        for(int i=0;i<59;++i){at=std::max(at,c.next);p.BeginFrame(at,c);Step(p,c,at,.004);at+=.004;}
+        at=std::max(at,c.next);p.BeginFrame(at,c);Step(p,c,at,.030);at+=.030;
+        CHECK(p.RecoveryWindowMeanSeconds()<.005);CHECK(p.RecoveryWindowPeakSeconds()==.030);CHECK(p.PendingTransition()==OverloadPolicy::Transition::None);
+        for(int i=0;i<59;++i){at=std::max(at,c.next);p.BeginFrame(at,c);Step(p,c,at,.004);at+=.004;CHECK(p.PendingTransition()==OverloadPolicy::Transition::None);}
+        at=std::max(at,c.next);p.BeginFrame(at,c);Step(p,c,at,.004);CHECK(p.PendingTransition()==OverloadPolicy::Transition::RecoverAdaptive);
+    }
+    // Lifecycle and invalidcostsamples discard partialevidence; they cannot
+    // borrow previousroom's59cheapsamples to authorize immediate recovery.
+    for(bool lifecycle:{false,true}){
+        OverloadPolicy::Config cfg;cfg.rollingRecovery=true;cfg.minimumNativeSeconds=.1;OverloadPolicy p(cfg);FixedTimeline c;double at=Enter(p,c);
+        for(int i=0;i<59;++i){at=std::max(at,c.next);p.BeginFrame(at,c);Step(p,c,at,.004);at+=.004;}
+        at=std::max(at,c.next);p.BeginFrame(at,c);CHECK(p.BeginFixedStep(at));c.Consume(at);p.ObserveFixedCost(lifecycle?.004:-1,!lifecycle);at+=.004;
+        CHECK(p.RecoveryWindowSamples()==0);
+        for(int i=0;i<59;++i){at=std::max(at,c.next);p.BeginFrame(at,c);Step(p,c,at,.004);at+=.004;CHECK(p.PendingTransition()==OverloadPolicy::Transition::None);}
+    }
+    // Recovery attempts thatimmediatelyre-enter overload backoff1,2,4,8seconds;
+    // sustainedadaptivework resets this delay. No entry thresholds are relaxed.
+    {OverloadPolicy::Config cfg;cfg.rollingRecovery=true;OverloadPolicy p(cfg);FixedTimeline c;double at=Enter(p,c);
+        auto recover=[&](){unsigned n=0;while(p.PendingTransition()==OverloadPolicy::Transition::None){at=std::max(at,c.next);p.BeginFrame(at,c);Step(p,c,at,.004);at+=.004;CHECK(++n<600);}CHECK(p.PendingTransition()==OverloadPolicy::Transition::RecoverAdaptive);p.BeginFrame(at,c);CHECK(!p.ShouldNative());};
+        auto heavy=[&](){for(int i=0;i<3;++i){at=std::max(at,c.next);p.BeginFrame(at,c);Step(p,c,at,.025);at+=.025;}CHECK(p.PendingTransition()==OverloadPolicy::Transition::EnterNative);p.BeginFrame(at,c);CHECK(p.ShouldNative());};
+        for(double expected:{2.0,4.0,8.0,8.0}){recover();heavy();Near(p.RecoveryDwellSeconds(),expected);}
+        CHECK(p.Stats().recoveryBackoffs==4);recover();
+        for(int i=0;i<130;++i){at=std::max(at,c.next);p.BeginFrame(at,c);Step(p,c,at,.004);at+=.004;}
+        heavy();Near(p.RecoveryDwellSeconds(),1.0);
+    }
+    // Bounds andzeroquota sanitation neverpermitinstant/infinitewindows.
+    {OverloadPolicy::Config cfg;cfg.rollingRecovery=true;cfg.recoveryWindowSteps=0;cfg.recoveryAllowedSlowSteps=1000;cfg.minimumNativeSeconds=-1;cfg.maximumRecoveryBackoffSeconds=-1;OverloadPolicy p(cfg);FixedTimeline c;double at=Enter(p,c);
+        for(int i=0;i<59;++i){at=std::max(at,c.next);p.BeginFrame(at,c);Step(p,c,at,.004);at+=.004;CHECK(p.PendingTransition()==OverloadPolicy::Transition::None);}CHECK(p.RecoveryWindowSamples()==59);Near(p.RecoveryDwellSeconds(),1.0);
+    }
+    std::puts("PASS overload: budget,3-heavy entry,next-frame promotion,external debt,one native cycle,hysteresis,60-cheap recovery,no early/burst tick,lifecycle exclusion,combined13+10 pressure,cheap-batch/external-wait protection,opt-in rolling mean/tail/peak,periodic and alternating costs,lifecycle reset,failed-probe backoff");return 0;
 }

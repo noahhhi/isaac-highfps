@@ -25,6 +25,7 @@
 #include "version.h"
 #include "render_timing.h"
 #include "overload_policy.h"
+#include "frame_work_budget.h"
 #include "camera_presentation.h"
 #include "menu_presentation.h"
 #include "carousel_presentation.h"
@@ -32,6 +33,9 @@
 #include "entity_draw_cache_j374_runtime.h"
 #include "shader_params_cache_j374.h"
 #include "input_result_cache_j374.h"
+#include "native_spawn_budget_j374.h"
+#include "native_poof_spawn_j374.h"
+#include "native_extra_split_budget_j374.h"
 #endif
 
 namespace {
@@ -93,7 +97,12 @@ struct Config {
     bool asyncLog = true;
     bool frameTiming = false; // presentation timestamps without expensive state audits
     bool overloadFallback = true;
+    bool overloadRollingRecovery = false;
     bool cacheShaderLocations = true;
+    bool spawnWorkBudget = false;
+    bool poofWorkBudget = false;
+    bool extraSplitWorkBudget = false;
+    highfps::work_budget::Config workBudget;
     unsigned cacheEntries=16384,cacheMiB=64;
 } g_cfg;
 
@@ -120,7 +129,23 @@ void LoadConfig() {
     g_cfg.asyncLog = GetPrivateProfileIntA("highfps","AsyncLog",1,path)!=0;
     g_cfg.frameTiming = GetPrivateProfileIntA("highfps","FrameTiming",0,path)!=0;
     g_cfg.overloadFallback = GetPrivateProfileIntA("highfps","OverloadFallback",1,path)!=0;
+    g_cfg.overloadRollingRecovery = GetPrivateProfileIntA("highfps","OverloadRollingRecovery",0,path)!=0;
     g_cfg.cacheShaderLocations = GetPrivateProfileIntA("highfps","CacheShaderLocations",1,path)!=0;
+    g_cfg.spawnWorkBudget = GetPrivateProfileIntA("highfps","SpawnWorkBudget",0,path)!=0;
+    g_cfg.poofWorkBudget = GetPrivateProfileIntA("highfps","PoofWorkBudget",0,path)!=0;
+    g_cfg.extraSplitWorkBudget = GetPrivateProfileIntA("highfps","ExtraSplitWorkBudget",0,path)!=0;
+    auto budgetSetting=[&](const char*name,unsigned&value,unsigned maximum){
+        const int read=int(GetPrivateProfileIntA("highfps",name,value,path));
+        if(read>=0&&unsigned(read)<=maximum)value=unsigned(read);
+    };
+    budgetSetting("SpawnChildrenPerTick",g_cfg.workBudget.childrenPerTick,1024);
+    budgetSetting("TechZeroSearchesPerTick",g_cfg.workBudget.techSearchesPerTick,1024);
+    budgetSetting("TrisagionCreatesPerTick",g_cfg.workBudget.trisCreatesPerTick,128);
+    budgetSetting("PoofsPerTick",g_cfg.workBudget.poofsPerTick,1024);
+    budgetSetting("TearSoftLimit",g_cfg.workBudget.softTears,512);
+    budgetSetting("LaserSoftLimit",g_cfg.workBudget.softLasers,128);
+    budgetSetting("PoofSoftLimit",g_cfg.workBudget.softPoofs,1024);
+    budgetSetting("MinimumPlayerLasers",g_cfg.workBudget.minimumPlayerLasers,128);
     const int entries=int(GetPrivateProfileIntA("highfps","CacheEntries",16384,path));
     const int mib=int(GetPrivateProfileIntA("highfps","CacheMiB",64,path));
     if(entries>=1024 && entries<=32768)g_cfg.cacheEntries=unsigned(entries);
@@ -260,6 +285,7 @@ double& g_nextWrapper = g_simClock.next;
 double g_lastWrapperTime = 0.0, g_lastTickTime = 0.0;
 // Loading is excluded explicitly, rather than inferred from a slow frame.
 uint64_t g_lifecycleEpoch = 0;
+unsigned g_loadDepth = 0;
 double g_excludedLoadSeconds = 0.0, g_appliedLoadSeconds = 0.0;
 bool g_presentAnchorValid = false;
 bool g_previewEnabled = false;
@@ -664,6 +690,7 @@ constexpr double kLongFrame = 0.020;   // 20 ms: a visible hitch at any refresh 
 // of times a second is not something to inflict on players.
 volatile LONG g_inUpdate = 0;
 DWORD g_gameThreadId = 0;
+thread_local unsigned g_luaExecutionDepth=0;
 
 constexpr uint32_t kSampleSlots = 8192;
 struct Sample { uint32_t addr; uint32_t count; };
@@ -944,6 +971,97 @@ bool ValidateCarouselLayout() {
         Expect(0x945E0E,writeY,sizeof writeY,"carousel canonical Y write");
 }
 highfps_entity_probe::Runtime* g_entityRenderCache = nullptr;
+highfps::spawn_budget19715::Adapter* g_spawnBudget = nullptr;
+highfps::poof_spawn19715::Adapter* g_poofBudget=nullptr;
+highfps::extra_split19715::Adapter* g_extraSplitBudget=nullptr;
+uint64_t g_extraSplitBudgetedCalls=0;
+highfps::work_budget::FrameWorkBudget* g_frameWorkBudget=nullptr;
+unsigned g_nativeUpdateScopeDepth=0;
+uint64_t g_spawnBudgetedCalls=0,g_poofBudgetedCalls=0,g_budgetSnapshotFailures=0,g_budgetSnapshots=0;
+struct BudgetScopeKey {
+    uintptr_t game=0,room=0;uint64_t epoch=0;uint32_t world=0;
+    bool Same(const BudgetScopeKey&o)const{return game==o.game&&room==o.room&&epoch==o.epoch&&world==o.world;}
+};
+struct BudgetScope {BudgetScopeKey key;bool active=false;};
+BudgetScope g_budgetScope;
+BudgetScopeKey g_populationKey;
+bool g_populationAttempted=false,g_populationReadable=false;
+// Separate calls keep every dereference inside the caller's SEH boundary under
+// clang-cl /O2. This collector never calls an engine/Lua/GL function.
+__declspec(noinline) uint32_t BudgetRead32(uintptr_t address){return *reinterpret_cast<const volatile uint32_t*>(address);}
+bool BudgetPopulation(uintptr_t room,highfps::work_budget::Population&out) {
+    highfps::work_budget::Population result{};
+    __try {
+        if(room<0x10000)return false;
+        const auto count=BudgetRead32(room+0x1264),array=BudgetRead32(room+0x125c);
+        if(count>8192 || (count && (array<0x10000 || array>0xffffffffu-count*4u)))return false;
+        for(unsigned i=0;i<count;++i) {
+            const uintptr_t entity=BudgetRead32(array+i*4);if(!entity)continue;if(entity<0x10000)return false;
+            const auto type=BudgetRead32(entity+0x28);
+            // Pending removal can over-count; it must never create free capacity.
+            if(type==2)++result.tears;
+            else if(type==7) {
+                ++result.lasers;uintptr_t ancestor=entity;
+                for(unsigned n=0;n<16;++n) {
+                    ancestor=BudgetRead32(ancestor+0x3c8);if(!ancestor)break;if(ancestor<0x10000)return false;
+                    if(BudgetRead32(ancestor+0x28)==1){++result.playerLasers;break;}
+                }
+            } else if(type==1000) {
+                ++result.effects;const auto variant=BudgetRead32(entity+0x2c);
+                if((variant==11||variant==12||variant==13||variant==79)&&BudgetRead32(entity+0x30)==0)++result.poofs;
+            }
+        }
+    }__except(EXCEPTION_EXECUTE_HANDLER){return false;}
+    out=result;return true;
+}
+bool ReadBudgetRoom(BudgetScopeKey&key) {
+    __try {
+        if(key.game<0x10000)return false;
+        key.room=BudgetRead32(key.game+0x18300);
+        return key.room>=0x10000;
+    }__except(EXCEPTION_EXECUTE_HANDLER){++g_budgetSnapshotFailures;return false;}
+}
+void BeginWorkBudgetScope(BudgetScopeKey key,bool eligible) {
+    g_budgetScope={key,false};
+    if(!eligible||!g_frameWorkBudget)return;
+    if(!g_populationAttempted||!g_populationKey.Same(key)) {
+        g_populationAttempted=true;g_populationKey=key;g_populationReadable=false;
+        g_frameWorkBudget->Reset();highfps::work_budget::Population population{};
+        ++g_budgetSnapshots;
+        if(BudgetPopulation(key.room,population)) {
+            g_frameWorkBudget->Begin(key.epoch,key.world,key.room,population);
+            g_populationReadable=true;
+        } else ++g_budgetSnapshotFailures;
+    }
+    // A failed snapshot stays invalid for this key; no per-admission retry/refill.
+    g_budgetScope.active=g_populationReadable;
+}
+bool WorkBudgetScopeReady() {
+    if(!g_budgetScope.active||g_nativeUpdateScopeDepth!=1||g_inRenderPhase||g_luaExecutionDepth||g_loadDepth)return false;
+    __try {
+        if(g_lifecycleEpoch==g_budgetScope.key.epoch&&GameObj()==g_budgetScope.key.game&&
+           BudgetRead32(g_budgetScope.key.game+0x18300)==g_budgetScope.key.room)return true;
+    }__except(EXCEPTION_EXECUTE_HANDLER){++g_budgetSnapshotFailures;g_populationReadable=false;}
+    g_budgetScope.active=false;return false;
+}
+bool AdmitSpawnWork(highfps::spawn_budget19715::Kind kind,void*tear,unsigned cost) {
+    if(!WorkBudgetScopeReady())return true;
+    const unsigned k=unsigned(kind);if(k>3 || cost!=(k==0?2u:k==2?4u:1u))return true;
+    ++g_spawnBudgetedCalls;
+    return g_frameWorkBudget->Admit(static_cast<highfps::work_budget::Kind>(k),BudgetRead32(reinterpret_cast<uintptr_t>(tear)+0x3ec));
+}
+bool AdmitExtraSplitWork(highfps::extra_split19715::Kind kind,void*tear,unsigned cost) {
+    if(!WorkBudgetScopeReady())return true;
+    const unsigned k=unsigned(kind);if(k>2 || cost!=(k==0?2u:1u))return true;
+    ++g_extraSplitBudgetedCalls;
+    return g_frameWorkBudget->Admit(static_cast<highfps::work_budget::Kind>(5+k),BudgetRead32(reinterpret_cast<uintptr_t>(tear)+0x3ec));
+}
+bool AdmitPoofWork(void*tear,unsigned,unsigned) {
+    if(!WorkBudgetScopeReady())return true;
+    ++g_poofBudgetedCalls;
+    return g_frameWorkBudget->Admit(highfps::work_budget::Kind::Poof,BudgetRead32(reinterpret_cast<uintptr_t>(tear)+0x3ec));
+}
+
 highfps_shader_params::Runtime* g_shaderParamsCache = nullptr;
 highfps_input_cache::Runtime* g_inputResultCache = nullptr;
 std::uint64_t InputCacheEpoch() { return g_lifecycleEpoch; }
@@ -986,6 +1104,31 @@ void EnsureFixedRenderPipeline() {
         highfps::native_ui_replay::InstallNativeUiReplay19715(&g_luaFrameIntermediate)) {
         g_carouselPresentationEnabled=ValidateCarouselLayout();
         g_separateNativeFrames = true;
+        if(g_cfg.spawnWorkBudget||g_cfg.poofWorkBudget||g_cfg.extraSplitWorkBudget)g_frameWorkBudget=new highfps::work_budget::FrameWorkBudget(g_cfg.workBudget);
+        if(g_cfg.spawnWorkBudget) {
+            highfps::spawn_budget19715::Host spawnHost;
+            spawnHost.address=&ResolveCacheAddress;spawnHost.poke=&Poke;spawnHost.admit=&AdmitSpawnWork;
+            spawnHost.gameThread=g_gameThreadId;spawnHost.enabled=true;
+            g_spawnBudget=new highfps::spawn_budget19715::Adapter(spawnHost);
+            if(g_spawnBudget->Install())Log("[spawn-budget] optional player attack work admission installed children=%u searches=%u",g_cfg.workBudget.childrenPerTick,g_cfg.workBudget.techSearchesPerTick);
+            else Log("[spawn-budget] optional admission unavailable; original attacks retained");
+        }
+        if(g_cfg.poofWorkBudget) {
+            highfps::poof_spawn19715::Host poofHost;
+            poofHost.address=&ResolveCacheAddress;poofHost.poke=&Poke;poofHost.admit=&AdmitPoofWork;
+            poofHost.gameThread=g_gameThreadId;poofHost.enabled=true;
+            g_poofBudget=new highfps::poof_spawn19715::Adapter(poofHost);
+            if(g_poofBudget->Install())Log("[poof-budget] native cosmetic admission installed quota=%u cap=%u",g_cfg.workBudget.poofsPerTick,g_cfg.workBudget.softPoofs);
+            else Log("[poof-budget] optional admission unavailable; original cosmetics retained");
+        }
+        if(g_cfg.extraSplitWorkBudget) {
+            highfps::extra_split19715::Host extraHost;
+            extraHost.address=&ResolveCacheAddress;extraHost.poke=&Poke;extraHost.admit=&AdmitExtraSplitWork;
+            extraHost.gameThread=g_gameThreadId;extraHost.enabled=true;
+            g_extraSplitBudget=new highfps::extra_split19715::Adapter(extraHost);
+            if(g_extraSplitBudget->Install())Log("[extra-split-budget] bone/lachry/plain-tear haemo admission installed");
+            else Log("[extra-split-budget] optional admission unavailable; original split work retained");
+        }
         if (g_cfg.diag) Log("[pipeline] installation completed in %.2f ms", (Now() - installStarted) * 1000.0);
         Log("[pipeline] fixed Update -> native Render -> GC; presentation replays entity Lua drawing");
     } else {
@@ -1080,7 +1223,7 @@ unsigned g_renderPassesDue = 0;
 // Union of nested Level::Init / Level::ChangeRoom calls. Ordinary rendering,
 // slow Lua updates and SwapBuffers waits never enter this accounting domain.
 #ifdef HIGHFPS_BUILD_19715
-unsigned g_loadDepth = 0;
+
 double g_loadStarted = 0.0;
 const char* g_loadKind = "unknown";
 using ChangeRoomFn = void(__fastcall*)(void*, void*, int, int);
@@ -1350,6 +1493,39 @@ int __cdecl HookedUpdateWrapper() {
         Log("[presentation-count] successful=%llu nativeVisibleCalls=%u nativeVisibleWorkMs=%.3f windowMs=%.3f overload=%u",
             g_successfulPresents,g_prof.nativeVisibleCalls,g_prof.nativeVisibleSum*1000,
             (now-g_statWindow)*1000,unsigned(nativeVisible));
+#ifdef HIGHFPS_BUILD_19715
+        if(g_spawnBudget) {
+            const auto stats=g_spawnBudget->GetStats();
+            Log("[spawn-budget] cumulative=1 budgeted=%llu parasiteAdmit=%llu parasiteDeny=%llu searchAdmit=%llu searchDeny=%llu quadAdmit=%llu quadDeny=%llu trisAdmit=%llu trisDeny=%llu unsupported=%llu reentry=%llu exceptions=%llu",
+                g_spawnBudgetedCalls,stats.admitted[0],stats.denied[0],stats.admitted[1],stats.denied[1],stats.admitted[2],stats.denied[2],stats.admitted[3],stats.denied[3],stats.unsupported,stats.reentry,stats.exceptions);
+        }
+        if(g_poofBudget) {
+            const auto stats=g_poofBudget->GetStats();
+            Log("[poof-budget] cumulative=1 budgeted=%llu admit=%llu deny=%llu unsupported=%llu exceptions=%llu",g_poofBudgetedCalls,
+                stats.admitted[0]+stats.admitted[1]+stats.admitted[2]+stats.admitted[3],
+                stats.denied[0]+stats.denied[1]+stats.denied[2]+stats.denied[3],stats.unsupported,stats.exceptions);
+        }
+        if(g_extraSplitBudget) {
+            const auto stats=g_extraSplitBudget->GetStats();
+            Log("[extra-split-budget] cumulative=1 budgeted=%llu boneAdmit=%llu boneDeny=%llu lachryAdmit=%llu lachryDeny=%llu haemoAdmit=%llu haemoDeny=%llu unsupported=%llu exceptions=%llu",
+                g_extraSplitBudgetedCalls,stats.admitted[0],stats.denied[0],stats.admitted[1],stats.denied[1],stats.admitted[2],stats.denied[2],stats.unsupported,stats.exceptions);
+        }
+        if(g_frameWorkBudget) {
+            const auto& state=g_frameWorkBudget->Snapshot();const auto& stats=g_frameWorkBudget->Stats();
+            Log("[work-population] snapshotWorld=%llu tears=%llu lasers=%llu playerLasers=%llu poofs=%llu effects=%llu reservedTears=%llu reservedLasers=%llu reservedPoofs=%llu snapshots=%llu failures=%llu",
+                state.worldStamp,state.sampled.tears,state.sampled.lasers,state.sampled.playerLasers,state.sampled.poofs,state.sampled.effects,
+                state.reserved.tears,state.reserved.lasers,state.reserved.poofs,g_budgetSnapshots,g_budgetSnapshotFailures);
+            Log("[work-budget] cumulative=1 accepted=%llu/%llu/%llu/%llu/%llu denied=%llu/%llu/%llu/%llu/%llu",
+                stats.admitted[0],stats.admitted[1],stats.admitted[2],stats.admitted[3],stats.admitted[4],
+                stats.denied[0],stats.denied[1],stats.denied[2],stats.denied[3],stats.denied[4]);
+            Log("[work-denial] cumulative=1 tick=%llu/%llu/%llu/%llu/%llu population=%llu/%llu/%llu/%llu/%llu",
+                stats.reasons[0][3],stats.reasons[1][3],stats.reasons[2][3],stats.reasons[3][3],stats.reasons[4][3],
+                stats.reasons[0][4],stats.reasons[1][4],stats.reasons[2][4],stats.reasons[3][4],stats.reasons[4][4]);
+            Log("[extra-work-budget] cumulative=1 accepted=%llu/%llu/%llu denied=%llu/%llu/%llu tick=%llu/%llu/%llu population=%llu/%llu/%llu",
+                stats.admitted[5],stats.admitted[6],stats.admitted[7],stats.denied[5],stats.denied[6],stats.denied[7],
+                stats.reasons[5][3],stats.reasons[6][3],stats.reasons[7][3],stats.reasons[5][4],stats.reasons[6][4],stats.reasons[7][4]);
+        }
+#endif
         if(auto* worker=g_asyncLog.load())Log("[log-worker] accepted=%ld written=%ld dropped=%ld truncated=%ld",
             worker->Accepted(),worker->Written(),worker->Dropped(),worker->Truncated());
 
@@ -1487,8 +1663,16 @@ int __cdecl HookedUpdateWrapper() {
 #endif
 #ifdef HIGHFPS_BUILD_19715
         if(g_entityRenderCache)g_entityRenderCache->BeginUpdateQueries();
+        const auto previousBudgetScope=g_budgetScope;
+        bool budgetEligible=(g_cfg.spawnWorkBudget||g_cfg.poofWorkBudget||g_cfg.extraSplitWorkBudget)&&logicPhase&&
+            !g_nativeUpdateScopeDepth&&!g_luaExecutionDepth&&!g_loadDepth&&gameBefore>=0x10000&&!NativeGamePaused19715();
+        // Latch BEFORE native Update: its GameFrame increment must not refill a
+        // quota partway through the same call. Extra presentations never enter.
+        BudgetScopeKey budgetKey{gameBefore,0,epochBefore,gameFrameBefore};
+        if(budgetEligible)budgetEligible=ReadBudgetRoom(budgetKey);
+        BeginWorkBudgetScope(budgetKey,budgetEligible);++g_nativeUpdateScopeDepth;
         __try {result = g_wrapperTrampoline();}
-        __finally {if(g_entityRenderCache)g_entityRenderCache->EndUpdateQueries();}
+        __finally {--g_nativeUpdateScopeDepth;g_budgetScope=previousBudgetScope;if(g_entityRenderCache)g_entityRenderCache->EndUpdateQueries();}
 #else
         result = g_wrapperTrampoline();
 #endif
@@ -2810,7 +2994,9 @@ int __cdecl HookedPcallk(void* L, int nargs, int nresults, int msgh, intptr_t ct
     }
     if (SuppressLuaNow()) { EmulateLuaCall(L, nargs, nresults); return 0; /* LUA_OK */ }
     PublishPresence(L);
-    return g_realPcallk(L, nargs, nresults, msgh, ctx, k);
+    const auto depth=g_luaExecutionDepth;g_luaExecutionDepth=depth+1;
+    __try{return g_realPcallk(L, nargs, nresults, msgh, ctx, k);}
+    __finally{g_luaExecutionDepth=depth;}
 }
 
 void __cdecl HookedCallk(void* L, int nargs, int nresults, intptr_t ctx, void* k) {
@@ -2820,7 +3006,9 @@ void __cdecl HookedCallk(void* L, int nargs, int nresults, intptr_t ctx, void* k
     }
     if (SuppressLuaNow()) { EmulateLuaCall(L, nargs, nresults); return; }
     PublishPresence(L);
-    g_realCallk(L, nargs, nresults, ctx, k);
+    const auto depth=g_luaExecutionDepth;g_luaExecutionDepth=depth+1;
+    __try{g_realCallk(L, nargs, nresults, ctx, k);}
+    __finally{g_luaExecutionDepth=depth;}
 }
 
 bool InstallLuaGate() {
@@ -2941,6 +3129,7 @@ bool InstallNativeTimingProbe() {
 
 DWORD WINAPI Init(LPVOID) {
     LoadConfig();
+    if(g_cfg.overloadRollingRecovery){highfps::OverloadPolicy::Config config;config.rollingRecovery=true;g_overloadPolicy=highfps::OverloadPolicy(config);}
     if (!g_cfg.enabled && !g_cfg.nativeTimingProbe) return 0;
 
     // The mod ships under two names so that a loader which will not pick up one of them

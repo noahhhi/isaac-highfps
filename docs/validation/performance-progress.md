@@ -2,6 +2,11 @@
 
 Status: **in progress**, not a stable-90-FPS release acceptance. The exact test builds are identified in [the measurement summary](performance-progress.json). Later source changes are not covered merely by sharing the version string.
 
+This report describes the earlier cache and scheduling work through R8. Later,
+explicitly permitted attack/effect reductions are covered in the separate
+[attack-work experiment report](attack-work-progress.md); its gameplay-changing
+results must not be attributed to the earlier semantics-preserving changes.
+
 ## Indexed draw cache, threading and native render cost
 
 The former 512-entry linear/FIFO callback cache could repeatedly search, evict and move large records under load. The new cache uses exact-key and lineage indexes, stable records, compact no-op records, bounded retained memory, and current-canonical-frame admission protection. The default is 16,384 entries and 64 MiB; the process is still 32-bit, so total machine RAM is not its address-space budget. See [cache unit evidence](cache-performance-unit.json). Native entity-pool warnings are a separate condition and also occurred in the user's stable native run.

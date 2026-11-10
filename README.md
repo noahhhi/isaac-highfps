@@ -6,6 +6,8 @@ The main update stays at 60 Hz, full world updates stay at 30 Hz, and presentati
 
 **0.13.0-j374.7 — performance work in progress.** The draw cache now uses indexed lookups and a bounded 16,384-entry / 64 MiB default budget. The main game thread can stay on one logical CPU, while copied log records are written by a separate worker. Empty entity callbacks avoid capture work; positive built-in shader locations are reused within guarded update/render scopes. Sustained overload shows complete native frames instead of repeatedly executing expensive hidden catch-up renders. This fallback can run below 60 FPS when native work is overloaded; it is not a claim of stable 90 FPS. See the [performance findings and remaining work](docs/validation/performance-progress.md).
 
+**Experimental attack-work limits are now available, disabled by default.** Separate pre-allocation budgets cover split children, laser searches/creation and known tear poofs. A reduced-effect triple-item test sustained approximately 89.97 presentations per second over 52 seconds, with fixed world/mod clocks; it deliberately changes attack output and still has first-shot stalls. See [scope, measurements and remaining validation](docs/validation/attack-work-progress.md).
+
 **0.13.0-j374.6 — character-selection carousel.** The wheel now interpolates the native per-character positions and scales during extra display frames, then restores them before the next update. It preserves selection, held-key repeat and native rotation timing, including wrap and reversal; it does not call the rotation updater at the display rate. See the [carousel evidence](docs/validation/character-carousel.json). This uses up to one 60 Hz interval of display history; input processing is unchanged.
 
 **0.13.0-j374.5 — Lua mod drawing and render-triggered continuation.** Ordinary ANM2 sprites now use their verified native shader/layout contracts, with resource lifetime tracking for image reloads and first texture uploads. This restores missing mod overlays without running their Lua callbacks at the display rate. A synchronous start/continue accounts for its complete blocking work; a render that changes the room/run cannot expose the new scene until a complete canonical frame is available. See the [mod image regressions](docs/validation/mod-image-regressions.md) and the individually scoped reports below.
@@ -64,6 +66,14 @@ To disable the mod, set `Enabled=0` and restart. To remove it, exit the game, re
 | `CacheMiB` | `64` | Retained CPU draw-cache budget, clamped to 16–128 MiB; native image/GPU storage and transient capture are additional. |
 | `CacheShaderLocations` | `1` | Reuse positive built-in shader locations within guarded native update/render scopes. |
 | `OverloadFallback` | `1` | Temporarily show native frames when sustained work exceeds the fixed budget; recover without fast-forwarding overload debt. |
+| `OverloadRollingRecovery` | `0` | Experimental recovery using a bounded cost window and retry backoff; avoids requiring every recovery sample to be below 8 ms. |
+| `SpawnWorkBudget` | `0` | Experimental player Parasite/Cricket's Body, Technology Zero and Trisagion admission limits; changes attack output. |
+| `ExtraSplitWorkBudget` | `0` | Experimental Compound Fracture, Lachryphagy and plain-tear Haemolacria child limits; shares the child budget. |
+| `PoofWorkBudget` | `0` | Experimental admission limit for known player tear poofs; separate from attack work. |
+| `SpawnChildrenPerTick` | `6` | Shared admitted child count per full world tick; pairs cost 2 and quads cost 4. |
+| `TechZeroSearchesPerTick` / `TrisagionCreatesPerTick` / `PoofsPerTick` | `4` each | Separate work quotas per full world tick. |
+| `TearSoftLimit` / `LaserSoftLimit` / `PoofSoftLimit` | `128` / `32` / `96` | Conservative population admission thresholds, not global hard caps. |
+| `MinimumPlayerLasers` | `4` | Estimated player-laser attempt allowance when other lasers occupy the soft limit; does not guarantee actual successful creation. |
 | `FrameTiming` | `0` | Log successful presentation timestamps for isolated measurements. |
 | `NativeTimingProbe` | `0` | With `Enabled=0` only, instrument native SwapBuffers for comparison; leaves native update/render/limiter and thread affinity unchanged. |
 
