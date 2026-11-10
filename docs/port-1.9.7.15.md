@@ -1,6 +1,6 @@
 # Repentance+ 1.9.7.15.J374 port
 
-Version `0.13.0-j374.5` builds a dedicated DLL for the 32-bit **1.9.7.15.J374** game. The `.5` compatibility release adds the Sprite/texture-lifetime repairs described below. Menu presentation source remains `4c552f0`, bound to its earlier 80/90 Hz checks in [menu-presentation.json](validation/menu-presentation.json). Earlier camera and `.2` fixed-clock reports retain their original DLL/source hashes and coverage. Its development and build environment is Fedora WSL; runtime checks use an isolated Steam Deck/Proton game copy. The original J460 binary is incompatible with J374, including its update wrapper and graphics ABI. Do not remove version guards to load the other build.
+Version `0.13.0-j374.6` builds a dedicated DLL for the 32-bit **1.9.7.15.J374** game. The `.5` compatibility release adds the Sprite/texture-lifetime repairs described below. Menu presentation source remains `4c552f0`, bound to its earlier 80/90 Hz checks in [menu-presentation.json](validation/menu-presentation.json). Earlier camera and `.2` fixed-clock reports retain their original DLL/source hashes and coverage. Its development and build environment is Fedora WSL; runtime checks use an isolated Steam Deck/Proton game copy. The original J460 binary is incompatible with J374, including its update wrapper and graphics ABI. Do not remove version guards to load the other build.
 
 ## Executable and ABI boundary
 
@@ -129,3 +129,7 @@ Report actual frame pacing and animation/gameplay timing separately. A high pres
 ## Combined compatibility release
 
 [mod-compatibility-release.json](validation/mod-compatibility-release.json) binds the `.5` release DLL, production-source hashes and final affected-path cases. The earlier R1/R2/R4 image and weapon reports retain their own hashes. The combined release additionally accounts for the entire pending native start/continue operation and holds display output until a complete canonical render of the new lifetime is ready. MC_INPUT_ACTION uses typed scalar snapshots only for extra presentations; every authoritative query, including nested updates, remains native. See the [controller report](validation/controller-input-compatibility.json) and [input ABI/design](validation/input-cache-unit.json) for cached-nil, raw fallback and coverage limits.
+
+## Character-selection wheel (.6)
+
+The carousel draw helper reads projected position/scale vectors, not the angle accumulator. `.6` adds a bounded, identity-checked display scope for those vectors, with six native layout/write-site byte guards. It retains the existing page viewport scope and all `.5` compatibility fixes. See [character-carousel.json](validation/character-carousel.json) for conditional image-repeat measurements, exact matched canonical curves, reversal coverage and observed pacing limits.

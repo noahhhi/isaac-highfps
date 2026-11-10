@@ -1,0 +1,1846 @@
+{
+  "schema": "isaac-character-carousel-validation-v1",
+  "candidate_version": "0.13.0-j374.6",
+  "candidate_dll_sha256": "be148d5217e161fda7ad661864460955e5cf4d48cd0d0682fb62c4e9f151fddd",
+  "cases": [
+    {
+      "case": "carousel-native60-20261110",
+      "artifacts_sha256": {
+        "game/winmm.dll": "1a2b77b5cc0ba4fc63890f9d08e09a43674d7c4cf32506f9ef446cb46af8c139",
+        "game/isaac-highfps.ini": "10720cb1d15e0aff47c90b4f2cddbc9197439a81b846e7a609a01c132e37b9b0",
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888"
+      },
+      "canonical_source": "single-valued consistent observer",
+      "visible_counts": [
+        14
+      ],
+      "actual_present_dt_ms": null,
+      "capture_dt_ms": {
+        "n": 1019,
+        "min": 13.581789,
+        "median": 16.20918099999713,
+        "p95": 18.1776720000002,
+        "max": 18.713693000000475
+      },
+      "pixel_roi": {
+        "bounds": [
+          336,
+          176,
+          944,
+          400
+        ],
+        "frames": 1020,
+        "runs": 249,
+        "run_length_histogram": {
+          "1": 217,
+          "5": 1,
+          "10": 20,
+          "42": 4,
+          "44": 1,
+          "45": 1,
+          "47": 1,
+          "50": 1,
+          "72": 2,
+          "100": 1
+        },
+        "short_run_threshold_sensitivity": [
+          {
+            "run_limit_ms": 33.333334,
+            "pairs": 186,
+            "repeats": 0
+          },
+          {
+            "run_limit_ms": 50.0,
+            "pairs": 186,
+            "repeats": 0
+          },
+          {
+            "run_limit_ms": 75.0,
+            "pairs": 186,
+            "repeats": 0
+          }
+        ],
+        "short_runs": 217,
+        "short_run_pairs": 186,
+        "short_run_repeat_pairs": 0,
+        "all_repeat_pairs": 771,
+        "capture_index_gaps": 0
+      },
+      "interpolation": {
+        "records_in_window": 0,
+        "moving_records": 0,
+        "max_lerp_residual": null,
+        "max_endpoint_overshoot": null,
+        "missing_fixed": 0,
+        "different_context": 0,
+        "alpha_outside_0_1": 0
+      },
+      "long_holds": [
+        {
+          "event": 8,
+          "from_selected": 2,
+          "to_selected": 17,
+          "accepted": 11,
+          "step_tick_intervals": [
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17
+          ]
+        },
+        {
+          "event": 9,
+          "from_selected": 17,
+          "to_selected": 2,
+          "accepted": 11,
+          "step_tick_intervals": [
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17
+          ]
+        }
+      ],
+      "atomic_reversals": [],
+      "diagnostics": []
+    },
+    {
+      "case": "carousel-old90-v2-20261110",
+      "artifacts_sha256": {
+        "game/winmm.dll": "1a2b77b5cc0ba4fc63890f9d08e09a43674d7c4cf32506f9ef446cb46af8c139",
+        "game/isaac-highfps.ini": "54c999029e57b90c486303653bda60c81f006f726d615b1afc155d2df1b18849",
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888"
+      },
+      "canonical_source": "single-valued consistent observer",
+      "visible_counts": [
+        14
+      ],
+      "actual_present_dt_ms": {
+        "n": 1472,
+        "min": 10.98,
+        "median": 11.112,
+        "p95": 11.157,
+        "max": 11.276
+      },
+      "capture_dt_ms": {
+        "n": 1529,
+        "min": 7.043104000000966,
+        "median": 11.075297999999734,
+        "p95": 12.457038999997394,
+        "max": 13.790218999998771
+      },
+      "pixel_roi": {
+        "bounds": [
+          336,
+          176,
+          944,
+          400
+        ],
+        "frames": 1530,
+        "runs": 257,
+        "run_length_histogram": {
+          "1": 115,
+          "2": 109,
+          "8": 1,
+          "15": 21,
+          "62": 1,
+          "63": 2,
+          "65": 1,
+          "66": 1,
+          "69": 1,
+          "72": 1,
+          "77": 1,
+          "84": 1,
+          "107": 1,
+          "146": 1
+        },
+        "short_run_threshold_sensitivity": [
+          {
+            "run_limit_ms": 33.333334,
+            "pairs": 301,
+            "repeats": 109
+          },
+          {
+            "run_limit_ms": 50.0,
+            "pairs": 301,
+            "repeats": 109
+          },
+          {
+            "run_limit_ms": 75.0,
+            "pairs": 301,
+            "repeats": 109
+          }
+        ],
+        "short_runs": 224,
+        "short_run_pairs": 301,
+        "short_run_repeat_pairs": 109,
+        "all_repeat_pairs": 1273,
+        "capture_index_gaps": 0
+      },
+      "interpolation": {
+        "records_in_window": 0,
+        "moving_records": 0,
+        "max_lerp_residual": null,
+        "max_endpoint_overshoot": null,
+        "missing_fixed": 0,
+        "different_context": 0,
+        "alpha_outside_0_1": 0
+      },
+      "long_holds": [
+        {
+          "event": 8,
+          "from_selected": 2,
+          "to_selected": 17,
+          "accepted": 11,
+          "step_tick_intervals": [
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17
+          ]
+        },
+        {
+          "event": 9,
+          "from_selected": 17,
+          "to_selected": 1,
+          "accepted": 12,
+          "step_tick_intervals": [
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17
+          ]
+        }
+      ],
+      "atomic_reversals": [],
+      "diagnostics": []
+    },
+    {
+      "case": "carousel-final90-20261110",
+      "artifacts_sha256": {
+        "game/winmm.dll": "be148d5217e161fda7ad661864460955e5cf4d48cd0d0682fb62c4e9f151fddd",
+        "game/isaac-highfps.ini": "54c999029e57b90c486303653bda60c81f006f726d615b1afc155d2df1b18849",
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888"
+      },
+      "canonical_source": "carousel-fixed",
+      "visible_counts": [
+        14
+      ],
+      "actual_present_dt_ms": {
+        "n": 1475,
+        "min": 10.812999999999999,
+        "median": 11.110999999999999,
+        "p95": 11.155,
+        "max": 11.439
+      },
+      "capture_dt_ms": {
+        "n": 1529,
+        "min": 7.671894999999651,
+        "median": 11.0509780000001,
+        "p95": 11.891517999998769,
+        "max": 13.617639999999653
+      },
+      "pixel_roi": {
+        "bounds": [
+          336,
+          176,
+          944,
+          400
+        ],
+        "frames": 1530,
+        "runs": 417,
+        "run_length_histogram": {
+          "1": 384,
+          "6": 1,
+          "13": 11,
+          "14": 10,
+          "61": 2,
+          "62": 2,
+          "63": 1,
+          "66": 1,
+          "71": 1,
+          "73": 1,
+          "81": 1,
+          "107": 1,
+          "150": 1
+        },
+        "short_run_threshold_sensitivity": [
+          {
+            "run_limit_ms": 33.333334,
+            "pairs": 352,
+            "repeats": 0
+          },
+          {
+            "run_limit_ms": 50.0,
+            "pairs": 352,
+            "repeats": 0
+          },
+          {
+            "run_limit_ms": 75.0,
+            "pairs": 359,
+            "repeats": 5
+          }
+        ],
+        "short_runs": 385,
+        "short_run_pairs": 359,
+        "short_run_repeat_pairs": 5,
+        "all_repeat_pairs": 1113,
+        "capture_index_gaps": 0
+      },
+      "interpolation": {
+        "records_in_window": 1476,
+        "moving_records": 384,
+        "max_lerp_residual": 1.549792477817391e-05,
+        "max_endpoint_overshoot": 0.0,
+        "missing_fixed": 0,
+        "different_context": 0,
+        "alpha_outside_0_1": 0
+      },
+      "long_holds": [
+        {
+          "event": 8,
+          "from_selected": 2,
+          "to_selected": 17,
+          "accepted": 11,
+          "step_tick_intervals": [
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17
+          ]
+        },
+        {
+          "event": 9,
+          "from_selected": 17,
+          "to_selected": 1,
+          "accepted": 12,
+          "step_tick_intervals": [
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17
+          ]
+        }
+      ],
+      "atomic_reversals": [],
+      "diagnostics": []
+    },
+    {
+      "case": "carousel-final80-20261110",
+      "artifacts_sha256": {
+        "game/winmm.dll": "be148d5217e161fda7ad661864460955e5cf4d48cd0d0682fb62c4e9f151fddd",
+        "game/isaac-highfps.ini": "54c999029e57b90c486303653bda60c81f006f726d615b1afc155d2df1b18849",
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888"
+      },
+      "canonical_source": "carousel-fixed",
+      "visible_counts": [
+        14
+      ],
+      "actual_present_dt_ms": {
+        "n": 1311,
+        "min": 12.212,
+        "median": 12.501,
+        "p95": 12.585,
+        "max": 25.094
+      },
+      "capture_dt_ms": {
+        "n": 1359,
+        "min": 9.183866999999957,
+        "median": 12.43096800000032,
+        "p95": 13.773060000000115,
+        "max": 23.027565999999666
+      },
+      "pixel_roi": {
+        "bounds": [
+          336,
+          176,
+          944,
+          400
+        ],
+        "frames": 1360,
+        "runs": 360,
+        "run_length_histogram": {
+          "1": 328,
+          "5": 1,
+          "12": 20,
+          "54": 2,
+          "55": 2,
+          "56": 1,
+          "58": 1,
+          "63": 1,
+          "65": 1,
+          "93": 1,
+          "95": 1,
+          "139": 1
+        },
+        "short_run_threshold_sensitivity": [
+          {
+            "run_limit_ms": 33.333334,
+            "pairs": 297,
+            "repeats": 0
+          },
+          {
+            "run_limit_ms": 50.0,
+            "pairs": 297,
+            "repeats": 0
+          },
+          {
+            "run_limit_ms": 75.0,
+            "pairs": 303,
+            "repeats": 4
+          }
+        ],
+        "short_runs": 329,
+        "short_run_pairs": 303,
+        "short_run_repeat_pairs": 4,
+        "all_repeat_pairs": 1000,
+        "capture_index_gaps": 0
+      },
+      "interpolation": {
+        "records_in_window": 1311,
+        "moving_records": 328,
+        "max_lerp_residual": 1.529907228814409e-05,
+        "max_endpoint_overshoot": 0.0,
+        "missing_fixed": 0,
+        "different_context": 0,
+        "alpha_outside_0_1": 0
+      },
+      "long_holds": [
+        {
+          "event": 8,
+          "from_selected": 2,
+          "to_selected": 17,
+          "accepted": 11,
+          "step_tick_intervals": [
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17
+          ]
+        },
+        {
+          "event": 9,
+          "from_selected": 17,
+          "to_selected": 2,
+          "accepted": 11,
+          "step_tick_intervals": [
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17,
+            17
+          ]
+        }
+      ],
+      "atomic_reversals": [],
+      "diagnostics": []
+    },
+    {
+      "case": "carousel-reverse-native60-20261110",
+      "artifacts_sha256": {
+        "game/winmm.dll": "2f1e8ee8a363de1492b717f525215c44d32cde2ebfee021f00d41378cf2e33f4",
+        "game/isaac-highfps.ini": "10720cb1d15e0aff47c90b4f2cddbc9197439a81b846e7a609a01c132e37b9b0",
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888"
+      },
+      "canonical_source": "single-valued consistent observer",
+      "visible_counts": [
+        14
+      ],
+      "actual_present_dt_ms": null,
+      "capture_dt_ms": {
+        "n": 479,
+        "min": 14.064488999999902,
+        "median": 16.67091200000037,
+        "p95": 33.25321300000006,
+        "max": 34.001473000000004
+      },
+      "pixel_roi": {
+        "bounds": [
+          336,
+          176,
+          944,
+          400
+        ],
+        "frames": 480,
+        "runs": 33,
+        "run_length_histogram": {
+          "1": 28,
+          "45": 1,
+          "52": 1,
+          "53": 1,
+          "58": 1,
+          "244": 1
+        },
+        "short_run_threshold_sensitivity": [
+          {
+            "run_limit_ms": 33.333334,
+            "pairs": 24,
+            "repeats": 0
+          },
+          {
+            "run_limit_ms": 50.0,
+            "pairs": 24,
+            "repeats": 0
+          },
+          {
+            "run_limit_ms": 75.0,
+            "pairs": 24,
+            "repeats": 0
+          }
+        ],
+        "short_runs": 28,
+        "short_run_pairs": 24,
+        "short_run_repeat_pairs": 0,
+        "all_repeat_pairs": 447,
+        "capture_index_gaps": 0
+      },
+      "interpolation": {
+        "records_in_window": 0,
+        "moving_records": 0,
+        "max_lerp_residual": null,
+        "max_endpoint_overshoot": null,
+        "missing_fixed": 0,
+        "different_context": 0,
+        "alpha_outside_0_1": 0
+      },
+      "long_holds": [],
+      "atomic_reversals": [
+        {
+          "event": 0,
+          "key": "Right+Left",
+          "schedule_seconds": [
+            0.025,
+            0.01,
+            0.025
+          ],
+          "accepted_selection_sequence": [
+            0,
+            1,
+            0
+          ],
+          "transition_tick_offsets": [
+            0,
+            4
+          ],
+          "before_second_transition_ready": 0,
+          "curves_ticks": [
+            4,
+            5
+          ]
+        },
+        {
+          "event": 1,
+          "key": "Left+Right",
+          "schedule_seconds": [
+            0.025,
+            0.01,
+            0.025
+          ],
+          "accepted_selection_sequence": [
+            0,
+            17,
+            0
+          ],
+          "transition_tick_offsets": [
+            0,
+            3
+          ],
+          "before_second_transition_ready": 0,
+          "curves_ticks": [
+            3,
+            4
+          ]
+        },
+        {
+          "event": 2,
+          "key": "Right+Left",
+          "schedule_seconds": [
+            0.025,
+            0.01,
+            0.025
+          ],
+          "accepted_selection_sequence": [
+            0,
+            1,
+            0
+          ],
+          "transition_tick_offsets": [
+            0,
+            4
+          ],
+          "before_second_transition_ready": 0,
+          "curves_ticks": [
+            4,
+            5
+          ]
+        },
+        {
+          "event": 3,
+          "key": "Left+Right",
+          "schedule_seconds": [
+            0.025,
+            0.01,
+            0.025
+          ],
+          "accepted_selection_sequence": [
+            0,
+            17,
+            0
+          ],
+          "transition_tick_offsets": [
+            0,
+            4
+          ],
+          "before_second_transition_ready": 0,
+          "curves_ticks": [
+            4,
+            5
+          ]
+        }
+      ],
+      "diagnostics": []
+    },
+    {
+      "case": "carousel-reverse-final90-20261110",
+      "artifacts_sha256": {
+        "game/winmm.dll": "be148d5217e161fda7ad661864460955e5cf4d48cd0d0682fb62c4e9f151fddd",
+        "game/isaac-highfps.ini": "54c999029e57b90c486303653bda60c81f006f726d615b1afc155d2df1b18849",
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888"
+      },
+      "canonical_source": "carousel-fixed",
+      "visible_counts": [
+        14
+      ],
+      "actual_present_dt_ms": {
+        "n": 666,
+        "min": 10.808,
+        "median": 11.11,
+        "p95": 11.152000000000001,
+        "max": 11.418
+      },
+      "capture_dt_ms": {
+        "n": 719,
+        "min": 7.192745000000222,
+        "median": 11.048048000000144,
+        "p95": 12.320649000000072,
+        "max": 13.806348999999773
+      },
+      "pixel_roi": {
+        "bounds": [
+          336,
+          176,
+          944,
+          400
+        ],
+        "frames": 720,
+        "runs": 59,
+        "run_length_histogram": {
+          "1": 54,
+          "70": 1,
+          "79": 1,
+          "83": 1,
+          "84": 1,
+          "350": 1
+        },
+        "short_run_threshold_sensitivity": [
+          {
+            "run_limit_ms": 33.333334,
+            "pairs": 50,
+            "repeats": 0
+          },
+          {
+            "run_limit_ms": 50.0,
+            "pairs": 50,
+            "repeats": 0
+          },
+          {
+            "run_limit_ms": 75.0,
+            "pairs": 50,
+            "repeats": 0
+          }
+        ],
+        "short_runs": 54,
+        "short_run_pairs": 50,
+        "short_run_repeat_pairs": 0,
+        "all_repeat_pairs": 661,
+        "capture_index_gaps": 0
+      },
+      "interpolation": {
+        "records_in_window": 667,
+        "moving_records": 54,
+        "max_lerp_residual": 1.5183654795691837e-05,
+        "max_endpoint_overshoot": 0.0,
+        "missing_fixed": 0,
+        "different_context": 0,
+        "alpha_outside_0_1": 0
+      },
+      "long_holds": [],
+      "atomic_reversals": [
+        {
+          "event": 0,
+          "key": "Right+Left",
+          "schedule_seconds": [
+            0.025,
+            0.01,
+            0.025
+          ],
+          "accepted_selection_sequence": [
+            0,
+            1,
+            0
+          ],
+          "transition_tick_offsets": [
+            0,
+            5
+          ],
+          "before_second_transition_ready": 0,
+          "curves_ticks": [
+            5,
+            6
+          ]
+        },
+        {
+          "event": 1,
+          "key": "Left+Right",
+          "schedule_seconds": [
+            0.025,
+            0.01,
+            0.025
+          ],
+          "accepted_selection_sequence": [
+            0,
+            17,
+            0
+          ],
+          "transition_tick_offsets": [
+            0,
+            3
+          ],
+          "before_second_transition_ready": 0,
+          "curves_ticks": [
+            3,
+            4
+          ]
+        },
+        {
+          "event": 2,
+          "key": "Right+Left",
+          "schedule_seconds": [
+            0.025,
+            0.01,
+            0.025
+          ],
+          "accepted_selection_sequence": [
+            0,
+            1,
+            0
+          ],
+          "transition_tick_offsets": [
+            0,
+            4
+          ],
+          "before_second_transition_ready": 0,
+          "curves_ticks": [
+            4,
+            5
+          ]
+        },
+        {
+          "event": 3,
+          "key": "Left+Right",
+          "schedule_seconds": [
+            0.025,
+            0.01,
+            0.025
+          ],
+          "accepted_selection_sequence": [
+            0,
+            17,
+            0
+          ],
+          "transition_tick_offsets": [
+            0,
+            4
+          ],
+          "before_second_transition_ready": 0,
+          "curves_ticks": [
+            4,
+            5
+          ]
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "canonical_comparisons": [
+    {
+      "baseline": "carousel-native60-20261110",
+      "trial": "carousel-old90-v2-20261110",
+      "compared_ordered_transitions": 30,
+      "compared_relative_ticks": 210,
+      "max_pose_error": 0.0,
+      "max_angle_error": 0.0,
+      "ready_mismatches": 0,
+      "excluded_ordered_transition_ordinals": [
+        30
+      ],
+      "short_input_curves": [
+        {
+          "event": 0,
+          "comparable": true,
+          "from_selected": 0,
+          "to_selected": 17,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 1,
+          "comparable": true,
+          "from_selected": 17,
+          "to_selected": 0,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 2,
+          "comparable": true,
+          "from_selected": 0,
+          "to_selected": 1,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 3,
+          "comparable": true,
+          "from_selected": 1,
+          "to_selected": 2,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 4,
+          "comparable": true,
+          "from_selected": 2,
+          "to_selected": 3,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 5,
+          "comparable": true,
+          "from_selected": 3,
+          "to_selected": 2,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 6,
+          "comparable": true,
+          "from_selected": 2,
+          "to_selected": 3,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 7,
+          "comparable": true,
+          "from_selected": 3,
+          "to_selected": 2,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 10,
+          "comparable": false
+        }
+      ]
+    },
+    {
+      "baseline": "carousel-native60-20261110",
+      "trial": "carousel-final90-20261110",
+      "compared_ordered_transitions": 30,
+      "compared_relative_ticks": 210,
+      "max_pose_error": 0.0,
+      "max_angle_error": 0.0,
+      "ready_mismatches": 0,
+      "excluded_ordered_transition_ordinals": [
+        30
+      ],
+      "short_input_curves": [
+        {
+          "event": 0,
+          "comparable": true,
+          "from_selected": 0,
+          "to_selected": 17,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 1,
+          "comparable": true,
+          "from_selected": 17,
+          "to_selected": 0,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 2,
+          "comparable": true,
+          "from_selected": 0,
+          "to_selected": 1,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 3,
+          "comparable": true,
+          "from_selected": 1,
+          "to_selected": 2,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 4,
+          "comparable": true,
+          "from_selected": 2,
+          "to_selected": 3,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 5,
+          "comparable": true,
+          "from_selected": 3,
+          "to_selected": 2,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 6,
+          "comparable": true,
+          "from_selected": 2,
+          "to_selected": 3,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 7,
+          "comparable": true,
+          "from_selected": 3,
+          "to_selected": 2,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 10,
+          "comparable": false
+        }
+      ]
+    },
+    {
+      "baseline": "carousel-native60-20261110",
+      "trial": "carousel-final80-20261110",
+      "compared_ordered_transitions": 31,
+      "compared_relative_ticks": 217,
+      "max_pose_error": 0.0,
+      "max_angle_error": 0.0,
+      "ready_mismatches": 0,
+      "excluded_ordered_transition_ordinals": [],
+      "short_input_curves": [
+        {
+          "event": 0,
+          "comparable": true,
+          "from_selected": 0,
+          "to_selected": 17,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 1,
+          "comparable": true,
+          "from_selected": 17,
+          "to_selected": 0,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 2,
+          "comparable": true,
+          "from_selected": 0,
+          "to_selected": 1,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 3,
+          "comparable": true,
+          "from_selected": 1,
+          "to_selected": 2,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 4,
+          "comparable": true,
+          "from_selected": 2,
+          "to_selected": 3,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 5,
+          "comparable": true,
+          "from_selected": 3,
+          "to_selected": 2,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 6,
+          "comparable": true,
+          "from_selected": 2,
+          "to_selected": 3,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 7,
+          "comparable": true,
+          "from_selected": 3,
+          "to_selected": 2,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 10,
+          "comparable": true,
+          "from_selected": 2,
+          "to_selected": 3,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "common_ticks": 7,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        }
+      ]
+    }
+  ],
+  "phase_matched_atomic_reversals": [
+    {
+      "trial_event": 0,
+      "key": "Right+Left",
+      "reversal_tick_offset": [
+        0,
+        5
+      ],
+      "matched_baseline_event": null
+    },
+    {
+      "trial_event": 1,
+      "key": "Left+Right",
+      "reversal_tick_offset": [
+        0,
+        3
+      ],
+      "matched_baseline_event": 1,
+      "legs": [
+        {
+          "event": 0,
+          "comparable": true,
+          "from_selected": 0,
+          "to_selected": 17,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2
+          ],
+          "common_ticks": 3,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 1,
+          "comparable": true,
+          "from_selected": 17,
+          "to_selected": 0,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "common_ticks": 4,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        }
+      ]
+    },
+    {
+      "trial_event": 2,
+      "key": "Right+Left",
+      "reversal_tick_offset": [
+        0,
+        4
+      ],
+      "matched_baseline_event": 0,
+      "legs": [
+        {
+          "event": 0,
+          "comparable": true,
+          "from_selected": 0,
+          "to_selected": 1,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "common_ticks": 4,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 1,
+          "comparable": true,
+          "from_selected": 1,
+          "to_selected": 0,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "common_ticks": 5,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        }
+      ]
+    },
+    {
+      "trial_event": 3,
+      "key": "Left+Right",
+      "reversal_tick_offset": [
+        0,
+        4
+      ],
+      "matched_baseline_event": 3,
+      "legs": [
+        {
+          "event": 0,
+          "comparable": true,
+          "from_selected": 0,
+          "to_selected": 17,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "common_ticks": 4,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        },
+        {
+          "event": 1,
+          "comparable": true,
+          "from_selected": 17,
+          "to_selected": 0,
+          "baseline_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "trial_relative_ticks": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "common_ticks": 5,
+          "max_pose_error": 0.0,
+          "different_pose_components": 0,
+          "max_angle_error": 0.0,
+          "ready_mismatches": 0
+        }
+      ]
+    }
+  ],
+  "additional_frame_pacing_observation": {
+    "case": "carousel-final80-20261110",
+    "intervals_ms": [
+      25.094,
+      24.961
+    ],
+    "latest_canonical_ticks": [
+      1382,
+      1451
+    ],
+    "wheel_ready": [
+      1,
+      1
+    ],
+    "interpretation": "Two doubled present intervals while wheel was settled. The conditional motion pixel metric does not claim every frame had ideal pacing."
+  },
+  "method": {
+    "canonical": "Candidate fixed logs are authoritative. Otherwise only single-valued observer ticks are used. Convert 9-significant-decimal logs back to binary32. Compare each matching short input selection change by relative Manager tick through first ready=1; do not equate selected ID with visible-array index or force wall alignment. Long-hold endpoints can differ because external input phase differs.",
+    "pixels": "Decode RGB, hash wheel ROI [336,176,944,400]. Report all run lengths. Conditional short-run motion statistic: runs whose frame_count*median_capture_period <=75ms; compare only adjacent frames both in these runs. Report sensitivity at 33.333334/50/75ms; the 75ms threshold includes a known 66ms settled gap between two short inputs in R1. This excludes long holds and is not an unconditional stutter or latency metric. Missing capture indices are counted.",
+    "timing": "Gst timestamps describe capture pacing. Injected present dt is restricted by latest canonical tick to first event.before.tick-2 through end.tick. Native has no injected actual-present telemetry. Input timestamps and capture clock include pipeline startup uncertainty.",
+    "interpolation": "For each present use fixed(tick-1), fixed(tick), printed alpha; check all x/y/scale values versus linear interpolation and endpoints. Printed alpha has six decimals; bounded float rounding is expected.",
+    "scope": "Only recorded isolated data. No physical control/hardware/VRR claim. Candidate observer multivalued ticks may include temporary presentation writes and are not canonical errors."
+  },
+  "limitations": [
+    "Only normal character page with14 visible entries and empty custom portrait list was recorded; no live custom roster replacement or tainted-page claim.",
+    "Input injection is external to the fixed tick. Long-hold release boundaries can add one accepted17-tick repeat; compare trajectories for matching accepted transitions, not whole wall-aligned runs.",
+    "The first stress reversal occurred after5 canonical ticks in candidate vs4 in baseline, so it has no complete phase-matched baseline curve. Remaining3 stress macros match exact binary32 poses/angles/ready over25 canonical states.",
+    "Conditional motion statistics exclude stable runs longer than50ms. The33.333ms sensitivity has identical results.75ms includes short intentional settled gaps, recorded in full histograms; this is not a universal frame-loss or input-latency metric.",
+    "Native60 actual presents were not instrumented; capture timestamps are reported separately. Candidate observer may see temporary interpolated writes; authoritative fixed logs are used for canonical comparisons.",
+    "No physical game control, physical VRR, hardware controller, gameplay or every menu animation coverage is claimed."
+  ],
+  "analyzer_sha256": "466fef4411f847493b45cf94fc39a723cbbf74ef4bb71df19d4cf49634634d73",
+  "source_files_sha256": {
+    "src/dllmain.cpp": "6fe3d0f82eb88ceaaab3696c1559ddec0d15b8642e49e88269cb79f97cd1cb11",
+    "src/carousel_presentation.h": "74b31f2779d46444660cdac6ba24f53db74ea95c27dc67dbee3ff31012b1a615",
+    "src/version.h": "225308344e8713c630a5e242fb4c94c96a112a573d6e13ff27b645e96dfc80b3"
+  },
+  "standalone": {
+    "command": "tests/run-tests.sh core",
+    "backend": "x86 MSVC via WSL Windows interop",
+    "result": "all eight core tests passed",
+    "test_source_sha256": "c2aedd7a43bbac2f24965b6c25bb98f422820c20c91829645a69a6bc5ad5bc46",
+    "local_log_sha256": "77485ef30f016e4b1c5cde728c3c574142a13d26e9fa3ef6a2cb10c41eaa60b2"
+  },
+  "gameplay_regression": {
+    "case": "carousel-game-native-input90-20261110",
+    "dll_sha256": "be148d5217e161fda7ad661864460955e5cf4d48cd0d0682fb62c4e9f151fddd",
+    "actual_native_menu_selection": true,
+    "fixture_sha256": "6d23529a7b3cde1eb347acfa36a1353c18fc4f3b1583a0a6e11f995c69e31d46",
+    "terminal_fixture_record": "t=540 gf=555 r=1080 u=541 phase=final_released want=false input=false eligible=true clear=true cfg=true lost=true room=84 shape=4 visible=6 map=721 ui=721 tab=721 query=12960 nilq=0 mapq=0 pos=320.000,280.000",
+    "diagnostic_counts": {
+      "[carousel-state]": 0,
+      "[carousel-restore]": 0,
+      "[pure-lua]": 0,
+      "[pure-state]": 0,
+      "[input-cache-miss]": 0,
+      "[entity-cache-miss]": 0,
+      "[FATAL]": 0,
+      "faulted": 0
+    },
+    "scope": "Existing GoodTrip fixture enters Greed via native menu inputs, completes540 world ticks/1080 main callbacks and both map holds. No new gameplay pixel capture claim.",
+    "earlier_harness_attempt": "A prior attempt used a legacy direct-memory character-selection helper and triggered the intended pure-state protection. The helper was replaced with native menu keys; this accepted rerun had no protection warnings. Production guards were not weakened."
+  }
+}

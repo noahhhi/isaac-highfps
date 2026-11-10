@@ -24,6 +24,7 @@
 #include "render_timing.h"
 #include "camera_presentation.h"
 #include "menu_presentation.h"
+#include "carousel_presentation.h"
 #ifdef HIGHFPS_BUILD_19715
 #include "entity_draw_cache_j374_runtime.h"
 #include "shader_params_cache_j374.h"
@@ -805,6 +806,80 @@ void SampleMenuPresentation() {
         Log("[warn] menu viewport sampling faulted; native menu presentation retained");
     }
 }
+// The carousel renderer reads per-entry projected poses, not its running angle.
+// Sample native results at 60Hz; only the pure display scope changes these arrays.
+highfps::carousel_presentation::History g_carouselHistory;
+bool g_carouselPresentationEnabled = false;
+unsigned g_carouselFixedLines=0,g_carouselPresentLines=0;
+highfps::carousel_presentation::Context CarouselPresentationContext() {
+    using namespace highfps::carousel_presentation;
+    Context c;const auto menu=MenuPresentationContext();
+    if(!highfps::menu_presentation::Active(menu))return c;
+    c.managerState=menu.managerState;c.epoch=menu.epoch;c.width=menu.width;c.height=menu.height;
+    c.menuPage=*reinterpret_cast<const int*>(menu.menu+0x40);
+    if(c.menuPage!=5)return c;
+    c.owner=menu.menu+0x1530;
+    c.status=*reinterpret_cast<const int*>(c.owner);
+    c.rosterPage=*reinterpret_cast<const int*>(c.owner+0xDB4);
+    c.count=*reinterpret_cast<const unsigned*>(c.owner+0xB18);
+    auto span=[](uintptr_t address) {const auto*p=reinterpret_cast<const uint32_t*>(address);return Span{p[0],p[1],p[2]};};
+    c.positions=span(c.owner+0xC38);c.scales=span(c.owner+0xC44);
+    c.roster=span(reinterpret_cast<uintptr_t>(Addr(0xC0EA78)));
+    const auto&v=c.roster;
+    if(v.begin||v.end||v.capacity) {
+        if(v.begin<0x10000||(v.begin%4)||v.end<v.begin||v.capacity<v.end||(v.end-v.begin)%8||
+           (v.capacity-v.begin)%8||v.capacity-v.begin>1024*1024||v.end-v.begin>MaxEntries*8) {
+            c.owner=0;return c;
+        }
+    }
+    c.rosterHash=1469598103934665603ull;
+    for(uintptr_t a=v.begin;a<v.end;a+=4)c.rosterHash=(c.rosterHash^*reinterpret_cast<const uint32_t*>(a))*1099511628211ull;
+    return c;
+}
+uint64_t CarouselLogicStamp(uintptr_t owner) {
+    uint64_t h=1469598103934665603ull;
+    for(unsigned offset:{0u,0xCu,0x10u,0x24u,0x28u,0x2Cu,0xB18u,0xB1Cu,0xC34u,0xDB4u})
+        h=(h^*reinterpret_cast<const uint32_t*>(owner+offset))*1099511628211ull;
+    return (h^*reinterpret_cast<const uint8_t*>(owner+6))*1099511628211ull;
+}
+void LogCarousel(const char*kind,const highfps::carousel_presentation::Context&c,float alpha,double at) {
+    char line[8192];
+    int used=std::snprintf(line,sizeof line,"[carousel-%s] t=%.6f tick=%u selected=%d target=%d ready=%u cooldown=%d angle=%.9g page=%d count=%u a=%.6f poses=",
+        kind,at,FrameCounter(),*reinterpret_cast<const int*>(c.owner+0x10),
+        *reinterpret_cast<const int*>(c.owner+0xB1C),*reinterpret_cast<const uint8_t*>(c.owner+6),
+        *reinterpret_cast<const int*>(c.owner+0xC),*reinterpret_cast<const float*>(c.owner+0xC34),c.rosterPage,c.count,alpha);
+    const auto*xy=reinterpret_cast<const float*>(c.positions.begin);const auto*scale=reinterpret_cast<const float*>(c.scales.begin);
+    for(unsigned i=0;i<c.count&&used>0&&size_t(used)<sizeof(line);++i) {
+        int n=std::snprintf(line+used,sizeof(line)-size_t(used),"%s%.9g,%.9g,%.9g",i?";":"",xy[2*i],xy[2*i+1],scale[i]);
+        if(n<0||size_t(n)>=sizeof(line)-size_t(used))break;used+=n;
+    }
+    Log("%s",line);
+}
+void SampleCarouselPresentation() {
+    if(!g_separateNativeFrames||!g_carouselPresentationEnabled)return;
+    __try {
+        const auto c=CarouselPresentationContext();
+        if(g_carouselHistory.Sample(c,reinterpret_cast<const float*>(c.positions.begin),reinterpret_cast<const float*>(c.scales.begin))&&
+           g_cfg.diag&&g_carouselFixedLines++<6000)LogCarousel("fixed",c,1.0f,Now());
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        g_carouselHistory.Invalidate();g_carouselPresentationEnabled=false;
+        Log("[warn] carousel sample faulted; native carousel retained");
+    }
+}
+bool ValidateCarouselLayout() {
+    const uint8_t count[]={0x8B,0x97,0x18,0x0B,0,0};
+    const uint8_t positions[]={0x8B,0x97,0x38,0x0C,0,0};
+    const uint8_t scales[]={0x8B,0x87,0x44,0x0C,0,0};
+    const uint8_t writeScale[]={0xF3,0x0F,0x11,0x04,0xB0};
+    const uint8_t writeX[]={0xF3,0x0F,0x11,0x3C,0xF0};
+    const uint8_t writeY[]={0xF3,0x0F,0x11,0x74,0xF0,0x04};
+    return Expect(0x944153,count,sizeof count,"carousel entry count")&&
+        Expect(0x9441CD,positions,sizeof positions,"carousel projected XY vector")&&
+        Expect(0x9441E8,scales,sizeof scales,"carousel scale vector")&&
+        Expect(0x945DF6,writeScale,sizeof writeScale,"carousel canonical scale write")&&
+        Expect(0x945E01,writeX,sizeof writeX,"carousel canonical X write")&&
+        Expect(0x945E0E,writeY,sizeof writeY,"carousel canonical Y write");
+}
 highfps_entity_probe::Runtime* g_entityRenderCache = nullptr;
 highfps_shader_params::Runtime* g_shaderParamsCache = nullptr;
 highfps_input_cache::Runtime* g_inputResultCache = nullptr;
@@ -844,6 +919,7 @@ void EnsureFixedRenderPipeline() {
     if (g_entityRenderCache->Install() && g_shaderParamsCache->Install() &&
         g_inputResultCache->Install() &&
         highfps::native_ui_replay::InstallNativeUiReplay19715(&g_luaFrameIntermediate)) {
+        g_carouselPresentationEnabled=ValidateCarouselLayout();
         g_separateNativeFrames = true;
         if (g_cfg.diag) Log("[pipeline] installation completed in %.2f ms", (Now() - installStarted) * 1000.0);
         Log("[pipeline] fixed Update -> native Render -> GC; presentation replays entity Lua drawing");
@@ -1338,6 +1414,7 @@ int __cdecl HookedUpdateWrapper() {
                 g_inRenderPhase = 0;
             }
             SampleMenuPresentation();
+            SampleCarouselPresentation();
             GarbageCollect19715();
             g_canonicalPresentation.Complete(renderEpoch, g_lifecycleEpoch);
             if (ApplyLifecycleTime() > 0) {
@@ -1477,6 +1554,8 @@ void __cdecl Render19715() {
     const bool audit = g_cfg.diag && g_separateNativeFrames;
     if (audit) before = PureGameplayHash19715();
     highfps::menu_presentation::Scope menuScope;
+    highfps::carousel_presentation::Scope carouselScope;
+    uint64_t carouselLogicBefore=0;
     __try {
         if(g_separateNativeFrames && g_cfg.interpolate && g_menuPresentationEnabled) {
             __try {
@@ -1495,8 +1574,41 @@ void __cdecl Render19715() {
                 Log("[warn] menu viewport preview faulted; native menu presentation retained");
             }
         }
+        if(g_separateNativeFrames&&g_cfg.interpolate&&g_carouselPresentationEnabled) {
+            __try {
+                const auto c=CarouselPresentationContext();
+                if(highfps::carousel_presentation::Active(c))carouselLogicBefore=CarouselLogicStamp(c.owner);
+                if(carouselScope.Begin(g_carouselHistory,c,reinterpret_cast<float*>(c.positions.begin),
+                    reinterpret_cast<float*>(c.scales.begin),g_menuPresentationTime,g_lastWrapperTime,g_luaFrameIntermediate!=0)) {
+                    if(g_cfg.diag&&g_carouselPresentLines++<9000)
+                        LogCarousel("present",c,highfps::menu_presentation::Alpha60(g_menuPresentationTime,g_lastWrapperTime),g_menuPresentationTime);
+                }
+            } __except(EXCEPTION_EXECUTE_HANDLER) {
+                // Begin may already have applied the display poses. A later
+                // diagnostic/read fault must not silently discard restoration.
+                __try { if(carouselScope.Applied())carouselScope.Restore(CarouselPresentationContext()); }
+                __except(EXCEPTION_EXECUTE_HANDLER) {}
+                carouselScope.Abandon();g_carouselHistory.Invalidate();g_carouselPresentationEnabled=false;
+                Log("[warn] carousel display scope faulted; native carousel retained");
+            }
+        }
         reinterpret_cast<void(__cdecl*)()>(Addr(0x94D340))();
     } __finally {
+        __try {
+            if(carouselScope.Applied()) {
+                const auto c=CarouselPresentationContext();
+                if(!carouselScope.Restore(c)) {
+                    g_carouselPresentationEnabled=false;
+                    Log("[carousel-restore] owner, roster or pose changed during presentation; interpolation disabled");
+                } else if(CarouselLogicStamp(c.owner)!=carouselLogicBefore) {
+                    g_carouselHistory.Invalidate();g_carouselPresentationEnabled=false;
+                    Log("[carousel-state] native selection state changed during pure presentation; interpolation disabled");
+                }
+            }
+        } __except(EXCEPTION_EXECUTE_HANDLER) {
+            carouselScope.Abandon();g_carouselPresentationEnabled=false;
+            Log("[warn] carousel restoration faulted; interpolation disabled");
+        }
         __try {
             if(menuScope.Applied() && !menuScope.Restore(MenuPresentationContext()))
                 Log("[menu-restore] owner or viewport changed during presentation; history invalidated");
