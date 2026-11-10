@@ -22,6 +22,7 @@
 #endif
 #include "version.h"
 #include "render_timing.h"
+#include "camera_presentation.h"
 #ifdef HIGHFPS_BUILD_19715
 #include "entity_draw_cache_j374_runtime.h"
 #include "shader_params_cache_j374.h"
@@ -338,35 +339,19 @@ Track* FindTrack(uintptr_t e, bool create) {
 }
 
 // ------------------------------------------------------------- room scroll
-// The render translation is NOT the camera object. Camera+0x60 is only the camera's own
-// focus state; once per 60 Hz frame Camera::DoUpdate maps it through the same 0.65
-// world->screen transform the sprites use, clamps it to the room, and stores the result
-// in Room+0x1204/+0x1208 - and THAT field is what every sprite draw adds (proven live:
-// it steps at exactly 60 Hz no matter what we write into the camera). So this preview
-// operates on the scroll field itself: sampled authoritative once per real frame,
-// advanced by us on every rendered frame, rolled back before every tick.
-//
-// The advance is the player screen-lock: while the offset is scrolling on an axis it
-// moves one-for-one with the player, so we move it with the player's own sub-frame
-// extrapolation - and in the exact quantisation the renderer applies. Every sprite's
-// position term is snapped to the render-target pixel grid BEFORE this offset is added
-// (see kSnapScaleA), so the offset must carry the SNAPPED player movement: staircase and
-// ramp then step in the same instant and the drawn player holds one RT pixel exactly.
-// sTarget is the drawn screen position we hold him at; it follows only the unsnapped
-// legitimate drift (camera easing, room clamps) sampled at real frames.
+// Room scroll is authoritative engine state, sampled once per 60 Hz main tick.
+// Present between its two native samples, independently of player prediction.
+// A camera can ease, stop at room bounds, or move during a frozen-world transition;
+// forcing it to track the player's predicted displacement overshoots those bounds
+// and transfers player prediction corrections into a whole-screen jump.
 struct CamTrack {
     float prev[2];   // authoritative scroll offset two real frames ago
     float cur[2];    // authoritative scroll offset at the last real frame
     bool  applied;   // a preview currently sits in the live field
     bool  valid;     // prev/cur hold two consecutive real samples
-    bool  locked[2]; // per-axis: player currently screen-locked on this axis
-    float sTarget[2];// per-axis: drawn player screen position we hold (snap-anchored)
-    float fb[2];     // per-axis: f(player authoritative pos) at the last real frame
 } g_cam = {};
 
-// The player's sub-frame movement this frame (rendered position minus authoritative), captured
-// while PreviewPass predicts the player and consumed by PreviewCamera to keep him screen-locked.
-// Zero on a real frame and whenever there is no player, so the camera stays authoritative.
+// Player prediction delta is retained for diagnostics only; it never drives room scroll.
 float g_playerRenderDelta[2] = {0.0f, 0.0f};
 
 float* CamField() {
@@ -378,8 +363,7 @@ float* CamField() {
 }
 
 // The player entity, stashed by PreviewPass on every pass (zero when there is none).
-// Both the sample and the preview below need his position, because the lock is defined
-// by where the RENDERER will draw him, not by where the camera is.
+// Used only to identify the player in per-presentation diagnostics.
 uintptr_t g_playerEnt = 0;
 uintptr_t g_interpGame = 0;
 uintptr_t g_interpRoom = 0;
@@ -411,26 +395,6 @@ void EnsureInterpolationScope() {
 }
 
 
-inline bool PlayerValid(uintptr_t e) {
-    return e >= 0x10000 && *reinterpret_cast<uint32_t*>(e + isaac::kEntType) == 1;
-}
-
-// world -> pre-snap screen units, exactly the renderer's mapping (axis 0 = x, 1 = y):
-// every sprite draw computes floor(MapToScreen(pos) * s + 0.5) / s + scrollOffset.
-inline float MapToScreen(int axis, float world) {
-    const float ortho = *reinterpret_cast<float*>(
-        Addr(axis ? isaac::kOrthoHeight : isaac::kOrthoWidth));
-    return (world - (axis ? 140.0f : 60.0f)) * 0.65f
-         + (ortho - (axis ? 182.0f : 338.0f)) * 0.5f;
-}
-
-// RT pixels per screen unit, or 0 while the graphics are not up / values are implausible.
-inline float SnapScale() {
-    const float s = *reinterpret_cast<float*>(Addr(isaac::kSnapScaleA))
-                  * *reinterpret_cast<float*>(Addr(isaac::kSnapScaleB));
-    return (s > 0.01f && s < 1024.0f) ? s : 0.0f;
-}
-
 // A camera step larger than this is a room change or a hard snap, not a scroll, and must not
 // be smeared across. Normal fast scrolling is a few units per 60 Hz frame; a room change is
 // hundreds - so this is deliberately far above the entity threshold, which is tuned for a
@@ -452,12 +416,8 @@ void RollbackCamera() {
     g_cam.applied = false;
 }
 
-// Sample the authoritative scroll offset once per real (60 Hz) frame, right after the
-// engine tick - the engine refreshes it from the camera exactly there. The player is
-// authoritative at the same moment, so this is also where the held screen position
-// follows the legitimate drift: whatever the offset moved beyond mirroring the player's
-// own step (camera easing, room-edge clamps). Both terms unsnapped, both smooth - the
-// sawtooth lives only in the snapped term, and that one is handled by PreviewCamera.
+// Capture native scroll after each complete fixed tick/render. The previous
+// preview was restored before Update; no display position enters this history.
 void SampleCamera() {
     EnsureInterpolationScope();
     float* c = CamField();
@@ -467,16 +427,6 @@ void SampleCamera() {
         const float dx = c[0] - g_cam.cur[0], dy = c[1] - g_cam.cur[1];
         if (dx * dx + dy * dy > kCamMaxStepSq) fresh = true;   // room change / snap
     }
-    const uintptr_t e = g_playerEnt;
-    const bool player = PlayerValid(e);
-    for (int a = 0; a < 2; ++a) {
-        if (fresh || !player) { g_cam.locked[a] = false; continue; }
-        const float fbNew =
-            MapToScreen(a, reinterpret_cast<float*>(e + isaac::kEntPosition)[a]);
-        if (g_cam.locked[a])
-            g_cam.sTarget[a] += (c[a] - g_cam.cur[a]) + (fbNew - g_cam.fb[a]);
-        g_cam.fb[a] = fbNew;
-    }
     g_cam.prev[0] = fresh ? c[0] : g_cam.cur[0];
     g_cam.prev[1] = fresh ? c[1] : g_cam.cur[1];
     g_cam.cur[0] = c[0];
@@ -485,48 +435,16 @@ void SampleCamera() {
     g_cam.applied = false;   // authoritative now; nothing to roll back
 }
 
-// Lock the player to the screen: on any axis the offset is actually scrolling on, it moves
-// one-for-one with the player, so we advance it with the player's own sub-frame
-// extrapolation. On an axis in the dead zone (offset not scrolling this frame) hold still,
-// so a player moving inside the dead zone slides across the screen as it should. cur is the
-// authoritative value the engine's next 60 Hz refresh supersedes, restored by RollbackCamera.
-//
-// The advance is NOT the raw sub-frame delta. The renderer quantises the position term of
-// every sprite to the render-target pixel grid BEFORE adding this offset (see kSnapScaleA in
-// offsets.h). Advancing by the raw delta would hold the player's TRUE screen position while
-// his DRAWN position keeps stepping whole RT pixels every time his world position crosses a
-// grid line: a one-pixel sawtooth against a smoothly scrolling background, on him alone -
-// everything not locked reads the same quantisation as ordinary motion. So the offset is set
-// to (held screen position - SNAPPED player term): staircase and ramp step in the same
-// instant, the sum is exact, and the background inherits a scroll in whole RT pixels - the
-// finest motion the snapped world can show anyway.
-void PreviewCamera(float /*unused*/) {
+// Camera-only display delay is one main tick (16.7 ms). Player input and
+// prediction are unchanged. Sprite snapping remains native; the whole room must
+// never be displaced to cancel a single player's sprite quantization.
+void PreviewCamera(float cameraAlpha) {
     if (!g_cam.valid) return;
     float* c = CamField();
     if (!c) return;
     g_cam.applied = true;
-
-    const float s = SnapScale();
-    const uintptr_t e = g_playerEnt;
-    const bool player = PlayerValid(e);
-    constexpr float kScrollEpsSq = 0.05f * 0.05f;
-    for (int a = 0; a < 2; ++a) {
-        const float d = g_cam.cur[a] - g_cam.prev[a];
-        const bool scrolling = player && d * d > kScrollEpsSq;
-        if (scrolling) {
-            const float fp =
-                MapToScreen(a, reinterpret_cast<float*>(e + isaac::kEntPosition)[a]);
-            const float snapFp = s != 0.0f ? floorf(fp * s + 0.5f) / s : fp;
-            if (!g_cam.locked[a])   // engage where he is drawn right now: no jump
-                g_cam.sTarget[a] = g_cam.cur[a]
-                                 + (s != 0.0f ? floorf(g_cam.fb[a] * s + 0.5f) / s
-                                              : g_cam.fb[a]);
-            c[a] = g_cam.sTarget[a] - snapFp;
-        } else {
-            c[a] = g_cam.cur[a];
-        }
-        g_cam.locked[a] = scrolling;
-    }
+    for (int a = 0; a < 2; ++a)
+        c[a] = highfps::camera_presentation::Axis(g_cam.prev[a], g_cam.cur[a], cameraAlpha);
 }
 
 // ------------------------------------------------------------- diagnosis
@@ -537,7 +455,7 @@ void PreviewCamera(float /*unused*/) {
 // every line IS one rendered frame. Diag=1 in the ini; off, it costs one branch.
 uint32_t g_diagLines = 0;
 
-void DiagDump(bool realFrame, float a30, float a60) {
+void DiagDump(bool realFrame, float a30, float a60, float cameraAlpha) {
     if (!g_cfg.diag || !g_worldAdvancing || g_diagLines > 4000) return;
     uintptr_t e = g_playerEnt;
     if (e < 0x10000) return;
@@ -547,11 +465,11 @@ void DiagDump(bool realFrame, float a30, float a60) {
     const auto* backup = reinterpret_cast<float*>(e + isaac::kEntPosBackup);
     ++g_diagLines;
     Log("[d] t=%.3f k=%u %s p=(%.3f,%.3f) b=(%.3f,%.3f) c=(%.3f,%.3f) cc=(%.3f,%.3f) "
-        "cp=(%.3f,%.3f) pd=(%.3f,%.3f) a30=%.3f a60=%.3f gf=%u",
+        "cp=(%.3f,%.3f) pd=(%.3f,%.3f) a30=%.3f a60=%.3f ac=%.6f gf=%u",
         Now() * 1000.0, FrameCounter(), realFrame ? "R" : "i",
         pos[0], pos[1], backup[0], backup[1], c[0], c[1],
         g_cam.cur[0], g_cam.cur[1], g_cam.prev[0], g_cam.prev[1],
-        g_playerRenderDelta[0], g_playerRenderDelta[1], a30, a60, GameFrame());
+        g_playerRenderDelta[0], g_playerRenderDelta[1], a30, a60, cameraAlpha, GameFrame());
 }
 
 // Byte-for-byte what the engine does at 0x9551F0 before an authoritative tick.
@@ -578,10 +496,10 @@ void RollbackPreviews() {
 // Velocity means different things per type: players are integrated twice per tick, so
 // theirs is a per-1/60 displacement, while everything else is per-1/30. Each therefore
 // gets its own share of its own interval.
-void PreviewPass(float worldAlpha, float playerAlpha) {
+void PreviewPass(float worldAlpha, float playerAlpha, float cameraAlpha) {
     EnsureInterpolationScope();
     if (NativeGamePaused19715()) playerAlpha = 0.0f;
-    g_playerRenderDelta[0] = g_playerRenderDelta[1] = 0.0f;   // no player found -> camera holds
+    g_playerRenderDelta[0] = g_playerRenderDelta[1] = 0.0f;
     g_playerEnt = 0;                                          // re-stashed below if he exists
     ForEachEntity([&](uintptr_t e) {
         if (*reinterpret_cast<uint64_t*>(e + isaac::kEntFlags) & isaac::kFlagNoInterpolate)
@@ -604,7 +522,7 @@ void PreviewPass(float worldAlpha, float playerAlpha) {
             const auto* vel = reinterpret_cast<float*>(e + isaac::kEntVelocity);
             pos[0] = backup[0] + step * vel[0];
             pos[1] = backup[1] + step * vel[1];
-            // Hand the camera the exact sub-frame move so it can keep the player screen-locked.
+            // Record predicted displacement for diagnostics.
             g_playerRenderDelta[0] = pos[0] - backup[0];
             g_playerRenderDelta[1] = pos[1] - backup[1];
             return;
@@ -620,10 +538,8 @@ void PreviewPass(float worldAlpha, float playerAlpha) {
         pos[1] = t->prev[1] + worldAlpha * (t->cur[1] - t->prev[1]);
     });
 
-    // The scroll offset rides the player's timeline (extrapolated), so it is advanced on
-    // real frames too: the drawn frame has to follow the same rule as the intermediate
-    // ones, or the locked player would step once per 60 Hz refresh.
-    PreviewCamera(playerAlpha);
+    // Main-clock camera interpolation also runs while the world/player is frozen.
+    PreviewCamera(cameraAlpha);
 }
 
 // Called right after an authoritative tick, when positions are real and no preview is
@@ -1223,7 +1139,8 @@ int __cdecl HookedUpdateWrapper() {
             __try {
                 PreviewPass(frac(now - g_lastTickTime, kTickPeriod),
                             g_worldAdvancing ? frac(now - g_lastWrapperTime, kWrapperPeriod)
-                                             : 0.0f);
+                                             : 0.0f,
+                            frac(now - g_lastWrapperTime, kWrapperPeriod));
             } __except (EXCEPTION_EXECUTE_HANDLER) {
                 g_previewEnabled = false;
                 Log("[warn] preview pass faulted - intermediate frames disabled, "
@@ -1238,6 +1155,7 @@ int __cdecl HookedUpdateWrapper() {
                 return highfps::RenderAlpha(e, 0, p);
             };
             DiagDump(false, frac(now - g_lastTickTime, kTickPeriod),
+                     frac(now - g_lastWrapperTime, kWrapperPeriod),
                      frac(now - g_lastWrapperTime, kWrapperPeriod));
         }
         // The render that follows shows the mod layer from the last real frame. Nothing
@@ -1367,7 +1285,8 @@ int __cdecl HookedUpdateWrapper() {
                 const double a = (now - g_lastTickTime) / kTickPeriod;
                 const double playerA = (now - g_lastWrapperTime) / kWrapperPeriod;
                 if (!renderHidden) PreviewPass(float(a < 0.0 ? 0.0 : (a > 1.0 ? 1.0 : a)),
-                            g_worldAdvancing ? float(playerA < 0.0 ? 0.0 : (playerA > 1.0 ? 1.0 : playerA)) : 0.0f);
+                            g_worldAdvancing ? float(playerA < 0.0 ? 0.0 : (playerA > 1.0 ? 1.0 : playerA)) : 0.0f,
+                            highfps::RenderAlpha(now, g_lastWrapperTime, kWrapperPeriod));
             } __except (EXCEPTION_EXECUTE_HANDLER) {
                 g_previewEnabled = false;
                 Log("[warn] track sampling faulted - intermediate frames disabled");
@@ -1385,7 +1304,8 @@ int __cdecl HookedUpdateWrapper() {
         const double a = (now - g_lastTickTime) / kTickPeriod;
         const double playerA = (now - g_lastWrapperTime) / kWrapperPeriod;
         DiagDump(true, float(a < 0.0 ? 0.0 : (a > 1.0 ? 1.0 : a)),
-                 float(playerA < 0.0 ? 0.0 : (playerA > 1.0 ? 1.0 : playerA)));
+                 float(playerA < 0.0 ? 0.0 : (playerA > 1.0 ? 1.0 : playerA)),
+                 highfps::RenderAlpha(now, g_lastWrapperTime, kWrapperPeriod));
     }
 
     // A real frame: the render that follows is the one Lua is allowed to draw in, so the
@@ -1398,7 +1318,8 @@ int __cdecl HookedUpdateWrapper() {
         if (g_previewEnabled) {
             __try {
                 PreviewPass(highfps::RenderAlpha(now, g_lastTickTime, kTickPeriod),
-                    g_worldAdvancing ? highfps::RenderAlpha(now, g_lastWrapperTime, kWrapperPeriod) : 0.0f);
+                    g_worldAdvancing ? highfps::RenderAlpha(now, g_lastWrapperTime, kWrapperPeriod) : 0.0f,
+                    highfps::RenderAlpha(now, g_lastWrapperTime, kWrapperPeriod));
             } __except (EXCEPTION_EXECUTE_HANDLER) {
                 g_previewEnabled = false;
                 Log("[warn] presentation preview faulted");
@@ -1406,7 +1327,8 @@ int __cdecl HookedUpdateWrapper() {
         }
         if (g_cfg.diag) {
             DiagDump(true, highfps::RenderAlpha(now, g_lastTickTime, kTickPeriod),
-                g_worldAdvancing ? highfps::RenderAlpha(now, g_lastWrapperTime, kWrapperPeriod) : 0.0f);
+                g_worldAdvancing ? highfps::RenderAlpha(now, g_lastWrapperTime, kWrapperPeriod) : 0.0f,
+                highfps::RenderAlpha(now, g_lastWrapperTime, kWrapperPeriod));
         }
     }
     g_inRenderPhase = 1;
