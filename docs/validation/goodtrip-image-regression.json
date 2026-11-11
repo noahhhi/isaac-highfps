@@ -1,0 +1,622 @@
+{
+  "schema": 1,
+  "date": "2026-11-10",
+  "feature": "GoodTrip held-map and reused Sprite control drawing",
+  "status": "R1 restoration, R4 graphics at90/80Hz, and R5 affected input-cache/graphics path at80Hz verified within measured windows; no remaining planned GoodTrip test for this build",
+  "source_mapping": "Working-tree candidate labels identify the exact tested DLL below; no committed-source mapping or later-binary equivalence is asserted. Lua source and fixture hashes identify actual test inputs.",
+  "method": {
+    "map_box_xyxy": [
+      286,
+      260,
+      402,
+      414
+    ],
+    "map_header_xyxy": [
+      295,
+      265,
+      390,
+      290
+    ],
+    "independent_tab_timer_xyxy": [
+      520,
+      100,
+      760,
+      135
+    ],
+    "control_white_square_xyxy": [
+      1136,
+      665,
+      1160,
+      695
+    ],
+    "gray_pixel": "min(R,G,B)>90 and max(R,G,B)-min(R,G,B)<25",
+    "map_present": "header gray pixels >500",
+    "tab_confirmed": "native timer gray pixels >500",
+    "control_present": "white-square gray pixels >200",
+    "limits": "Each run has a bounded capture window:360 frames native/R1/R4-90,320 frames R4-80. The independent timer selects only the first held-Tab subset. Full-run logs do not establish unseen pixels, teleport or physical VRR."
+  },
+  "cases": {
+    "native60": {
+      "case_id": "goodtrip-native60-keys-20261110",
+      "dll_present_sha256": "4119e933accfafc8f156b511f84916655825607947a9ff345bac32653bbfe9ec",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "6d23529a7b3cde1eb347acfa36a1353c18fc4f3b1583a0a6e11f995c69e31d46",
+      "mod_main_lua_sha256": "1843d75a740e869ef94640003052053d567febeac25b0e56774352a8aff5714b",
+      "artifact_manifest_sha256": "b232056824824cb38b30f0520b97b115ceb0f06748b8c1a384aa2556d874541a",
+      "game_log_sha256": "f61e1a39b47dc678984b2bda2291bf1bb36896b5fd6c484b4fc4c12994863951",
+      "label": "native60, HighFPS disabled",
+      "highfps_enabled": false,
+      "fixture_done": true,
+      "counters": {
+        "t": 540,
+        "gf": 555,
+        "r": 1080,
+        "u": 541,
+        "map": 720,
+        "ui": 720,
+        "tab": 720,
+        "query": 12960,
+        "nilq": 0,
+        "mapq": 0
+      },
+      "images": {
+        "total": 360,
+        "capture_duration_s": 5.979343,
+        "tab_confirmed": 242,
+        "tab_frame_indices": [
+          118,
+          359
+        ],
+        "tab_capture_time_s": [
+          1.981085,
+          5.997247
+        ],
+        "map_present_during_confirmed_tab": 242,
+        "map_missing_during_confirmed_tab": 0,
+        "control_present_all_capture": 360,
+        "map_box_mae_vs_native180_during_tab": {
+          "n": 242,
+          "mean": 0.048975,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0,
+          "max": 7.801929
+        },
+        "stable_map_box_mae_vs_native180": {
+          "n": 242,
+          "mean": 0.048975,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0,
+          "max": 7.801929
+        },
+        "capture_tab_interval_ms": {
+          "n": 241,
+          "mean": 16.66457,
+          "p50": 16.833542,
+          "p95": 17.087222,
+          "p99": 17.866179,
+          "max": 18.077093
+        }
+      },
+      "native_present_hold_interior_ms": null,
+      "native_present_hold_interior_over_16p667ms": null,
+      "all_logged_buckets": {
+        "callback2": null,
+        "shader_rejects": null,
+        "unsafe_log_lines": null,
+        "note": "Buckets include startup/trailing activity; not fixture-only callback totals."
+      }
+    },
+    "old90": {
+      "case_id": "goodtrip-old90-keys-20261110",
+      "dll_present_sha256": "4119e933accfafc8f156b511f84916655825607947a9ff345bac32653bbfe9ec",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "6d23529a7b3cde1eb347acfa36a1353c18fc4f3b1583a0a6e11f995c69e31d46",
+      "mod_main_lua_sha256": "1843d75a740e869ef94640003052053d567febeac25b0e56774352a8aff5714b",
+      "artifact_manifest_sha256": "51379c3b0a13dc1f738bb1cc9feb8c714007d10f6dcdab018d90e9255144699e",
+      "game_log_sha256": "2241c36c5bd7adaec546e25d804b630212e9c20cac8cdf252482084248ed78b1",
+      "label": "0.13.0-j374.4 before repair",
+      "highfps_enabled": true,
+      "fixture_done": true,
+      "counters": {
+        "t": 540,
+        "gf": 555,
+        "r": 1080,
+        "u": 541,
+        "map": 720,
+        "ui": 720,
+        "tab": 720,
+        "query": 12960,
+        "nilq": 0,
+        "mapq": 0
+      },
+      "images": {
+        "total": 360,
+        "capture_duration_s": 3.985279,
+        "tab_confirmed": 184,
+        "tab_frame_indices": [
+          176,
+          359
+        ],
+        "tab_capture_time_s": [
+          1.95782,
+          3.991163
+        ],
+        "map_present_during_confirmed_tab": 0,
+        "map_missing_during_confirmed_tab": 184,
+        "control_present_all_capture": 0,
+        "map_box_mae_vs_native180_during_tab": {
+          "n": 184,
+          "mean": 58.724735,
+          "p50": 58.724735,
+          "p95": 58.724735,
+          "p99": 58.724735,
+          "max": 58.724735
+        },
+        "stable_map_box_mae_vs_native180": null,
+        "capture_tab_interval_ms": {
+          "n": 183,
+          "mean": 11.111165,
+          "p50": 11.112888,
+          "p95": 12.863555,
+          "p99": 13.117937,
+          "max": 14.35881
+        }
+      },
+      "native_present_hold_interior_ms": {
+        "n": 990,
+        "mean": 11.111068,
+        "p50": 11.11,
+        "p95": 11.16155,
+        "p99": 11.20355,
+        "max": 11.341
+      },
+      "native_present_hold_interior_over_16p667ms": 0,
+      "all_logged_buckets": {
+        "callback2": {
+          "canonical": 1392,
+          "hits": 435,
+          "misses": 1620
+        },
+        "shader_rejects": 1080,
+        "unsafe_log_lines": 0,
+        "note": "Buckets include startup/trailing activity; not fixture-only callback totals."
+      }
+    },
+    "fixed90": {
+      "case_id": "goodtrip-fixed90-keys-20261110",
+      "dll_present_sha256": "0221770be17b98e339bc7fb8de0ab322406d93f2fe9d721c4a3a640bc74785d1",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "6d23529a7b3cde1eb347acfa36a1353c18fc4f3b1583a0a6e11f995c69e31d46",
+      "mod_main_lua_sha256": "1843d75a740e869ef94640003052053d567febeac25b0e56774352a8aff5714b",
+      "artifact_manifest_sha256": "fdb5f05083be73b9ef53a23675defd643212fe85580c9bfd2d6a4eb3bbb8414d",
+      "game_log_sha256": "5d96b4973c2ae72241c92fdb43034041e9f8cd933f10c523dde379fc0644991b",
+      "label": "R1 working-tree repair",
+      "highfps_enabled": true,
+      "fixture_done": true,
+      "counters": {
+        "t": 540,
+        "gf": 555,
+        "r": 1080,
+        "u": 541,
+        "map": 720,
+        "ui": 720,
+        "tab": 720,
+        "query": 12960,
+        "nilq": 0,
+        "mapq": 0
+      },
+      "images": {
+        "total": 360,
+        "capture_duration_s": 3.984994,
+        "tab_confirmed": 180,
+        "tab_frame_indices": [
+          180,
+          359
+        ],
+        "tab_capture_time_s": [
+          2.012419,
+          4.002546
+        ],
+        "map_present_during_confirmed_tab": 180,
+        "map_missing_during_confirmed_tab": 0,
+        "control_present_all_capture": 360,
+        "map_box_mae_vs_native180_during_tab": {
+          "n": 180,
+          "mean": 0.109188,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 4.837955,
+          "max": 7.801929
+        },
+        "stable_map_box_mae_vs_native180": {
+          "n": 180,
+          "mean": 0.109188,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 4.837955,
+          "max": 7.801929
+        },
+        "capture_tab_interval_ms": {
+          "n": 179,
+          "mean": 11.118028,
+          "p50": 11.069128,
+          "p95": 12.722297,
+          "p99": 13.474349,
+          "max": 14.72208
+        }
+      },
+      "native_present_hold_interior_ms": {
+        "n": 990,
+        "mean": 11.111109,
+        "p50": 11.111,
+        "p95": 11.18155,
+        "p99": 11.23022,
+        "max": 12.049
+      },
+      "native_present_hold_interior_over_16p667ms": 0,
+      "all_logged_buckets": {
+        "callback2": {
+          "canonical": 1392,
+          "hits": 2059,
+          "misses": 0
+        },
+        "shader_rejects": 0,
+        "unsafe_log_lines": 0,
+        "note": "Buckets include startup/trailing activity; not fixture-only callback totals."
+      }
+    },
+    "R4_90": {
+      "case_id": "goodtrip-r4-90-20261110",
+      "label": "R4 working-tree graphics candidate",
+      "requested_hz": 90,
+      "highfps_enabled": true,
+      "dll_present_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "6d23529a7b3cde1eb347acfa36a1353c18fc4f3b1583a0a6e11f995c69e31d46",
+      "mod_main_lua_sha256": "1843d75a740e869ef94640003052053d567febeac25b0e56774352a8aff5714b",
+      "artifact_manifest_sha256": "17b5ab2456a81c600a99ee4fd1cb5e50e39aff6e5f8a219a94004de14dbe4cd3",
+      "game_log_sha256": "48e645ca1d674608dfb0e63b3f4da066e30af3520d35560b39dfc6d6b275c598",
+      "capture_manifest_sha256": "9cfcdf234afb9d93993c95d85bd51d8df4ca9a53b3a6f4af6026fa61a3b8ece2",
+      "fixture_done": true,
+      "counters": {
+        "t": 540,
+        "gf": 555,
+        "r": 1080,
+        "u": 541,
+        "map": 721,
+        "ui": 721,
+        "tab": 721,
+        "query": 12960,
+        "nilq": 0,
+        "mapq": 0
+      },
+      "images": {
+        "total": 360,
+        "capture_duration_s": 3.987317,
+        "tab_confirmed": 185,
+        "tab_frame_indices": [
+          175,
+          359
+        ],
+        "tab_capture_time_s": [
+          1.95397,
+          3.999063
+        ],
+        "map_present_during_confirmed_tab": 185,
+        "map_missing_during_confirmed_tab": 0,
+        "control_present_all_capture": 360,
+        "map_box_mae_vs_native180_during_tab": {
+          "n": 185,
+          "mean": 0.085957,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 4.050063,
+          "max": 7.801929
+        },
+        "stable_map_box_mae_vs_native180": {
+          "n": 185,
+          "mean": 0.085957,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 4.050063,
+          "max": 7.801929
+        },
+        "capture_tab_interval_ms": {
+          "n": 184,
+          "mean": 11.114637,
+          "p50": 11.077178,
+          "p95": 12.495331,
+          "p99": 12.92147,
+          "max": 12.982769
+        }
+      },
+      "native_present_hold_interior_ms": {
+        "n": 990,
+        "mean": 11.111171,
+        "p50": 11.111,
+        "p95": 11.182,
+        "p99": 11.215,
+        "max": 11.302
+      },
+      "native_present_hold_interior_over_1p5_period": 0,
+      "all_logged_buckets": {
+        "callback2": {
+          "canonical": 1375,
+          "hits": 2058,
+          "misses": 0
+        },
+        "shader_rejects": 0,
+        "unsafe_log_lines": 0,
+        "note": "Includes startup/trailing activity; not fixture-only totals."
+      },
+      "real_tab_events": [
+        {
+          "fixture_tick": 60,
+          "held": true,
+          "wall_seconds": 1.9445365350002248
+        },
+        {
+          "fixture_tick": 240,
+          "held": false,
+          "wall_seconds": 7.953678269001102
+        },
+        {
+          "fixture_tick": 300,
+          "held": true,
+          "wall_seconds": 9.952029561001837
+        },
+        {
+          "fixture_tick": 480,
+          "held": false,
+          "wall_seconds": 15.949943118001102
+        }
+      ],
+      "real_tab_hold_seconds": [
+        6.0091417340008775,
+        5.997913556999265
+      ],
+      "counter_comparison_note": "Main Lua renders1080 and elapsed world ticks540 match native. Map/UI/Tab paths are721 versus720 in the earlier native/R1 runs; preserve this one-call difference. Real OS key delivery is not a frame-perfect input schedule; boundary sampling is a possible explanation, not a proven cause."
+    },
+    "R4_80": {
+      "case_id": "goodtrip-r4-80-20261110",
+      "label": "R4 working-tree graphics candidate",
+      "requested_hz": 80,
+      "highfps_enabled": true,
+      "dll_present_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "6d23529a7b3cde1eb347acfa36a1353c18fc4f3b1583a0a6e11f995c69e31d46",
+      "mod_main_lua_sha256": "1843d75a740e869ef94640003052053d567febeac25b0e56774352a8aff5714b",
+      "artifact_manifest_sha256": "17b5ab2456a81c600a99ee4fd1cb5e50e39aff6e5f8a219a94004de14dbe4cd3",
+      "game_log_sha256": "e2cd46ae8389fd15a2b9cc2fde5123a04c126aa4d965307840365b8919ddbeb0",
+      "capture_manifest_sha256": "23ddaa6c8ecd06a5656bb833212e8a67f18671885cbce4017752ac782df1b555",
+      "fixture_done": true,
+      "counters": {
+        "t": 540,
+        "gf": 555,
+        "r": 1080,
+        "u": 541,
+        "map": 721,
+        "ui": 721,
+        "tab": 721,
+        "query": 12960,
+        "nilq": 0,
+        "mapq": 0
+      },
+      "images": {
+        "total": 320,
+        "capture_duration_s": 3.985656,
+        "tab_confirmed": 159,
+        "tab_frame_indices": [
+          161,
+          319
+        ],
+        "tab_capture_time_s": [
+          2.014648,
+          3.990361
+        ],
+        "map_present_during_confirmed_tab": 159,
+        "map_missing_during_confirmed_tab": 0,
+        "control_present_all_capture": 320,
+        "map_box_mae_vs_native180_during_tab": {
+          "n": 159,
+          "mean": 0.12361,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 5.625847,
+          "max": 7.801929
+        },
+        "stable_map_box_mae_vs_native180": {
+          "n": 159,
+          "mean": 0.12361,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 5.625847,
+          "max": 7.801929
+        },
+        "capture_tab_interval_ms": {
+          "n": 158,
+          "mean": 12.504515,
+          "p50": 12.321653,
+          "p95": 13.683063,
+          "p99": 13.854259,
+          "max": 14.056009
+        }
+      },
+      "native_present_hold_interior_ms": {
+        "n": 880,
+        "mean": 12.499965,
+        "p50": 12.499,
+        "p95": 12.568,
+        "p99": 12.60842,
+        "max": 12.825
+      },
+      "native_present_hold_interior_over_1p5_period": 0,
+      "all_logged_buckets": {
+        "callback2": {
+          "canonical": 1386,
+          "hits": 1844,
+          "misses": 0
+        },
+        "shader_rejects": 0,
+        "unsafe_log_lines": 0,
+        "note": "Includes startup/trailing activity; not fixture-only totals."
+      },
+      "real_tab_events": [
+        {
+          "fixture_tick": 60,
+          "held": true,
+          "wall_seconds": 1.9174911160007468
+        },
+        {
+          "fixture_tick": 240,
+          "held": false,
+          "wall_seconds": 7.915268873002788
+        },
+        {
+          "fixture_tick": 300,
+          "held": true,
+          "wall_seconds": 9.923953032001009
+        },
+        {
+          "fixture_tick": 480,
+          "held": false,
+          "wall_seconds": 15.921637498002383
+        }
+      ],
+      "real_tab_hold_seconds": [
+        5.997777757002041,
+        5.997684466001374
+      ],
+      "counter_comparison_note": "Main Lua renders1080 and elapsed world ticks540 match native. Map/UI/Tab paths are721 versus720 in the earlier native/R1 runs; preserve this one-call difference. Real OS key delivery is not a frame-perfect input schedule; boundary sampling is a possible explanation, not a proven cause."
+    },
+    "R5_80": {
+      "case_id": "goodtrip-r5-80-20261110",
+      "label": "R5 affected input-cache/graphics verification",
+      "requested_hz": 80,
+      "highfps_enabled": true,
+      "dll_present_sha256": "1a2b77b5cc0ba4fc63890f9d08e09a43674d7c4cf32506f9ef446cb46af8c139",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "6d23529a7b3cde1eb347acfa36a1353c18fc4f3b1583a0a6e11f995c69e31d46",
+      "mod_main_lua_sha256": "1843d75a740e869ef94640003052053d567febeac25b0e56774352a8aff5714b",
+      "artifact_manifest_sha256": "5ba2056610f8aa2fa8374f67f1100801de02131f4eebecb8dcb3d738bdab2d0e",
+      "game_log_sha256": "77e1d144514dd57650f7082d11288f630b867f3ffdc05e6101a62e6bd2ed29a1",
+      "capture_manifest_sha256": "89118cd00df8593fa0b174960b403d2c6b40b4cf53038bb0d52c964308e90f46",
+      "fixture_done": true,
+      "counters": {
+        "t": 540,
+        "gf": 555,
+        "r": 1080,
+        "u": 541,
+        "map": 721,
+        "ui": 721,
+        "tab": 721,
+        "query": 12960,
+        "nilq": 0,
+        "mapq": 0
+      },
+      "images": {
+        "total": 320,
+        "capture_duration_s": 3.986348,
+        "tab_confirmed": 162,
+        "tab_frame_indices": [
+          158,
+          319
+        ],
+        "tab_capture_time_s": [
+          1.982117,
+          3.994235
+        ],
+        "map_present_during_confirmed_tab": 162,
+        "map_missing_during_confirmed_tab": 0,
+        "control_present_all_capture": 320,
+        "map_box_mae_vs_native180_during_tab": {
+          "n": 162,
+          "mean": 0.169988,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 5.513291,
+          "max": 11.635972
+        },
+        "stable_map_box_mae_vs_native180": {
+          "n": 162,
+          "mean": 0.169988,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 5.513291,
+          "max": 11.635972
+        },
+        "capture_tab_interval_ms": {
+          "n": 161,
+          "mean": 12.497628,
+          "p50": 12.435809,
+          "p95": 13.92396,
+          "p99": 14.154736,
+          "max": 14.186599
+        }
+      },
+      "native_present_hold_interior_ms": {
+        "n": 880,
+        "mean": 12.500114,
+        "p50": 12.499,
+        "p95": 12.571,
+        "p99": 12.62647,
+        "max": 12.757
+      },
+      "native_present_hold_interior_over_1p5_period": 0,
+      "all_logged_buckets": {
+        "callback2": {
+          "canonical": 1375,
+          "hits": 1829,
+          "misses": 0
+        },
+        "shader_rejects": 0,
+        "unsafe_log_lines": 0,
+        "note": "Includes startup/trailing activity; not fixture-only totals."
+      },
+      "diagnostic_lines": {
+        "[input-cache-miss]": 0,
+        "[entity-cache-miss]": 0,
+        "[pure-state]": 0,
+        "[pure-lua]": 0,
+        "[FATAL]": 0
+      },
+      "real_tab_events": [
+        {
+          "fixture_tick": 60,
+          "held": true,
+          "wall_seconds": 1.9691385309997713
+        },
+        {
+          "fixture_tick": 240,
+          "held": false,
+          "wall_seconds": 7.962942704998568
+        },
+        {
+          "fixture_tick": 300,
+          "held": true,
+          "wall_seconds": 9.961256826998579
+        },
+        {
+          "fixture_tick": 480,
+          "held": false,
+          "wall_seconds": 15.964738097998634
+        }
+      ],
+      "real_tab_hold_seconds": [
+        5.993804173998797,
+        6.003481271000055
+      ],
+      "counter_comparison_note": "Main Lua renders1080 and elapsed world ticks540 match native. Map/UI/Tab paths721 match R4 but differ by one from earlier native/R1 runs720. Keep this real-input boundary variance; no exact input-edge equivalence or proven cause is claimed.",
+      "viewed_capture": "frame-0240.jpg: actual extra map, native Tab timer and independent Sprite control visible.",
+      "initial_map_reveal": "The first four selected map frames158\u2013161 differ from the settled native reference during UI reveal; all frames162\u2013319 have map-region RGB MAE0. This explains the higher early maximum without claiming every selected frame is identical."
+    }
+  },
+  "scope_limits": [
+    "Real Tab input in the verified isolated display; the Lua input hook alone did not drive direct Input.* queries.",
+    "Only the first-hold captured subset is a pixel claim; complete two-hold logs establish callback counts, not unseen pixels.",
+    "Stationary scene; teleport, cursor navigation, all mod features and physical VRR are not covered.",
+    "No third-party mod source/resources, game binaries, captures, save data, private paths or complete mod list are bundled."
+  ]
+}

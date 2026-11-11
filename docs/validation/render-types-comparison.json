@@ -1,0 +1,916 @@
+{
+  "schema": "isaac-highfps-public-validation-v1",
+  "source_summary": "render-types-comparison.json",
+  "source_summary_sha256": "98b281f629709835d2d53faff7701ce95229ef3c4dd05fd085b2e791823994fd",
+  "scope_note": "Quantified results apply to the identified artifacts and cases; no game files, mod lists or private paths are included.",
+  "cases": [
+    {
+      "case_id": "types-native60",
+      "artifacts": {
+        "dll_sha256": "1805a3c7e0f9e5bdf5c01a51a0f8e049cebf6a0c856659d18ee1f645bf3c6c1d",
+        "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "02b7e38c54fb072716d4445cef0e5558a4a865957bfbaf90068e445b3f4fe760"
+      },
+      "complete": true,
+      "coverage": {
+        "MAIN": {
+          "type": "MAIN",
+          "observed": 1.0,
+          "callbacks": 706.0,
+          "spawned": 0.0,
+          "spawn_failed": 0.0
+        },
+        "PLAYER": {
+          "type": "PLAYER",
+          "observed": 1.0,
+          "callbacks": 706.0,
+          "spawned": 0.0,
+          "spawn_failed": 0.0
+        },
+        "FAMILIAR": {
+          "type": "FAMILIAR",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        },
+        "NPC": {
+          "type": "NPC",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        },
+        "PICKUP": {
+          "type": "PICKUP",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        },
+        "TEAR": {
+          "type": "TEAR",
+          "observed": 1.0,
+          "callbacks": 476.0,
+          "spawned": 9.0,
+          "spawn_failed": 0.0
+        },
+        "PROJECTILE": {
+          "type": "PROJECTILE",
+          "observed": 1.0,
+          "callbacks": 498.0,
+          "spawned": 9.0,
+          "spawn_failed": 0.0
+        },
+        "LASER": {
+          "type": "LASER",
+          "observed": 1.0,
+          "callbacks": 535.0,
+          "spawned": 5.0,
+          "spawn_failed": 0.0
+        },
+        "KNIFE": {
+          "type": "KNIFE",
+          "observed": 1.0,
+          "callbacks": 9.0,
+          "spawned": 9.0,
+          "spawn_failed": 0.0
+        },
+        "EFFECT": {
+          "type": "EFFECT",
+          "observed": 1.0,
+          "callbacks": 430.0,
+          "spawned": 5.0,
+          "spawn_failed": 0.0
+        },
+        "BOMB": {
+          "type": "BOMB",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        }
+      },
+      "all_11_callbacks_observed": true,
+      "f60_to_300": {
+        "seconds": 7.9990000000000006,
+        "game_hz": 30.003750468808597,
+        "callback_deltas": {
+          "MAIN": 480.0,
+          "PLAYER": 480.0,
+          "FAMILIAR": 480.0,
+          "NPC": 480.0,
+          "PICKUP": 480.0,
+          "TEAR": 422.0,
+          "PROJECTILE": 444.0,
+          "LASER": 428.0,
+          "KNIFE": 8.0,
+          "EFFECT": 344.0,
+          "BOMB": 480.0
+        },
+        "callback_per_second": {
+          "MAIN": 60.007500937617195,
+          "PLAYER": 60.007500937617195,
+          "FAMILIAR": 60.007500937617195,
+          "NPC": 60.007500937617195,
+          "PICKUP": 60.007500937617195,
+          "TEAR": 52.75659457432179,
+          "PROJECTILE": 55.50693836729591,
+          "LASER": 53.506688336042004,
+          "KNIFE": 1.0001250156269532,
+          "EFFECT": 43.005375671958994,
+          "BOMB": 60.007500937617195
+        }
+      },
+      "native": {
+        "available": false
+      }
+    },
+    {
+      "case_id": "types-unified100",
+      "artifacts": {
+        "dll_sha256": "1805a3c7e0f9e5bdf5c01a51a0f8e049cebf6a0c856659d18ee1f645bf3c6c1d",
+        "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "02b7e38c54fb072716d4445cef0e5558a4a865957bfbaf90068e445b3f4fe760"
+      },
+      "complete": true,
+      "coverage": {
+        "MAIN": {
+          "type": "MAIN",
+          "observed": 1.0,
+          "callbacks": 706.0,
+          "spawned": 0.0,
+          "spawn_failed": 0.0
+        },
+        "PLAYER": {
+          "type": "PLAYER",
+          "observed": 1.0,
+          "callbacks": 706.0,
+          "spawned": 0.0,
+          "spawn_failed": 0.0
+        },
+        "FAMILIAR": {
+          "type": "FAMILIAR",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        },
+        "NPC": {
+          "type": "NPC",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        },
+        "PICKUP": {
+          "type": "PICKUP",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        },
+        "TEAR": {
+          "type": "TEAR",
+          "observed": 1.0,
+          "callbacks": 474.0,
+          "spawned": 9.0,
+          "spawn_failed": 0.0
+        },
+        "PROJECTILE": {
+          "type": "PROJECTILE",
+          "observed": 1.0,
+          "callbacks": 500.0,
+          "spawned": 9.0,
+          "spawn_failed": 0.0
+        },
+        "LASER": {
+          "type": "LASER",
+          "observed": 1.0,
+          "callbacks": 535.0,
+          "spawned": 5.0,
+          "spawn_failed": 0.0
+        },
+        "KNIFE": {
+          "type": "KNIFE",
+          "observed": 1.0,
+          "callbacks": 9.0,
+          "spawned": 9.0,
+          "spawn_failed": 0.0
+        },
+        "EFFECT": {
+          "type": "EFFECT",
+          "observed": 1.0,
+          "callbacks": 430.0,
+          "spawned": 5.0,
+          "spawn_failed": 0.0
+        },
+        "BOMB": {
+          "type": "BOMB",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        }
+      },
+      "all_11_callbacks_observed": true,
+      "f60_to_300": {
+        "seconds": 7.9990000000000006,
+        "game_hz": 30.003750468808597,
+        "callback_deltas": {
+          "MAIN": 480.0,
+          "PLAYER": 480.0,
+          "FAMILIAR": 480.0,
+          "NPC": 480.0,
+          "PICKUP": 480.0,
+          "TEAR": 420.0,
+          "PROJECTILE": 444.0,
+          "LASER": 428.0,
+          "KNIFE": 8.0,
+          "EFFECT": 344.0,
+          "BOMB": 480.0
+        },
+        "callback_per_second": {
+          "MAIN": 60.007500937617195,
+          "PLAYER": 60.007500937617195,
+          "FAMILIAR": 60.007500937617195,
+          "NPC": 60.007500937617195,
+          "PICKUP": 60.007500937617195,
+          "TEAR": 52.50656332041505,
+          "PROJECTILE": 55.50693836729591,
+          "LASER": 53.506688336042004,
+          "KNIFE": 1.0001250156269532,
+          "EFFECT": 43.005375671958994,
+          "BOMB": 60.007500937617195
+        }
+      },
+      "native": {
+        "available": true,
+        "actual_swap_configuration": [
+          "[present] actual swap interval=1, display=100 Hz, requested render cap=0"
+        ],
+        "present_samples": 804,
+        "median_present_ms": 9.998999999999999,
+        "median_present_hz": 100.01000100010002,
+        "main_manager_hz_regression": 59.9923142565795,
+        "between_presents_manager_tick_steps": {
+          "0": 322,
+          "1": 481
+        },
+        "pure_state_or_lua_reports": [],
+        "unsafe_cache_reports": [],
+        "resource_or_shader_rejects": [],
+        "nonzero_ui_miss_or_restore_reports": [],
+        "cache_counters": {
+          "MAIN": {
+            "canonical": 972,
+            "replayHit": 1575,
+            "replayMiss": 0,
+            "buckets": 17
+          },
+          "PLAYER": {
+            "canonical": 972,
+            "replayHit": 1575,
+            "replayMiss": 0,
+            "buckets": 17
+          },
+          "EFFECT": {
+            "canonical": 3147,
+            "replayHit": 5130,
+            "replayMiss": 22,
+            "buckets": 15
+          },
+          "FAMILIAR": {
+            "canonical": 697,
+            "replayHit": 1149,
+            "replayMiss": 0,
+            "buckets": 12
+          },
+          "NPC": {
+            "canonical": 697,
+            "replayHit": 1149,
+            "replayMiss": 0,
+            "buckets": 12
+          },
+          "PICKUP": {
+            "canonical": 697,
+            "replayHit": 1149,
+            "replayMiss": 0,
+            "buckets": 12
+          },
+          "TEAR": {
+            "canonical": 474,
+            "replayHit": 779,
+            "replayMiss": 0,
+            "buckets": 10
+          },
+          "PROJECTILE": {
+            "canonical": 500,
+            "replayHit": 820,
+            "replayMiss": 0,
+            "buckets": 10
+          },
+          "LASER": {
+            "canonical": 540,
+            "replayHit": 890,
+            "replayMiss": 0,
+            "buckets": 11
+          },
+          "KNIFE": {
+            "canonical": 18,
+            "replayHit": 25,
+            "replayMiss": 0,
+            "buckets": 9
+          },
+          "BOMB": {
+            "canonical": 697,
+            "replayHit": 1149,
+            "replayMiss": 0,
+            "buckets": 12
+          }
+        }
+      }
+    },
+    {
+      "case_id": "types-unified45",
+      "artifacts": {
+        "dll_sha256": "1805a3c7e0f9e5bdf5c01a51a0f8e049cebf6a0c856659d18ee1f645bf3c6c1d",
+        "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "02b7e38c54fb072716d4445cef0e5558a4a865957bfbaf90068e445b3f4fe760"
+      },
+      "complete": true,
+      "coverage": {
+        "MAIN": {
+          "type": "MAIN",
+          "observed": 1.0,
+          "callbacks": 706.0,
+          "spawned": 0.0,
+          "spawn_failed": 0.0
+        },
+        "PLAYER": {
+          "type": "PLAYER",
+          "observed": 1.0,
+          "callbacks": 706.0,
+          "spawned": 0.0,
+          "spawn_failed": 0.0
+        },
+        "FAMILIAR": {
+          "type": "FAMILIAR",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        },
+        "NPC": {
+          "type": "NPC",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        },
+        "PICKUP": {
+          "type": "PICKUP",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        },
+        "TEAR": {
+          "type": "TEAR",
+          "observed": 1.0,
+          "callbacks": 474.0,
+          "spawned": 9.0,
+          "spawn_failed": 0.0
+        },
+        "PROJECTILE": {
+          "type": "PROJECTILE",
+          "observed": 1.0,
+          "callbacks": 498.0,
+          "spawned": 9.0,
+          "spawn_failed": 0.0
+        },
+        "LASER": {
+          "type": "LASER",
+          "observed": 1.0,
+          "callbacks": 535.0,
+          "spawned": 5.0,
+          "spawn_failed": 0.0
+        },
+        "KNIFE": {
+          "type": "KNIFE",
+          "observed": 1.0,
+          "callbacks": 9.0,
+          "spawned": 9.0,
+          "spawn_failed": 0.0
+        },
+        "EFFECT": {
+          "type": "EFFECT",
+          "observed": 1.0,
+          "callbacks": 430.0,
+          "spawned": 5.0,
+          "spawn_failed": 0.0
+        },
+        "BOMB": {
+          "type": "BOMB",
+          "observed": 1.0,
+          "callbacks": 600.0,
+          "spawned": 1.0,
+          "spawn_failed": 0.0
+        }
+      },
+      "all_11_callbacks_observed": true,
+      "f60_to_300": {
+        "seconds": 8.0,
+        "game_hz": 30.0,
+        "callback_deltas": {
+          "MAIN": 480.0,
+          "PLAYER": 480.0,
+          "FAMILIAR": 480.0,
+          "NPC": 480.0,
+          "PICKUP": 480.0,
+          "TEAR": 422.0,
+          "PROJECTILE": 442.0,
+          "LASER": 428.0,
+          "KNIFE": 8.0,
+          "EFFECT": 344.0,
+          "BOMB": 480.0
+        },
+        "callback_per_second": {
+          "MAIN": 60.0,
+          "PLAYER": 60.0,
+          "FAMILIAR": 60.0,
+          "NPC": 60.0,
+          "PICKUP": 60.0,
+          "TEAR": 52.75,
+          "PROJECTILE": 55.25,
+          "LASER": 53.5,
+          "KNIFE": 1.0,
+          "EFFECT": 43.0,
+          "BOMB": 60.0
+        }
+      },
+      "native": {
+        "available": true,
+        "actual_swap_configuration": [
+          "[present] actual swap interval=1, display=45 Hz, requested render cap=0"
+        ],
+        "present_samples": 362,
+        "median_present_ms": 22.221999999999998,
+        "median_present_hz": 45.000450004500046,
+        "main_manager_hz_regression": 60.00421226272562,
+        "between_presents_manager_tick_steps": {
+          "1": 241,
+          "2": 120
+        },
+        "pure_state_or_lua_reports": [],
+        "unsafe_cache_reports": [],
+        "resource_or_shader_rejects": [],
+        "nonzero_ui_miss_or_restore_reports": [],
+        "cache_counters": {
+          "MAIN": {
+            "canonical": 928,
+            "replayHit": 679,
+            "replayMiss": 0,
+            "buckets": 16
+          },
+          "PLAYER": {
+            "canonical": 928,
+            "replayHit": 679,
+            "replayMiss": 0,
+            "buckets": 16
+          },
+          "EFFECT": {
+            "canonical": 3490,
+            "replayHit": 2584,
+            "replayMiss": 3,
+            "buckets": 15
+          },
+          "FAMILIAR": {
+            "canonical": 649,
+            "replayHit": 482,
+            "replayMiss": 0,
+            "buckets": 11
+          },
+          "NPC": {
+            "canonical": 649,
+            "replayHit": 482,
+            "replayMiss": 0,
+            "buckets": 11
+          },
+          "PICKUP": {
+            "canonical": 649,
+            "replayHit": 482,
+            "replayMiss": 0,
+            "buckets": 11
+          },
+          "TEAR": {
+            "canonical": 474,
+            "replayHit": 352,
+            "replayMiss": 0,
+            "buckets": 10
+          },
+          "PROJECTILE": {
+            "canonical": 498,
+            "replayHit": 370,
+            "replayMiss": 0,
+            "buckets": 10
+          },
+          "LASER": {
+            "canonical": 540,
+            "replayHit": 401,
+            "replayMiss": 0,
+            "buckets": 11
+          },
+          "KNIFE": {
+            "canonical": 18,
+            "replayHit": 17,
+            "replayMiss": 0,
+            "buckets": 9
+          },
+          "BOMB": {
+            "canonical": 649,
+            "replayHit": 482,
+            "replayMiss": 0,
+            "buckets": 11
+          }
+        }
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "same_seed_fixture_exe": true,
+      "same_enabled_lua_modset": true,
+      "actual_presentation_observed": true,
+      "common_snapshot_game_ticks": [
+        15,
+        30,
+        45,
+        60,
+        75,
+        90,
+        105,
+        120,
+        135,
+        150,
+        165,
+        180,
+        195,
+        210,
+        225,
+        240,
+        255,
+        270,
+        285,
+        300,
+        315,
+        330
+      ],
+      "per_type": {
+        "MAIN": {
+          "baseline_total": 706.0,
+          "trial_total": 706.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": null
+        },
+        "PLAYER": {
+          "baseline_total": 706.0,
+          "trial_total": 706.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "FAMILIAR": {
+          "baseline_total": 600.0,
+          "trial_total": 600.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "NPC": {
+          "baseline_total": 600.0,
+          "trial_total": 600.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "PICKUP": {
+          "baseline_total": 600.0,
+          "trial_total": 600.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "TEAR": {
+          "baseline_total": 476.0,
+          "trial_total": 474.0,
+          "snapshot_counter_difference_range": [
+            -4.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [
+            120,
+            135,
+            150,
+            165,
+            180,
+            195,
+            240,
+            255,
+            300,
+            315,
+            330
+          ],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "PROJECTILE": {
+          "baseline_total": 498.0,
+          "trial_total": 500.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            4.0
+          ],
+          "counter_mismatch_ticks": [
+            60,
+            75,
+            120,
+            135,
+            180,
+            195,
+            210,
+            225,
+            240,
+            255,
+            270,
+            285,
+            300,
+            315,
+            330
+          ],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "LASER": {
+          "baseline_total": 535.0,
+          "trial_total": 535.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "KNIFE": {
+          "baseline_total": 9.0,
+          "trial_total": 9.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "EFFECT": {
+          "baseline_total": 430.0,
+          "trial_total": 430.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "BOMB": {
+          "baseline_total": 600.0,
+          "trial_total": 600.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        }
+      },
+      "first_seen_order_identical": true,
+      "trial_case_id": "types-unified100"
+    },
+    {
+      "same_seed_fixture_exe": true,
+      "same_enabled_lua_modset": true,
+      "actual_presentation_observed": true,
+      "common_snapshot_game_ticks": [
+        15,
+        30,
+        45,
+        60,
+        75,
+        90,
+        105,
+        120,
+        135,
+        150,
+        165,
+        180,
+        195,
+        210,
+        225,
+        240,
+        255,
+        270,
+        285,
+        300,
+        315,
+        330
+      ],
+      "per_type": {
+        "MAIN": {
+          "baseline_total": 706.0,
+          "trial_total": 706.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": null
+        },
+        "PLAYER": {
+          "baseline_total": 706.0,
+          "trial_total": 706.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "FAMILIAR": {
+          "baseline_total": 600.0,
+          "trial_total": 600.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "NPC": {
+          "baseline_total": 600.0,
+          "trial_total": 600.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "PICKUP": {
+          "baseline_total": 600.0,
+          "trial_total": 600.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "TEAR": {
+          "baseline_total": 476.0,
+          "trial_total": 474.0,
+          "snapshot_counter_difference_range": [
+            -2.0,
+            2.0
+          ],
+          "counter_mismatch_ticks": [
+            60,
+            75,
+            90,
+            105,
+            120,
+            135,
+            180,
+            195,
+            210,
+            225,
+            300,
+            315,
+            330
+          ],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "PROJECTILE": {
+          "baseline_total": 498.0,
+          "trial_total": 498.0,
+          "snapshot_counter_difference_range": [
+            -2.0,
+            2.0
+          ],
+          "counter_mismatch_ticks": [
+            60,
+            75,
+            90,
+            105,
+            150,
+            165,
+            180,
+            195,
+            210,
+            225,
+            240,
+            255
+          ],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "LASER": {
+          "baseline_total": 535.0,
+          "trial_total": 535.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "KNIFE": {
+          "baseline_total": 9.0,
+          "trial_total": 9.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "EFFECT": {
+          "baseline_total": 430.0,
+          "trial_total": 430.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        },
+        "BOMB": {
+          "baseline_total": 600.0,
+          "trial_total": 600.0,
+          "snapshot_counter_difference_range": [
+            0.0,
+            0.0
+          ],
+          "counter_mismatch_ticks": [],
+          "alive_flag_mismatch_ticks": [],
+          "max_same_alive_lua_data_count_difference": 0.0
+        }
+      },
+      "first_seen_order_identical": true,
+      "trial_case_id": "types-unified45"
+    }
+  ],
+  "open_boundary": "This earlier aggregate report is not proof that effect misses are harmless. The later direct-spawn Blood Splat variant7 regression demonstrates the Update-owned RenderToTexture callback defect and correction; see blood-callback-comparison.json. Natural damage producers and baked pixels remain outside that fixture.",
+  "limitations": [
+    "HFRT only records 15-tick snapshots and first-seen order. It cannot prove every callback's full U-to-R order; use the detailed HFOV fixture at the desired display rate.",
+    "Native cache counters include all effects and entities, not only tagged fixture entities. A replayMiss is not classified as harmless without an entity/key/reason trace.",
+    "Short-lived natural tear/projectile totals can vary with birth conditions; no rendering-speed attribution follows from total counts alone.",
+    "Callback presence and successful replay counters do not prove colored pixels appeared; capture verification is separate.",
+    "45 Hz is an intentional low-frame-rate test; 60 canonical ticks per second require multiple main ticks between some presents, not a high-refresh display claim."
+  ]
+}

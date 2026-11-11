@@ -6,26 +6,61 @@
 ; 0 disables the mod entirely without deleting it.
 Enabled = 1
 
+; Isolated diagnostics only, effective ONLY with Enabled=0. Records completed
+; native SwapBuffers times via one IAT hook; native update/render/limiter, Lua,
+; input and thread affinity stay unchanged. Uses async logging after startup.
+; This is an instrumented vanilla baseline, not a pristine disabled run.
+; Set Log=1; the probe emits [native-measure] and [present-frame] records.
+NativeTimingProbe = 0
+
 ; 0 uncaps the frame rate but skips the intermediate positions, so you get more
 ; frames of the same 60 Hz motion. Mostly useful for telling the two effects apart.
 Interpolate = 1
 
 ; 0 = run at whatever the display allows. Otherwise a hard cap, e.g. 120.
-; The mod drops to 60 on its own during loads and menus regardless of this.
+; Menus and paused screens retain display cadence when IdleFps=0.
 MaxFps = 0
+VSync = 1
+IdleFps = 0
 
-; Keeps mod Lua callbacks at their normal 60 per second even though the game now renders
-; more frames. Without it, every mod's render callback fires once per rendered frame:
-; three times the Lua cost at 180 fps, and mods that count frames or run logic in render
-; callbacks run three times too fast.
+; Preserve native Update/Render callback ordering at the fixed main cadence.
+; World logic remains 30 Hz; extra display frames must not run extra Lua logic.
 LuaVanillaCadence = 1
 
-; What mods draw goes onto a surface of its own, which is composited onto every frame.
-; That is what stops mod HUDs from flickering while their Lua stays at 60 Hz. Costs a
-; render target switch per Lua dispatch, so it is the most expensive thing here by far.
-; Turn it off only to test whether it is the cause of a rendering problem; with it off,
-; mod graphics appear on one frame in three.
+; J374 replays supported native draw commands at the original callback position.
+; Keep enabled together with LuaVanillaCadence for the independent render pipeline.
 LuaOverlay = 1
+
+; Main game thread only: -2 pins its current allowed logical CPU; -1 leaves it
+; to the scheduler; 0..31 explicitly selects an allowed CPU in group 0.
+; Other engine/driver threads retain their affinities. Restart to apply changes.
+MainThreadCpu = -2
+
+; Copy log records into a bounded queue; a lower-priority worker performs I/O.
+; No game objects, Lua state or GL context are accessed by this worker.
+AsyncLog = 1
+
+; Avoid spending many slow native frames on catch-up before showing an image.
+; Sustained overload temporarily presents each complete native Update/Render
+; directly, at the rate the engine can sustain (never extra Lua at display Hz).
+; Recovery does not fast-forward the accumulated overload interval.
+OverloadFallback = 1
+
+; Exact draw-cache index capacity (1024..32768) and CPU allocation budget
+; (16..128 MiB). The game is 32-bit even on a machine with 16+ GB of RAM.
+; Native image/GPU memory owned by the engine is not included in this budget.
+CacheEntries = 16384
+CacheMiB = 64
+CacheFileProbes = 1
+
+; J374 shares repeated sprite-angle sine/cosine results. Every projectile keeps
+; its own position, rotation, collision and damage; no projectile is merged.
+; Unsupported inputs or poor cache reuse retain native calculations.
+ReuseSpriteRotation = 1
+
+; Reuse positive built-in shader attribute/uniform locations inside known
+; Update/Render scopes. Relink/delete/context changes invalidate these results.
+CacheShaderLocations = 1
 
 ; Per-second timings and hitch reports in %TEMP%\isaac-highfps.log.
 ; Leave it on. It's what makes a bug report worth anything.
@@ -34,3 +69,7 @@ Log = 1
 ; Dumps the player/scroll state of every rendered frame into the log. Only useful when
 ; someone is hunting a stutter with you; it writes a lot. Leave it off.
 Diag = 0
+
+; Completed presentation timestamps without the expensive Diag state audits.
+; For isolated performance recording; can generate a large log.
+FrameTiming = 0

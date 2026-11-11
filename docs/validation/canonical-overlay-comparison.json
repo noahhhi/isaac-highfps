@@ -1,0 +1,183 @@
+{
+  "schema": "isaac-highfps-public-validation-v1",
+  "source_summary": "canonical-overlay-comparison.json",
+  "source_summary_sha256": "a95cd4058f875be3be359a1ec9fe1d2df70287faf88047cab077ac4cba2bc776",
+  "scope_note": "Quantified results apply to the identified artifacts and cases; no game files, mod lists or private paths are included.",
+  "cases": [
+    {
+      "case_id": "canonical-overlay-native60",
+      "artifacts": {
+        "dll_sha256": "6b33ede128cb938b6b7c3aef4da1a4e7b7ded8b52d029c6f5c65ef22ec831beb",
+        "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "b5d12d00cd83b963fb028905480bf31c6fd2df964f3c1ecec7b50aa5ed79f1e3"
+      },
+      "complete": true,
+      "records": 483
+    },
+    {
+      "case_id": "canonical-overlay90-canary",
+      "artifacts": {
+        "dll_sha256": "6b33ede128cb938b6b7c3aef4da1a4e7b7ded8b52d029c6f5c65ef22ec831beb",
+        "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "b5d12d00cd83b963fb028905480bf31c6fd2df964f3c1ecec7b50aa5ed79f1e3"
+      },
+      "complete": true,
+      "records": 483
+    },
+    {
+      "case_id": "canonical-unified90",
+      "artifacts": {
+        "dll_sha256": "1805a3c7e0f9e5bdf5c01a51a0f8e049cebf6a0c856659d18ee1f645bf3c6c1d",
+        "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "b5d12d00cd83b963fb028905480bf31c6fd2df964f3c1ecec7b50aa5ed79f1e3"
+      },
+      "complete": true,
+      "records": 483
+    }
+  ],
+  "comparisons": [
+    {
+      "common_update_ticks": 300,
+      "metadata_match": true,
+      "recorded_events_excluding_wall_time_identical": true,
+      "recorded_event_counts": {
+        "baseline": 483,
+        "trial": 483
+      },
+      "first_event_mismatches": [],
+      "window_15_145": {
+        "baseline_seconds": 4.334,
+        "trial_seconds": 4.334,
+        "baseline_counts": {
+          "u": 130.0,
+          "pu": 260.0,
+          "tu": 130.0,
+          "r": 260.0,
+          "pr": 260.0,
+          "tr": 260.0,
+          "mw": 260.0,
+          "pw": 260.0,
+          "tw": 260.0
+        },
+        "trial_counts": {
+          "u": 130.0,
+          "pu": 260.0,
+          "tu": 130.0,
+          "r": 260.0,
+          "pr": 260.0,
+          "tr": 260.0,
+          "mw": 260.0,
+          "pw": 260.0,
+          "tw": 260.0
+        },
+        "count_difference": {
+          "u": 0.0,
+          "pu": 0.0,
+          "tu": 0.0,
+          "r": 0.0,
+          "pr": 0.0,
+          "tr": 0.0,
+          "mw": 0.0,
+          "pw": 0.0,
+          "tw": 0.0
+        }
+      },
+      "same_tick_position_errors": {
+        "px": {
+          "samples": 286,
+          "max": 0.0
+        },
+        "py": {
+          "samples": 286,
+          "max": 0.0
+        },
+        "tx": {
+          "samples": 286,
+          "max": 0.0
+        },
+        "ty": {
+          "samples": 286,
+          "max": 0.0
+        }
+      },
+      "order_differences": {},
+      "trial_case_id": "canonical-overlay90-canary"
+    },
+    {
+      "common_update_ticks": 300,
+      "metadata_match": true,
+      "recorded_events_excluding_wall_time_identical": true,
+      "recorded_event_counts": {
+        "baseline": 483,
+        "trial": 483
+      },
+      "first_event_mismatches": [],
+      "window_15_145": {
+        "baseline_seconds": 4.334,
+        "trial_seconds": 4.333,
+        "baseline_counts": {
+          "u": 130.0,
+          "pu": 260.0,
+          "tu": 130.0,
+          "r": 260.0,
+          "pr": 260.0,
+          "tr": 260.0,
+          "mw": 260.0,
+          "pw": 260.0,
+          "tw": 260.0
+        },
+        "trial_counts": {
+          "u": 130.0,
+          "pu": 260.0,
+          "tu": 130.0,
+          "r": 260.0,
+          "pr": 260.0,
+          "tr": 260.0,
+          "mw": 260.0,
+          "pw": 260.0,
+          "tw": 260.0
+        },
+        "count_difference": {
+          "u": 0.0,
+          "pu": 0.0,
+          "tu": 0.0,
+          "r": 0.0,
+          "pr": 0.0,
+          "tr": 0.0,
+          "mw": 0.0,
+          "pw": 0.0,
+          "tw": 0.0
+        }
+      },
+      "same_tick_position_errors": {
+        "px": {
+          "samples": 286,
+          "max": 0.0
+        },
+        "py": {
+          "samples": 286,
+          "max": 0.0
+        },
+        "tx": {
+          "samples": 286,
+          "max": 0.0
+        },
+        "ty": {
+          "samples": 286,
+          "max": 0.0
+        }
+      },
+      "order_differences": {},
+      "trial_case_id": "canonical-unified90"
+    }
+  ],
+  "limitations": [
+    "Canary prediction assumes no collision/physics displacement; compare vanilla residuals first.",
+    "Callback execution/order and Position persistence do not prove cached draw commands appear on every presented image.",
+    "Capture the M/P/T counter markers and actual present trace separately for overlay visual verification.",
+    "This fixture intentionally changes player/tear positions and belongs only in the isolated test copy."
+  ]
+}

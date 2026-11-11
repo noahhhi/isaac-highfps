@@ -1,0 +1,219 @@
+{
+  "schema": "isaac-highfps-public-validation-v1",
+  "source_summary": "shader-comparison.json",
+  "source_summary_sha256": "51ca15c4c50df27c40215ac370437cb1378699aa29a2b489140ba4b4be371149",
+  "scope_note": "Quantified results apply to the identified artifacts and cases; no game files, mod lists or private paths are included.",
+  "cases": [
+    {
+      "case_id": "shader-native60",
+      "artifacts": {
+        "dll_sha256": "61fa6616036ad6e6a36f89ded755506b3b8e6960cc264dee69e2eb902ca59107",
+        "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "4646b76e9348117ce61b89572d2f68524de959045e256f5826f315f532924184"
+      },
+      "complete": true,
+      "event_count": 2240,
+      "contiguous_seq": true,
+      "totals": {
+        "u": 300.0,
+        "r": 646.0,
+        "a": 646.0,
+        "b": 646.0
+      },
+      "dual_name_code_errors": [],
+      "steady_window": {
+        "first_f": 15,
+        "last_f": 285,
+        "seconds": 9.0,
+        "deltas": {
+          "u": 270.0,
+          "r": 540.0,
+          "a": 540.0,
+          "b": 540.0
+        },
+        "rates": {
+          "u": 30.0,
+          "r": 60.0,
+          "a": 60.0,
+          "b": 60.0
+        }
+      },
+      "steady_per_game_tick_distributions": {
+        "mainRender": {
+          "2": 295
+        },
+        "HFShaderProbeA": {
+          "2": 295
+        },
+        "HFShaderProbeB": {
+          "2": 295
+        }
+      },
+      "native_cache_all_miss_reject_zero": false,
+      "native_cache_refs_range": null,
+      "shader_xml_hash_recorded": false,
+      "presentation": {
+        "status": "no_native_trace",
+        "high_refresh_confirmed": false
+      }
+    },
+    {
+      "case_id": "shader-cached100",
+      "artifacts": {
+        "dll_sha256": "61fa6616036ad6e6a36f89ded755506b3b8e6960cc264dee69e2eb902ca59107",
+        "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "4646b76e9348117ce61b89572d2f68524de959045e256f5826f315f532924184"
+      },
+      "complete": true,
+      "event_count": 2240,
+      "contiguous_seq": true,
+      "totals": {
+        "u": 300.0,
+        "r": 646.0,
+        "a": 646.0,
+        "b": 646.0
+      },
+      "dual_name_code_errors": [],
+      "steady_window": {
+        "first_f": 15,
+        "last_f": 285,
+        "seconds": 8.999,
+        "deltas": {
+          "u": 270.0,
+          "r": 540.0,
+          "a": 540.0,
+          "b": 540.0
+        },
+        "rates": {
+          "u": 30.003333703744858,
+          "r": 60.006667407489715,
+          "a": 60.006667407489715,
+          "b": 60.006667407489715
+        }
+      },
+      "steady_per_game_tick_distributions": {
+        "mainRender": {
+          "2": 295
+        },
+        "HFShaderProbeA": {
+          "2": 295
+        },
+        "HFShaderProbeB": {
+          "2": 295
+        }
+      },
+      "native_cache_all_miss_reject_zero": true,
+      "native_cache_refs_range": [
+        2,
+        2
+      ],
+      "shader_xml_hash_recorded": false,
+      "presentation": {
+        "status": "native_high_refresh_present_confirmed",
+        "high_refresh_confirmed": true,
+        "steady_candidate_samples": 84,
+        "steady_candidate_median_ms": 9.998,
+        "median_present_hz": 100.02000400080016,
+        "scope": "native swap trace; does not prove physical display scanout or VRR"
+      }
+    },
+    {
+      "case_id": "shader-cached45",
+      "artifacts": {
+        "dll_sha256": "61fa6616036ad6e6a36f89ded755506b3b8e6960cc264dee69e2eb902ca59107",
+        "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "4646b76e9348117ce61b89572d2f68524de959045e256f5826f315f532924184"
+      },
+      "complete": true,
+      "event_count": 2240,
+      "contiguous_seq": true,
+      "totals": {
+        "u": 300.0,
+        "r": 646.0,
+        "a": 646.0,
+        "b": 646.0
+      },
+      "dual_name_code_errors": [],
+      "steady_window": {
+        "first_f": 15,
+        "last_f": 285,
+        "seconds": 9.0,
+        "deltas": {
+          "u": 270.0,
+          "r": 540.0,
+          "a": 540.0,
+          "b": 540.0
+        },
+        "rates": {
+          "u": 30.0,
+          "r": 60.0,
+          "a": 60.0,
+          "b": 60.0
+        }
+      },
+      "steady_per_game_tick_distributions": {
+        "mainRender": {
+          "2": 295
+        },
+        "HFShaderProbeA": {
+          "2": 295
+        },
+        "HFShaderProbeB": {
+          "2": 295
+        }
+      },
+      "native_cache_all_miss_reject_zero": true,
+      "native_cache_refs_range": [
+        2,
+        2
+      ],
+      "shader_xml_hash_recorded": false,
+      "presentation": {
+        "status": "high_refresh_unproven",
+        "high_refresh_confirmed": false,
+        "steady_candidate_samples": 37,
+        "steady_candidate_median_ms": 22.217000000000002,
+        "median_present_hz": 45.01057748570914,
+        "scope": "native swap trace; does not prove physical display scanout or VRR"
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "same_metadata": true,
+      "same_exe_and_shader_fixture": true,
+      "same_enabled_lua_modset": true,
+      "all_events_except_wall_time_identical": true,
+      "baseline_events": 2240,
+      "trial_events": 2240,
+      "first_event_mismatches": [],
+      "game_tick_event_order_mismatches": [],
+      "dual_name_code_isolation_in_canonical_trace": true,
+      "actual_high_refresh_present_confirmed": true,
+      "trial_case_id": "shader-cached100"
+    },
+    {
+      "same_metadata": true,
+      "same_exe_and_shader_fixture": true,
+      "same_enabled_lua_modset": true,
+      "all_events_except_wall_time_identical": true,
+      "baseline_events": 2240,
+      "trial_events": 2240,
+      "first_event_mismatches": [],
+      "game_tick_event_order_mismatches": [],
+      "dual_name_code_isolation_in_canonical_trace": true,
+      "actual_high_refresh_present_confirmed": false,
+      "trial_case_id": "shader-cached45"
+    }
+  ],
+  "limitations": [
+    "Matching canonical Lua parameter logs proves callback cadence/order and generated A/B code values, not the GPU color of every pure presentation.",
+    "Native hit/miss/ref counters corroborate replay but do not replace colored-pixel verification.",
+    "If shaders.xml was not hashed in the case manifest, identical historical shader resource content is not independently established by the Lua hash.",
+    "This is the registered screen-shader path. Sprite/Image custom shader selection remains outside this fixture's scope.",
+    "Menu animation values require their own validated observer offsets; successful shader callback tests do not validate menu fades."
+  ]
+}

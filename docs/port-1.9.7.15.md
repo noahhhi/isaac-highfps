@@ -1,77 +1,135 @@
-# Repentance+ 1.9.7.15.J374 port (beta)
+# Repentance+ 1.9.7.15.J374 port
 
-This branch builds a dedicated J374 DLL, tested on Steam Deck OLED with Proton.
-The J460 DLL remains incompatible: use build-wsl.sh for J374.
-PE timestamp/size and all affected instruction sites are checked before patching.
+Version `0.13.0-j374.6` builds a dedicated DLL for the 32-bit **1.9.7.15.J374** game. The `.5` compatibility release adds the Sprite/texture-lifetime repairs described below. Menu presentation source remains `4c552f0`, bound to its earlier 80/90 Hz checks in [menu-presentation.json](validation/menu-presentation.json). Earlier camera and `.2` fixed-clock reports retain their original DLL/source hashes and coverage. Its development and build environment is Fedora WSL; runtime checks use an isolated Steam Deck/Proton game copy. The original J460 binary is incompatible with J374, including its update wrapper and graphics ABI. Do not remove version guards to load the other build.
 
-## Confirmed from 1.9.7.15.J374
+## Executable and ABI boundary
 
-Image base: 0x400000. Addresses were located using REPENTOGON signatures,
-then inspected in the running game's memory and disassembly.
+The J374 image check expects PE timestamp `0x68D45723` and image size `0x8B6000`. Patch sites are additionally checked against their expected instructions. Absolute operands require relocation-aware comparisons; matching only a version string is insufficient.
 
-| Item | 1.9.7.17 | 1.9.7.15 |
-|---|---|---|
-| g_Manager | 0xC7169C | 0xC0C09C |
-| g_Game | 0xC71678 | 0xC0C074 |
-| Manager frame count | +0x4ABBC | +0x4ABA8 |
-| IsaacMain | 0x931050 | 0x929330 |
-| Manager::Update | 0x954CD0 | 0x94CAD0 |
+| Item | J460 / 1.9.7.17 | J374 / 1.9.7.15 |
+| --- | --- | --- |
+| Manager global | `0xC7169C` | `0xC0C09C` |
+| Game global | `0xC71678` | `0xC0C074` |
+| Manager frame counter | `+0x4ABBC` | `+0x4ABA8` |
+| Main loop | `0x931050` | `0x929330` |
+| Manager update | `0x954CD0` | `0x94CAD0` |
 
-The manager pointer and frame counter were read live: the counter advanced
-60 times per second with the native mod disabled. The old g_Manager address
-falls in .reloc on 1.9.7.15, so even initialization dereferences invalid data.
+J374 directly calls `Manager::Update(bool)` through the sequence at `0x9295D6`. Its counter increments at the end of the update: **even on entry means the full 30 Hz game phase**, and odd means the half-step phase. Copying J460's wrapper/parity assumption into this call-site adapter gives the wrong interpolation sampling phase.
 
-The main loop in 1.9.7.15 has `push 1` at 0x9295D6 followed by
-`call 0x94CAD0` at 0x9295D8, and render at 0x9295DD. It does not use
-the 1.9.7.17 no-argument wrapper assumed by InstallWrapperHook.
-A call-site adapter must preserve the original calling convention and stack.
+The port also covers the outer input update at `0x9295CF`. Input edges must be sampled with actual fixed updates; consuming them on intermediate display frames can lose a press before game logic sees it. The adjacent native render and GC calls participate in the ordered fixed-tick pipeline.
 
-Limiter: at 0x929611 `test bl,bl`, at 0x929613 `jne 0x929621`,
-at 0x929615 `cmp byte ptr [0xBD5795],bl`, and at 0x92961B
-`jne 0x929514`. Pacing begins at 0x929621; the loop head is 0x929514.
-Do not reuse the old branch bytes/displacement. The logic gate must be
-installed before uncapping, and all patch sites must be validated together.
+## Build on WSL or Linux
 
-## Build on WSL / Linux
+Required tools and local inputs:
 
-Install clang-cl, lld-link, Python 3, and obtain an x86 Windows CRT/SDK sysroot
-with xwin (`--accept-license --arch x86 splat --output /path/to/msvc`).
+- `clang-cl` and `lld-link`, using `i686-pc-windows-msvc`.
+- Python 3 for the export-table generator.
+- An x86 Windows CRT/SDK sysroot, for example one prepared with `xwin` under its license terms.
+- A local 32-bit `winmm.dll` whose export table supplies the forwarding names. A suitable Wine system copy can be used.
 
 ```sh
-XWIN_ROOT=/path/to/msvc WINMM_SOURCE=/path/to/32bit/winmm.dll bash build-wsl.sh
+XWIN_ROOT=/path/to/x86-msvc-sysroot \
+WINMM_SOURCE=/path/to/32-bit/winmm.dll \
+bash build-wsl.sh
 ```
 
-The export source can be Wine's syswow64/winmm.dll. It is only parsed to generate
-forwarders; do not commit it. The resulting DLL uses the static CRT and imports
-only KERNEL32.dll. The tested compiler was Fedora clang-cl 22.1.8 with MSVC ABI.
-GNU-ABI LLVM-MinGW failed to assemble x86 SEH for this source; use clang-cl instead.
+`build-wsl.sh` supplies `/DHIGHFPS_BUILD_19715`, `/std:c++17`, `/EHsc`, `/O2` and `/MT`. The output is `build/winmm.dll`. `/MT` links the CRT statically. The tested compiler family is Fedora clang-cl 22 with the MSVC ABI; GNU-ABI LLVM-MinGW did not support the required x86 SEH build path.
 
-## Install
+The system DLL is an input to export generation, not a file to bundle. Do not commit it, the game executable, process memory, copied saves, credentials, generated test executables or local prefixes. Build artifacts should be delivered separately with their hash and supported game version.
 
-Copy build/winmm.dll next to isaac-ng.exe. Under Proton set winmm=native,builtin
-using an application DLL override or the upstream Steam launch option.
-Use Enabled=1, Interpolate=1, MaxFps=90, LuaOverlay=0, Log=1 on Deck OLED.
-Keep the game's VSync disabled and avoid a Steam frame cap below 90.
+## Install, configure and roll back
 
-## Validation on Steam Deck
+Exit the game before replacing the DLL. Preserve the previous DLL/INI, game options, saves and any pre-existing launch options. Copy the J374 DLL beside `isaac-ng.exe`; on Proton use:
 
-- Full startup, save selection, room loading, and character movement completed.
-- Logs measured 90-91 render-loop iterations and 60-61 wrapper calls per
-  one-second reporting interval (boundary rounding accounts for the extra one).
-- Independent 3-second live-memory sampling measured 59.998 Manager ticks/s
-  and 29.999 Game ticks/s, preserving normal game speed.
-- During a short movement sample, 45 position changes occurred without a change
-  to the Manager frame counter, confirming intermediate position previews.
-- Pause automatically returned rendering to approximately 60 FPS.
+```text
+WINEDLLOVERRIDES="winmm=n,b" %command%
+```
 
-## Known limitations
+Recommended starting settings:
 
-The J374 KAGE ABI differs from J460. This build forcibly disables LuaOverlay;
-unported graphics addresses are never called. Lua presence/rate globals still
-work, but render callbacks run at render rate, not the original 60 Hz. Mods that
-count render callbacks may advance those counters faster. Upstream generic log
-messages about the Lua gate do not imply cadence suppression with overlay off.
-Large-room scrolling and lengthy combat still need broader player testing.
+```ini
+[highfps]
+Enabled=1
+Interpolate=1
+MaxFps=0
+VSync=1
+IdleFps=0
+LuaVanillaCadence=1
+LuaOverlay=1
+Log=1
+Diag=0
+```
 
-No proprietary executable, memory dump, user saves, credentials, or generated
-DLLs are included in the repository. Analysis files remain outside the checkout.
+There is no required 90 FPS cap and no requirement to disable VSync. With VSync enabled, the actual display mode can provide the pacing, including an 80 Hz mode. A positive `MaxFps` requests an additional cap; `MaxFps=100` cannot create 100 Hz physical output on a display currently limited to 90 Hz. `IdleFps=0` avoids a forced lower cap when paused or in menus.
+
+Both Lua settings enable the tested fixed-render/draw-cache path. `LuaOverlay` is a legacy option name, not a statement that the new pipeline renders every callback into an FBO. Disabling it is not the recommended compatibility configuration.
+
+For a reversible disable, set `Enabled=0` and restart. To roll back, exit the game, restore the saved DLL and INI (or remove this fork's files if none existed), and restore the prior launch option and any options changed during installation. Keep the save backup until the replacement version has been accepted. No installation step requires changing save contents.
+
+## What changed from the initial port
+
+The initial J374 port retained several assumptions from the upstream high-refresh architecture. It also disabled the unported Lua overlay. The current pipeline corrects J374 parity/input handling, completes native Update → Render → GC for each fixed tick, and reuses supported drawing on additional output frames.
+
+Short loading debt was possible in the upstream scheduler too. The fork's early multi-update catchup made that debt more visible by advancing many transition ticks before a displayed image. Current lifecycle hooks explicitly exclude measured loading/setup intervals. Ordinary rendering cost remains part of elapsed gameplay; a slow frame is not automatically classified as a load.
+
+Native menu scalars and shared UI animation helpers have their own timing repairs. Reused preview sprites still perform required Play/type initialization. Pure presentation replays their recorded canonical animation result rather than incrementing the timeout/frame again. Cache ownership is reset across lifecycle epochs, including object-address reuse.
+
+## `.5` UI draw-cache compatibility
+
+GoodTrip exposed a shared rendering defect: the old cache rejected the ordinary ANM2 shader path and treated every vertex-format setter as unsafe. One such operation invalidated the whole native main-callback draw scope, so unrelated UI in the same pass could also disappear. The repair supports the four verified native Sprite shader contracts and ordered supported vertex-format restoration. Recorded image filter/wrap fields are restored only under the valid texture-generation contract; this is not arbitrary GPU sampler replay. Canonical Lua execution remains at its native cadence; display frames replay drawing without repeating mod side effects.
+
+Regret then exposed a separate first-load failure. R1 still rejected any `glDeleteTextures` call, including disposal of unrelated old graphics. R2 checks real texture objects, retained draw dependencies and framebuffer attachments, and tracks texture-name generations. It allows unrelated deletion while retaining rejection for actual dependencies or unknown state. Unknown shader uniforms, layouts, uploads outside the audited initialization path and unrepresented GL operations remain unsupported; this is not an all-mod compatibility claim.
+
+The compared DLLs are identified exactly:
+
+| Role | SHA256 |
+| --- | --- |
+| Native60 control / old90 negative control, with different INI modes | `4119e933accfafc8f156b511f84916655825607947a9ff345bac32653bbfe9ec` |
+| R1 native Sprite/format repair | `0221770be17b98e339bc7fb8de0ab322406d93f2fe9d721c4a3a640bc74785d1` |
+| R2 Sprite/format plus selective texture lifetime repair | `c3344f15c61a2c377ef3da1496ff7fcabc94abe14deaa722e0d7883c022d723c` |
+
+GoodTrip cases `goodtrip-{native60,old90,fixed90}-keys-20261110` exercised two real isolated Tab holds. All completed with 1080 main render callbacks and 720 calls each to GoodTrip's map/UI/Tab paths. In captured frames selected by the independently visible native Tab timer, the map appeared in 242/242 native samples, 0/184 old90 samples and 180/180 R1 samples. The separate Sprite control appeared in all 360 native/R1 samples and none of the old90 samples. The R1 map region's median and p95 RGB difference from the native reference were zero. Each capture covers only about six seconds at native60 or four seconds at 90 Hz; the selected map samples cover part of the first hold, not every frame of the full 18-second fixture or teleport behavior. In conservative hold interiors, R1's native present intervals had p99 11.230 ms and maximum 12.049 ms across 990 samples. Shader reflection cost averaged 8.655 ms per roughly one-second workload bucket; no permanent program-ID-only reflection cache was introduced.
+
+Regret cases `regret-native60-visible-20261110`, `regret-fixed90-visible-20261110` and `regret-r2-90-visible-20261110` use the same visible-ghost fixture. R1's first load at game frame 46 rejected the main scope and missed two presentations. R2 observes both deletions as unrelated, with no dependency/attachment/unknown classification, and records zero replay misses, shader/reference rejections or unsafe-operation entries over the run. The first presentation at frame 46 follows the previous one by 11.106 ms. These diagnostics establish removal of the reproduced rejection; they do not substitute for an independent image comparison of first-visible ghost alpha and subsequent drawing.
+
+Bethany's first player-render callback exposed another startup-only rejection in R2: three ordinary Sprite image uploads caused 24 native parameter calls and three `glTexImage2D` calls. The R3 header follow-up supports only their audited native 2D initialization call sites. It seals pending vertices, queries the current unit's bound texture, permits unrelated initialization or actual same-value parameter calls, and rejects captured-image/target dependencies and unsupported arguments. Resource generations advance for real changes, so older captures cannot silently reuse altered texture content. This follow-up has standalone ABI/dependency tests; the historical R1/R2 measurements above must not be relabeled as evidence for a later combined DLL. Final affected-feature and lifecycle cases belong to that DLL's release report.
+
+The [sanitized cache implementation/unit report](validation/cache-compatibility-unit.json) records exact R2 source/test hashes, test domains and Regret runtime artifact/log hashes. It covers the common cache repair, not final acceptance of every enabled mod, controller interaction, Character Enhance, range previews, inventory helpers or rewind integration. Those feature cases require their own exact-build reports.
+
+## Verification and limits
+
+The evidence directory separates test cases by executable, DLL, fixture and mod-set identifiers. Reports describe the observed scope rather than asserting that the entire game is equivalent.
+
+- [Canonical callback comparison](validation/canonical-overlay-comparison.json): native 60 Hz versus the 90 Hz pipeline, with 300 common update ticks and 483 identical recorded events after removing wall timestamps. Player and tear positions matched in 286 paired samples each. The fixture deliberately mutates positions from main/player/tear render callbacks; it belongs only in an isolated game copy.
+- [Callback-type and cadence comparison](validation/render-types-comparison.json): eleven callback categories observed at native 60 Hz, output 100 Hz and output 45 Hz. The 100 Hz case measured approximately 59.992 Manager ticks/s and 30.004 active game ticks/s; the 45 Hz case measured approximately 60.004 and 30.000. Main/player/familiar/NPC/pickup/bomb fixture counters matched at the recorded snapshots. Natural short-lived tear/projectile totals differed, and the Update-owned Blood Splat render-to-texture correction is covered by its separate direct-spawn regression below.
+- [Room-transition matrix](validation/transition-matrix-comparison.json): WALK, FADE and TELEPORT each have one matched native 60 Hz/output 100 Hz pair. Phase sequences matched; spans aligned from the first observed positive mode1 alpha to completion used 17/35/91 Manager ticks in both versions. Maximum timing differences along common alpha samples were 4.24/6.49/10.13 ms. No observed interval contained three or more ticks within 12 ms. These polling traces do not establish native baseline load duration, a repeatability distribution or pixel-level smoothness.
+- [Screen-shader parameter comparison](validation/shader-comparison.json): 2,240 recorded events matched after excluding wall timestamps, including per-game-tick order and independent A/B shader code values. The nine-second window had 270 world updates and 540 calls each for main render and shader A/B. This validates the registered screen-shader parameter path; visible GPU colors and Sprite/Image shader selection need separate evidence. The historical manifest did not hash `shaders.xml`, so resource identity is not established as strongly as the executable/Lua fixture.
+- [Menu difficulty curves](validation/menu-curve-comparison.json): real Down/Up input covered Normal/Hard/Greed. All 16 matched vignette/black/yellow fade curves used 18 Manager ticks between the same interior values; maximum relative curve timing difference was 10.474 ms. Startup poison and the one-byte menu dirty flag are excluded from state comparisons. This does not cover Greedier or every menu animation.
+- [Ordinary floor transition](validation/floor-comparison.json): a natural stage 1→2 trapdoor produced 125 matching event snapshots after removing wall time and normalizing the starting UI counter. Request→new-level took 8.523/8.517 s with 502 UI ticks, arrival→unpaused took 2.928/2.940 s with 177 UI ticks, and the complete span through ten resumed world updates took 11.784/11.787 s. Alternate stages and other cinematic routes remain outside this case.
+- [Update-owned Blood Splat regression](validation/blood-callback-comparison.json): ten direct spawns produced 30 render callbacks in native60 and the fixed100 build, versus 20 in the negative control. All 540 normalized event records and ten terminal summaries matched; the candidate forwarded ten callback56 invocations outside Manager Render and recorded no corresponding cache miss. The attempted NPC-damage producer did not yield this variant, so natural damage production and baked pixels remain unverified.
+- [Moving pause/resume](validation/pause-moving-comparison.json): approximately three-second interior windows retained velocity `(3.572232, 0)` while position, GameFrame and TimeCounter stayed constant. Manager cadence remained approximately 60 Hz. Each two-second resumed window advanced 60 world/120 UI ticks without a sub-12 ms world-update interval. The runs used different seeds; this is a within-run pause invariant, not cross-seed world equivalence.
+- [Glowing Hour Glass rewind](validation/rewind-comparison.json): 104 event records matched after explicit token/time/UI-origin normalization. Each run used the item once; GameFrame went from 45 back to restored-room frame30, then returned at31 and completed at41. Use→return took 1.027/1.040 s, followed by ten resumed updates. No runtime Lua VM replacement was observed (`vm_resume=0`); that is covered only by the separate mock/lifetime test domains.
+- [Final R5 evidence](validation/release-r5-evidence.json): the exact delivered DLL measured 100.010 FPS in the callback/draw smoke and 79.994 FPS in the strict-seed global case. Its 483 callback records matched native60; the global case's measured counters and listed player/timer/fire/bomb fields matched, including the 33-shot sequence. Natural tear birth differences are retained as a limitation rather than normalized into a claim of identical initial conditions.
+- Pure unit tests exercise scheduler debt/exclusion, UI timing and replay ownership independently of the game. They cannot establish physical scanout, visual smoothness or compatibility with arbitrary mods.
+
+**Pending acceptance:** broader floor/nightmare routes, Greedier and other menu paths, render-triggered lifecycle changes and untested restart/VM-reload routes, persistent dice/emote states, broader shader behavior, extended combat, physical VRR and runtime refresh changes. The attempted runtime FPS-limit control did not change actual output cadence, so it does not validate dynamic pacing. Specific transition/menu/shader fixtures may add evidence while these broader categories remain open. Do not relabel a partial fixture as full coverage.
+
+## Startup readiness
+
+The initializer and game thread must not install overlapping patches concurrently. The game thread now waits for the initializer thread to have actually exited before installing the complete cache pipeline. A usable trampoline pointer alone does not mark a hook installed: readiness is published only after its patch succeeds. Missing required readiness uses a 60 FPS/native-Lua fallback instead of uncapping an incomplete pipeline.
+
+One earlier isolated launch did not complete within its 45-second startup budget; retry succeeded. The cause of that timeout was not established. The concurrency handoff correction closes a code-level risk, but the timeout is not presented as proof that a deadlock occurred.
+
+## Bug reports
+
+Include the J374 executable version, fork DLL hash, INI, display/compositor mode, reproduction steps and enabled mods. Capture `%TEMP%\isaac-highfps.log` with `Diag=1` for a short controlled reproduction, then turn detailed diagnostics off. Particularly useful markers include `[pipeline]`, `[present]`, `[lifecycle]`, `[entity-cache]`, `[entity-cache-format]`, `[entity-cache-shader]`, `[entity-cache-texture]`, `[shader-cache]`, `[native-ui-replay]`, `[native-ui-epoch]`, `[pure-state]` and `[pure-lua]` where enabled by that build.
+
+Report actual frame pacing and animation/gameplay timing separately. A high presentation rate can coexist with an incorrectly timed native animation or a mod graphic that updates its position only at the canonical 60 Hz sample.
+
+## Combined compatibility release
+
+[mod-compatibility-release.json](validation/mod-compatibility-release.json) binds the `.5` release DLL, production-source hashes and final affected-path cases. The earlier R1/R2/R4 image and weapon reports retain their own hashes. The combined release additionally accounts for the entire pending native start/continue operation and holds display output until a complete canonical render of the new lifetime is ready. MC_INPUT_ACTION uses typed scalar snapshots only for extra presentations; every authoritative query, including nested updates, remains native. See the [controller report](validation/controller-input-compatibility.json) and [input ABI/design](validation/input-cache-unit.json) for cached-nil, raw fallback and coverage limits.
+
+## Character-selection wheel (.6)
+
+The carousel draw helper reads projected position/scale vectors, not the angle accumulator. `.6` adds a bounded, identity-checked display scope for those vectors, with six native layout/write-site byte guards. It retains the existing page viewport scope and all `.5` compatibility fixes. See [character-carousel.json](validation/character-carousel.json) for conditional image-repeat measurements, exact matched canonical curves, reversal coverage and observed pacing limits.

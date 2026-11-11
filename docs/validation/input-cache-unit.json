@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-10",
+  "game_build": "1.9.7.15.J374",
+  "scope": "Standalone MC_INPUT_ACTION typed result-cache design and ABI validation; no live controller pass claimed",
+  "source_sha256": {
+    "src/input_result_cache_j374.h": "61b453ff3a0afe1aa4c399afa72ac5df08935fcc5967ee1a436bf77f39c08a04",
+    "tests/input_result_cache_test.cpp": "e40e15e08a0290126da32a3469bbff1d55752a360aae9933d25181c7adccf62e"
+  },
+  "native_abi": {
+    "boolean": {
+      "address": "0x864970",
+      "signature": "bool __stdcall(Entity*, int hook, int action, bool* output)",
+      "return": "AL is handled; RET16"
+    },
+    "numeric": {
+      "address": "0x864AD0",
+      "signature": "bool __stdcall(Entity*, uintptr_t unused, int action, float* output)",
+      "return": "AL is handled; hook is always 2; RET16"
+    },
+    "unhandled": "Output remains untouched; original caller executes its own raw input branch.",
+    "guard_patterns": "Both prologues, both RET16 epilogues, both dispatcher calls and native Entity Index getter were checked against J374 instructions."
+  },
+  "policy": {
+    "authoritative": "Every Update/canonical query executes natively, including repeated, recursive and nested mod-driven Game:Update calls. Query count is not fixed at 60 per second.",
+    "pure": "Reuse latest completed sample for the same key in the current fixed tick; never execute Lua to fill a miss.",
+    "missing_or_nil": "Return handled=false without writing output; preserve original caller controller index, online aggregation, flags and raw-query behavior.",
+    "key": [
+      "entity pointer",
+      "native Index",
+      "type",
+      "variant",
+      "InitSeed",
+      "input hook",
+      "action"
+    ],
+    "null_entity": "valid key; callback arguments do not contain controller index",
+    "context_identity": [
+      "scene epoch",
+      "dispatcher object",
+      "dispatcher Lua state",
+      "dispatcher registry reference",
+      "atomic lua_close generation"
+    ],
+    "record_order": "Store after original returns; latest completed outer result wins over a reentrant inner sample; no ordinal matching.",
+    "lifetime": "Clear once before each fixed input/update pass and on context changes; no retained Lua references.",
+    "capacity_keys_per_tick": 4096,
+    "overflow": "New key is not stored; later pure query logs a missing sample and uses native raw fallback.",
+    "diagnostics": [
+      "per-hook native/hit/nilRaw/missRaw summary",
+      "bounded input-cache-miss key and reason detail",
+      "skipped-store count"
+    ]
+  },
+  "standalone_test": {
+    "command": "tests/run-tests.sh abi",
+    "result": "passed",
+    "execution": "x86 Windows executable via WSL interop",
+    "coverage": [
+      "Actual guarded detour installation and both RET16 ABIs, with 1000 native then 1000 pure calls per typed wrapper",
+      "False override distinct from nil; bool/float output untouched on nil or miss",
+      "Exact float negative-zero and NaN payload bits",
+      "Different input hooks, null entity, and changed entity Index",
+      "Latest authoritative sample and recursive inner-nil/outer-override completion order",
+      "Repeated outside-render updates still execute when previous render role was pure",
+      "Fixed-tick, scene epoch, dispatcher ref, callback mask and same-address VM-close invalidation",
+      "Prior close-chain forwarding and partial-install rollback",
+      "4096-key bound and replacement of an existing key at capacity"
+    ],
+    "not_exercised": "No game launch, physical controller, live Lua VM replacement, multiplayer or arbitrary native hook replacement."
+  },
+  "integration_review": {
+    "result": "reviewed",
+    "points": [
+      "Install after shader cache; shutdown before it to preserve chained lua_close order",
+      "BeginRender propagates canonical/pure role",
+      "BeginTick runs once before each real fixed Update19715, including native input sampling, not once per presentation"
+    ]
+  },
+  "runtime_validation": {
+    "exact_build_dll_sha256": "1a2b77b5cc0ba4fc63890f9d08e09a43674d7c4cf32506f9ef446cb46af8c139",
+    "single_controller": {
+      "result": "passed at90 and45 FPS",
+      "report": "controller-input-compatibility.json",
+      "source": "process-local synthetic XInput through native engine APIs"
+    },
+    "extra_updates_and_lifecycle": {
+      "result": "tested at90 FPS",
+      "reports": [
+        "timemachine-mod-compatibility.json",
+        "ce-eden-compatibility.json"
+      ],
+      "live_VM_replacement": "not observed; same-address VM reuse remains unit coverage"
+    },
+    "missing_queries": "Zero reported in the listed release cases. Unknown queries still log and use the original caller raw-input branch; no general compatibility inference."
+  },
+  "limits": [
+    "Latest-result sampling does not emulate arbitrary Lua that intentionally varies by query ordinal on pure frames.",
+    "Only callback scalar results are cached; upstream final raw input queries are deliberately not cached.",
+    "Unit success does not validate multiplayer/online semantics or every custom input filter.",
+    "Arbitrary third-party native hook hot replacement is not an established shutdown guarantee."
+  ]
+}

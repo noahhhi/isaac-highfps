@@ -1,0 +1,49 @@
+; Experimental Steam Deck preset: prioritize frame rate over attack output.
+; Back up the active INI, copy this beside winmm.dll as isaac-highfps.ini,
+; then set Enabled=1 and restart when ready. It starts disabled deliberately.
+; Under pressure, these limits can substantially reduce damage and effects.
+; The controlled-target test retained about 30% of native total damage.
+
+[highfps]
+Enabled=0
+Interpolate=1
+MaxFps=0
+VSync=1
+IdleFps=0
+LuaVanillaCadence=1
+LuaOverlay=1
+
+; Matches the tested Deck CPU selection. On other machines use -2 to pin
+; the main thread to its current allowed CPU. Native gameplay stays on it.
+MainThreadCpu=6
+AsyncLog=1
+CacheEntries=16384
+CacheMiB=64
+CacheFileProbes=1
+CacheShaderLocations=1
+OverloadFallback=1
+OverloadRollingRecovery=1
+
+; Separate pre-allocation budgets; all attack children share the first quota.
+; Adaptive mode applies limits under pressure and restores unrestricted work
+; after sustained quiet. The first unseen burst can precede activation.
+SpawnWorkBudget=1
+ExtraSplitWorkBudget=1
+PoofWorkBudget=1
+AdaptiveWorkBudget=1
+SpawnChildrenPerTick=6
+TechZeroSearchesPerTick=1
+TrisagionCreatesPerTick=1
+PoofsPerTick=1
+
+; Admission estimates, not hard global entity caps.
+TearSoftLimit=128
+LaserSoftLimit=8
+PoofSoftLimit=32
+MinimumPlayerLasers=4
+
+; Normal-use logging. Presentation timing diagnostics are off.
+Log=1
+Diag=0
+FrameTiming=0
+NativeTimingProbe=0

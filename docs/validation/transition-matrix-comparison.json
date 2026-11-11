@@ -1,0 +1,381 @@
+{
+  "schema": "isaac-highfps-public-validation-v1",
+  "source_summary": "transition-matrix-comparison.json",
+  "source_summary_sha256": "9a3e256c5671fb192e91bbb36ca294f2eea3035e31e192a336d1514e1e03105d",
+  "scope_note": "Quantified results apply to the identified artifacts and cases; no game files, mod lists or private paths are included.",
+  "matrix": [
+    {
+      "animation": "walk",
+      "baseline": {
+        "case_id": "matrix-walk-native60",
+        "artifacts": {
+          "dll_sha256": "3cc91db3570be21a836cc8adeacb2264417a5312b13e1b01c3c6c6a15e4db34c",
+          "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+          "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "77ea613911f8e1edd8be22b276375240b860e01acb0af5799008c933b16bafb0"
+        }
+      },
+      "trial": {
+        "case_id": "matrix-walk-epoch100",
+        "artifacts": {
+          "dll_sha256": "3cc91db3570be21a836cc8adeacb2264417a5312b13e1b01c3c6c6a15e4db34c",
+          "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+          "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "77ea613911f8e1edd8be22b276375240b860e01acb0af5799008c933b16bafb0"
+        }
+      },
+      "setup": {
+        "same_seed_fixture_comparison": true,
+        "same_observed_enabled_lua_modset": true,
+        "usable_as_high_refresh_comparison": true,
+        "strict_modset_verified_comparison": true
+      },
+      "phase_comparison": {
+        "mode_sequence_baseline": [
+          1,
+          3,
+          0
+        ],
+        "mode_sequence_trial": [
+          1,
+          3,
+          0
+        ],
+        "phases": [
+          {
+            "mode": 1,
+            "baseline_observed_phase_ms": 21.9361210038187,
+            "trial_observed_phase_ms": 21.976241987431422,
+            "baseline_possible_gap_ms": null,
+            "trial_possible_gap_ms": null
+          },
+          {
+            "mode": 3,
+            "baseline_observed_phase_ms": 413.0842870072229,
+            "trial_observed_phase_ms": 420.87968000851106,
+            "baseline_possible_gap_ms": 160.01460500410758,
+            "trial_possible_gap_ms": 166.65543500857893,
+            "common_alpha_curve": {
+              "first_alpha": 0.0,
+              "last_alpha": 1.0,
+              "common_samples": 15,
+              "baseline_ms": 218.65232099662535,
+              "trial_ms": 222.89177399943583,
+              "max_wall_curve_difference_ms": 4.239453002810478,
+              "baseline_manager_tick_span": 14,
+              "trial_manager_tick_span": 14,
+              "baseline_alpha_only": [],
+              "trial_alpha_only": []
+            },
+            "common_alpha_start_to_next_mode_ms": {
+              "baseline": 253.0696820031153,
+              "trial": 254.22424499993213
+            }
+          },
+          {
+            "mode": 0,
+            "baseline_observed_phase_ms": 0.0,
+            "trial_observed_phase_ms": 0.0,
+            "baseline_possible_gap_ms": null,
+            "trial_possible_gap_ms": null
+          }
+        ],
+        "first_positive_mode1_to_end": {
+          "baseline_ms": 431.86467699706554,
+          "trial_ms": 430.29869100428186,
+          "baseline_manager_ticks": 17,
+          "trial_manager_ticks": 17
+        }
+      },
+      "presentation": {
+        "status": "native_high_refresh_present_confirmed",
+        "high_refresh_confirmed": true,
+        "steady_candidate_samples": 82,
+        "steady_candidate_median_ms": 10.001,
+        "median_present_hz": 99.99000099990002,
+        "scope": "native swap trace; does not prove physical display scanout or VRR"
+      },
+      "observed_tick_bursts": {
+        "baseline": [],
+        "trial": []
+      }
+    },
+    {
+      "animation": "fade",
+      "baseline": {
+        "case_id": "matrix-fade-native60",
+        "artifacts": {
+          "dll_sha256": "3cc91db3570be21a836cc8adeacb2264417a5312b13e1b01c3c6c6a15e4db34c",
+          "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+          "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "2347ed695cd631482593071a4ec12793c67027348e1eb3993a8973f3c28ac616"
+        }
+      },
+      "trial": {
+        "case_id": "matrix-fade-epoch100",
+        "artifacts": {
+          "dll_sha256": "3cc91db3570be21a836cc8adeacb2264417a5312b13e1b01c3c6c6a15e4db34c",
+          "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+          "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "2347ed695cd631482593071a4ec12793c67027348e1eb3993a8973f3c28ac616"
+        }
+      },
+      "setup": {
+        "same_seed_fixture_comparison": true,
+        "same_observed_enabled_lua_modset": true,
+        "usable_as_high_refresh_comparison": true,
+        "strict_modset_verified_comparison": true
+      },
+      "phase_comparison": {
+        "mode_sequence_baseline": [
+          1,
+          2,
+          3,
+          4,
+          0
+        ],
+        "mode_sequence_trial": [
+          1,
+          2,
+          3,
+          4,
+          0
+        ],
+        "phases": [
+          {
+            "mode": 1,
+            "baseline_observed_phase_ms": 18.88982100354042,
+            "trial_observed_phase_ms": 28.435293992515653,
+            "baseline_possible_gap_ms": null,
+            "trial_possible_gap_ms": null
+          },
+          {
+            "mode": 2,
+            "baseline_observed_phase_ms": 267.3040170047898,
+            "trial_observed_phase_ms": 269.03932000277564,
+            "baseline_possible_gap_ms": null,
+            "trial_possible_gap_ms": null,
+            "common_alpha_curve": {
+              "first_alpha": 0.0,
+              "last_alpha": 1.0,
+              "common_samples": 15,
+              "baseline_ms": 232.6968839915935,
+              "trial_ms": 228.36902301060036,
+              "max_wall_curve_difference_ms": 4.350570001406595,
+              "baseline_manager_tick_span": 14,
+              "trial_manager_tick_span": 14,
+              "baseline_alpha_only": [],
+              "trial_alpha_only": []
+            },
+            "common_alpha_start_to_next_mode_ms": {
+              "baseline": 267.3040170047898,
+              "trial": 269.03932000277564
+            }
+          },
+          {
+            "mode": 3,
+            "baseline_observed_phase_ms": 413.44120299618226,
+            "trial_observed_phase_ms": 410.6706070015207,
+            "baseline_possible_gap_ms": 159.69967599085066,
+            "trial_possible_gap_ms": 159.91467599815223,
+            "common_alpha_curve": {
+              "first_alpha": 0.0,
+              "last_alpha": 1.0,
+              "common_samples": 15,
+              "baseline_ms": 219.3689190025907,
+              "trial_ms": 219.3983020115411,
+              "max_wall_curve_difference_ms": 6.49134699779097,
+              "baseline_manager_tick_span": 14,
+              "trial_manager_tick_span": 14,
+              "baseline_alpha_only": [],
+              "trial_alpha_only": []
+            },
+            "common_alpha_start_to_next_mode_ms": {
+              "baseline": 253.7415270053316,
+              "trial": 250.75593100336846
+            }
+          },
+          {
+            "mode": 4,
+            "baseline_observed_phase_ms": 31.27004900306929,
+            "trial_observed_phase_ms": 28.1351080047898,
+            "baseline_possible_gap_ms": null,
+            "trial_possible_gap_ms": null,
+            "common_alpha_curve": {
+              "first_alpha": 0.0,
+              "last_alpha": 0.071429,
+              "common_samples": 2,
+              "baseline_ms": 15.653390000807121,
+              "trial_ms": 18.758049001917243,
+              "max_wall_curve_difference_ms": 3.1046590011101216,
+              "baseline_manager_tick_span": 1,
+              "trial_manager_tick_span": 1,
+              "baseline_alpha_only": [],
+              "trial_alpha_only": []
+            },
+            "common_alpha_start_to_next_mode_ms": {
+              "baseline": 31.27004900306929,
+              "trial": 28.1351080047898
+            }
+          },
+          {
+            "mode": 0,
+            "baseline_observed_phase_ms": 0.0,
+            "trial_observed_phase_ms": 0.0,
+            "baseline_possible_gap_ms": null,
+            "trial_possible_gap_ms": null
+          }
+        ],
+        "first_positive_mode1_to_end": {
+          "baseline_ms": 730.9050900075817,
+          "trial_ms": 729.9772679980379,
+          "baseline_manager_ticks": 35,
+          "trial_manager_ticks": 35
+        }
+      },
+      "presentation": {
+        "status": "native_high_refresh_present_confirmed",
+        "high_refresh_confirmed": true,
+        "steady_candidate_samples": 84,
+        "steady_candidate_median_ms": 10.002,
+        "median_present_hz": 99.98000399920015,
+        "scope": "native swap trace; does not prove physical display scanout or VRR"
+      },
+      "observed_tick_bursts": {
+        "baseline": [],
+        "trial": []
+      }
+    },
+    {
+      "animation": "teleport",
+      "baseline": {
+        "case_id": "matrix-teleport-native60",
+        "artifacts": {
+          "dll_sha256": "3cc91db3570be21a836cc8adeacb2264417a5312b13e1b01c3c6c6a15e4db34c",
+          "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+          "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "38637ee012203a746fa1311d3f2c3ba53a2cd4eed8471c4e954e96dab870c6e9"
+        }
+      },
+      "trial": {
+        "case_id": "matrix-teleport-epoch100",
+        "artifacts": {
+          "dll_sha256": "3cc91db3570be21a836cc8adeacb2264417a5312b13e1b01c3c6c6a15e4db34c",
+          "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+          "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+          "fixture_sha256": "38637ee012203a746fa1311d3f2c3ba53a2cd4eed8471c4e954e96dab870c6e9"
+        }
+      },
+      "setup": {
+        "same_seed_fixture_comparison": true,
+        "same_observed_enabled_lua_modset": true,
+        "usable_as_high_refresh_comparison": true,
+        "strict_modset_verified_comparison": true
+      },
+      "phase_comparison": {
+        "mode_sequence_baseline": [
+          1,
+          3,
+          4,
+          0
+        ],
+        "mode_sequence_trial": [
+          1,
+          3,
+          4,
+          0
+        ],
+        "phases": [
+          {
+            "mode": 1,
+            "baseline_observed_phase_ms": 620.0779710052302,
+            "trial_observed_phase_ms": 636.8465549894609,
+            "baseline_possible_gap_ms": null,
+            "trial_possible_gap_ms": null
+          },
+          {
+            "mode": 3,
+            "baseline_observed_phase_ms": 416.27636799239554,
+            "trial_observed_phase_ms": 398.1959270022344,
+            "baseline_possible_gap_ms": 162.8638269903604,
+            "trial_possible_gap_ms": 153.6319480073871,
+            "common_alpha_curve": {
+              "first_alpha": 0.071429,
+              "last_alpha": 1.0,
+              "common_samples": 14,
+              "baseline_ms": 215.81784899171907,
+              "trial_ms": 213.29127899662126,
+              "max_wall_curve_difference_ms": 6.053060991689563,
+              "baseline_manager_tick_span": 13,
+              "trial_manager_tick_span": 13,
+              "baseline_alpha_only": [
+                0.0
+              ],
+              "trial_alpha_only": []
+            },
+            "common_alpha_start_to_next_mode_ms": {
+              "baseline": 250.22098199406173,
+              "trial": 244.56397899484728
+            }
+          },
+          {
+            "mode": 4,
+            "baseline_observed_phase_ms": 631.8919670011383,
+            "trial_observed_phase_ms": 639.4285020069219,
+            "baseline_possible_gap_ms": null,
+            "trial_possible_gap_ms": null,
+            "common_alpha_curve": {
+              "first_alpha": 0.0,
+              "last_alpha": 2.642857,
+              "common_samples": 37,
+              "baseline_ms": 616.2373300030595,
+              "trial_ms": 620.7280770031502,
+              "max_wall_curve_difference_ms": 10.126110995770432,
+              "baseline_manager_tick_span": 37,
+              "trial_manager_tick_span": 37,
+              "baseline_alpha_only": [],
+              "trial_alpha_only": []
+            },
+            "common_alpha_start_to_next_mode_ms": {
+              "baseline": 631.8919670011383,
+              "trial": 639.4285020069219
+            }
+          },
+          {
+            "mode": 0,
+            "baseline_observed_phase_ms": 0.0,
+            "trial_observed_phase_ms": 0.0,
+            "baseline_possible_gap_ms": null,
+            "trial_possible_gap_ms": null
+          }
+        ],
+        "first_positive_mode1_to_end": {
+          "baseline_ms": 1668.246305998764,
+          "trial_ms": 1658.8124130066717,
+          "baseline_manager_ticks": 91,
+          "trial_manager_ticks": 91
+        }
+      },
+      "presentation": {
+        "status": "native_high_refresh_present_confirmed",
+        "high_refresh_confirmed": true,
+        "steady_candidate_samples": 83,
+        "steady_candidate_median_ms": 10.003,
+        "median_present_hz": 99.97000899730081,
+        "scope": "native swap trace; does not prove physical display scanout or VRR"
+      },
+      "observed_tick_bursts": {
+        "baseline": [],
+        "trial": []
+      }
+    }
+  ],
+  "limitations": [
+    "Observer, native QPC and Lua time have different origins. Only within-clock durations are compared here.",
+    "Observer gaps are not exact load spans. Trial native spans are exact instrumented scopes, while baseline has no equivalent native trace.",
+    "Mode1 often starts before the first captured sample. Aligning its first positive alpha removes the observed one-tick start offset; it is not the full request latency.",
+    "Manager and transition fields are read non-atomically, so occasional count/alpha disagreement or missing alpha samples can reflect polling.",
+    "Animation alpha is not necessarily clamped to1: TELEPORT mode4 legitimately exceeds1 in the native reference.",
+    "One run per animation/rate proves this sampled matrix, not a repeatability distribution, every transition style, or pixel-level smoothness."
+  ]
+}

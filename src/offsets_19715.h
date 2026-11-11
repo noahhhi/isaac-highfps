@@ -1,182 +1,54 @@
-// J374 port. Only addresses used with LuaOverlay disabled are mapped.
-// Unported KAGE constants are unreachable: Init forces LuaOverlay=false.
-// Isaac high-FPS mod — verified addresses for The Binding of Isaac: Rebirth
-// Repentance+ build v1.9.7.17 ("J460"), PE32 x86, image base 0x400000.
-//
-// Confidence tags:
-//   [LIVE]  read out of the running process and confirmed
-//   [VER]   static finding that an independent adversarial pass re-read byte-for-byte
-//   [SIG]   recovered from a REPENTOGON ZHL signature that matched our binary exactly once
-//           AND was cross-checked structurally (a unique match alone is NOT enough:
-//           the published Manager::Render pattern matched a resize handler here)
-//   [OPEN]  not yet proven — do not patch against this
+// Repentance+ 1.9.7.15.J374, PE32 x86, preferred image base 0x400000.
+// Globals/functions below are virtual addresses; Addr() applies the ASLR delta.
+// Member fields and vtable indices are offsets. See docs/port-1.9.7.15.md.
 #pragma once
 #include <cstdint>
-
 namespace isaac {
+inline constexpr uint32_t kPeTimestamp = 0x68D45723;
+inline constexpr uint32_t kPeImageSize = 0x8B6000;
 
+// Executable identity and simulation
 inline constexpr uintptr_t kImageBase = 0x00400000;
 inline constexpr uintptr_t kGGamePtr = 0x00C0C074;
-
-// ---------------------------------------------------------------- globals
-// g_Manager: the global Manager*. [SIG] captured from the g_Manager ZHL pattern,
-// [LIVE] dereferenced in the running game and all member offsets below read back sane.
 inline constexpr uintptr_t kGManagerPtr   = 0x00C0C09C;
-inline constexpr uintptr_t kGMenuManager  = 0x00C72A20;  // [SIG]
-inline constexpr uintptr_t kGWindowFlags  = 0x00C798E4;  // [VER] bit 0x200 = vsync enabled
+inline constexpr uintptr_t kMgrFrameCount        = 0x4ABA8;
+inline constexpr uintptr_t kPhaseMachine     = 0x0094CAD0;
 
-// ------------------------------------------------------- Manager members
-// Offsets from *g_Manager. Note REPENTOGON publishes 0x4A8B8 for _framecount and
-// 0x2A1FB for _enableInterpolation on their 1.9.7.12 build — both differ from ours,
-// so these were derived against THIS binary, not ported.
-inline constexpr uintptr_t kMgrFrameCount        = 0x4ABA8;  // [LIVE] +1 per main-loop iteration
-inline constexpr uintptr_t kMgrFps               = 0x4B12C;  // [LIVE] engine's own 1/dt
-inline constexpr uintptr_t kMgrOptionsConfig     = 0x2A33C;  // [VER]
-inline constexpr uintptr_t kMgrEnableInterp      = 0x2A3C0;  // [LIVE] optionsConfig + 0x84
-
-// -------------------------------------------------------- Entity members
-// [VER] derived from the Lua accessor thunks (Position getter 0x417290,
-// Velocity getter 0x4172D0), not guessed. _flags/_velocity independently agree
-// with REPENTOGON's published member table.
+// Entity state (shared layout verified in J374)
 inline constexpr uintptr_t kEntType        = 0x028;
-inline constexpr uintptr_t kEntFlags       = 0x168;  // uint64, lo dword here, hi at 0x16C
-inline constexpr uintptr_t kEntPreviewFlag = 0x175;  // byte: "Position currently holds a preview"
-inline constexpr uintptr_t kEntPosition    = 0x33C;  // float2
-inline constexpr uintptr_t kEntPosBackup   = 0x344;  // float2, written by Interpolate()
-inline constexpr uintptr_t kEntVelocity    = 0x360;  // float2
-inline constexpr uintptr_t kEntFrictionBase= 0x368;
+inline constexpr uintptr_t kEntFlags       = 0x168;
+inline constexpr uintptr_t kEntPreviewFlag = 0x175;
+inline constexpr uintptr_t kEntPosition    = 0x33C;
+inline constexpr uintptr_t kEntPosBackup   = 0x344;
+inline constexpr uintptr_t kEntVelocity    = 0x360;
 inline constexpr uintptr_t kEntFriction    = 0x36C;
-inline constexpr uintptr_t kEntTimeScale   = 0x39C;  // float, ctor-init 1.0 at 0x6A94F0
-
+inline constexpr uintptr_t kEntTimeScale   = 0x39C;
 inline constexpr uint64_t kFlagNoInterpolate      = 1ull << 1;
-inline constexpr uint64_t kFlagInterpolationUpdate= 1ull << 14;
 
-// ------------------------------------------------------- room camera
-// The camera is a SEPARATE 0x94-byte object, not inline in the Game object - which is why
-// scanning the Game object for it turned up nothing. It is reached Game -> Room -> Camera:
-//   Room   = *(Game + 0x18300)   the same pointer the entity list is walked through
-//   Camera = *(Room + 0x11F8)    Room::_Camera, from REPENTOGON's Room.zhl
-//   pos    =  Camera + 0x60      the render position, a float2
-// [LIVE] verified in the running game: Camera+0x60/+0x64 read back the exact player position
-// and scrolled with movement; Camera+0x8C is _shouldOverride (matches REPENTOGON's Camera.zhl)
-// and Camera+0x90 is the 0.1 ease factor. It is written at 60 Hz (Camera::DoUpdate) and read
-// by the render every frame, so uncapped it holds for three frames and then jumps - exactly
-// the big-room judder.
-inline constexpr uintptr_t kRoomInGame   = 0x18300;  // [LIVE] Game -> current Room*
-inline constexpr uintptr_t kCameraInRoom = 0x11F8;   // [SIG] Room::_Camera (Room.zhl)
-inline constexpr uintptr_t kCamPosition  = 0x60;     // [LIVE] Camera focus position, float2
+// Room and render projection
+inline constexpr uintptr_t kRoomInGame   = 0x18300;
+inline constexpr uintptr_t kRoomScrollOfs = 0x1204;
+inline constexpr uintptr_t kOrthoWidth        = 0x00C0E71C;
+inline constexpr uintptr_t kOrthoHeight       = 0x00C0E92C;
+inline constexpr uintptr_t kSnapScaleA = 0x00BAF5E4;
+inline constexpr uintptr_t kSnapScaleB = 0x00BAF7A0;
 
-// What the renderer ACTUALLY consumes. Camera+0x60 is only the camera's own focus
-// state: once per 60 Hz frame Camera::DoUpdate (0x9437E0 -> 0x943830) maps it through
-// the same 0.65 world->screen transform the sprites use, clamps it to the room, and
-// stores the result here - and every sprite draw adds THIS field, post-snap
-// (Room::Render 0x80F200 passes &Room+0x1204 into every Entity::Render).
-// [LIVE] proven by cadence: this field steps at exactly 60 Hz while our Camera+0x60
-// previews ran at 180 - which is why previewing the camera field never reached the
-// screen, and why the extrapolated player sawtoothed against the frozen scroll.
-inline constexpr uintptr_t kRoomScrollOfs = 0x1204;  // [VER]+[LIVE] float2, screen units
-
-// ------------------------------------------------- render pixel snapping
-// The world->screen mapping every sprite renderer inlines ([VER] three copies in
-// Entity_Player::Render 0x78CA00, more in Room::Render 0x80F200):
-//   screen = floor(((world - 60|140) * 0.65 + (ortho - 338|182) * 0.5) * s + 0.5) / s
-//          + scrollOffset
-// with s = *kSnapScaleA * *kSnapScaleB ([LIVE] 1.0 * 2.0 = 2 RT pixels per screen unit)
-// and scrollOffset = Room+0x1204/+0x1208, the camera-derived term - added AFTER the
-// snap. The position term is therefore quantised to the render-target pixel grid
-// independently of the camera, which is what makes a screen-locked sprite oscillate
-// one RT pixel against a smoothly scrolling background (the big-room walk shiver).
-inline constexpr uintptr_t kSnapScaleA = 0x00BAF5E4;  // [VER]+[LIVE] float 1.0
-inline constexpr uintptr_t kSnapScaleB = 0x00BAF7A0;  // [VER]+[LIVE] float 2.0
-
-// Entity vtable layout. Slot 4 is the render-preview step; REPENTOGON's own
-// source marks it `skip; // Interpolate`.
-inline constexpr int kVtUpdate      = 3;   // +0x0C
-inline constexpr int kVtInterpolate = 4;   // +0x10
-inline constexpr int kVtRender      = 5;   // +0x14
-
-// ------------------------------------------------------------- functions
-inline constexpr uintptr_t kIsaacMain        = 0x00931050;  // [SIG]+[VER] confirmed as main()
-inline constexpr uintptr_t kManagerRender    = 0x009555C0;  // [SIG] anchor 0x955C8A lands inside
-inline constexpr uintptr_t kManagerUpdateWrp = 0x009AB6D0;  // [VER] thin wrapper -> phase machine
-inline constexpr uintptr_t kPhaseMachine     = 0x0094CAD0;  // [VER] takes a bool; re-entrant!
-inline constexpr uintptr_t kInterpStep       = 0x006FD3F0;  // [VER] the odd-frame substep driver
-inline constexpr uintptr_t kEntityUpdateBase = 0x006AE820;  // [VER] the ONE gameplay integrator
-inline constexpr uintptr_t kEntityInterpBase = 0x006B0EB0;  // [VER] base Interpolate (vt[4])
-inline constexpr uintptr_t kRoomGetTimeScale = 0x007EA3E0;  // [SIG]+[VER] shared TimeScale source
-inline constexpr uintptr_t kGameIsPaused     = 0x006FD350;  // [SIG]
-inline constexpr uintptr_t kGetRenderPosition= 0x0067F310;  // [SIG]
-
-// ------------------------------------------------------------ patch sites
-// The 1/60 limiter constant. THREE readers in main(), not two — the third is a
-// watchdog comparing (1/60)/dt against 1.1 and force-enabling the limiter after
-// 30 consecutive fast frames. Missing it means the cap silently comes back.
-inline constexpr uintptr_t kConst1Over60   = 0x00BAA498;  // [VER] double 0.016666666666666666
-inline constexpr uintptr_t kLimiterMain[]  = {0x0093136E, 0x00931445};  // [VER]
-inline constexpr uintptr_t kLimiterWatchdog= 0x0093129F;                // [VER] the one we'd have missed
-inline constexpr uintptr_t kLimiterLoading[]= {0x008FC3B1, 0x008FC450}; // [VER] loading-screen loop
-
-// The integrator's two TimeScale reads. 8-byte instructions, so a 5-byte jmp fits.
-// Scale HERE, never the stored +0x39C field: that same field feeds the per-tick timer
-// accumulator at 0x6AE867-0x6AE88E, which must keep counting at 30 Hz.
-inline constexpr uintptr_t kIntegratorTsRead[] = {0x006AEB95, 0x006AEBF9};  // [VER]
-
-// The hardcoded 0.5 of the render preview. The constant at 0xBAA2D0 is shared by
-// 2810 instructions binary-wide — NEVER patch it in place. Patch the abs32 operand
-// of each mulss instead (operand sits at instruction+4).
-inline constexpr uintptr_t kConstHalfShared = 0x00BAA2D0;  // [VER] float 0.5, 2810 users
-inline constexpr uintptr_t kPreviewHalfOperand[] = {      // [VER] instruction+4
-    0x006B0F43, 0x006B0F4B,  // base Interpolate (Player, Bomb, Slot, + delegated)
-    0x0065C583, 0x0065C5A7,  // Projectile
-    0x00967F85, 0x00967FA5,  // Knife
-    0x0097E761, 0x0097E781,  // Laser
-    0x0067989A, 0x00679BE8,  // Tear
-};
-
-// ------------------------------------------------- KAGE graphics / overlay
-// Everything here was read out of THIS binary, mostly by following the engine's own
-// "Colormod Surface" path in sub_6FBC10 — the same sequence we imitate: create a
-// procedural render target, push/bind it, draw, flush, pop, blit it full-screen.
-inline constexpr uintptr_t kGraphicsManager   = 0x00C798E0;  // [VER] +4 == kGWindowFlags
-inline constexpr uintptr_t kScreenWidth       = 0x00C79110;  // [VER] uint32, feeds every surface
-inline constexpr uintptr_t kScreenHeight      = 0x00C79114;  // [VER] uint32
-inline constexpr uintptr_t kOrthoWidth        = 0x00C0E71C;  // [VER] float, full-screen quad
-inline constexpr uintptr_t kOrthoHeight       = 0x00C0E92C;  // [VER] float
-inline constexpr uintptr_t kCurrentShader     = 0x00C379B8;  // [VER] written by kSelectShader
-
-// Manager fields, relative to kGraphicsManager.
-inline constexpr uintptr_t kMgrBlendState     = 0x20;  // [VER] 5 dwords, reset by Clear()
-inline constexpr uintptr_t kMgrCurRenderTgt   = 0x68;  // [VER] == 0x00C79948
-
-// [VER] all four confirmed by disassembly, including their stack cleanup:
-inline constexpr uintptr_t kPushRenderTarget  = 0x00683680;  // no args, retn
-inline constexpr uintptr_t kPopRenderTarget   = 0x006836C0;  // no args, retn ("stack is empty!")
-inline constexpr uintptr_t kSetRenderTarget   = 0x00A18300;  // thiscall(mgr, target, screenSized), retn 8
-inline constexpr uintptr_t kClearTarget       = 0x00A18230;  // thiscall(mgr), clears to (0,0,0,0)
-inline constexpr uintptr_t kFlushBatches      = 0x00A19180;  // thiscall(mgr, 1), retn 4
-inline constexpr uintptr_t kSelectShader      = 0x00A14050;  // stdcall(x) -> KAGE_ColorTextureShader
-inline constexpr uintptr_t kCreateRenderTgt   = 0x00A11F30;  // stdcall(&out, w, h, name, &color), retn 0x14
-
-// ImageBase vtable slots, byte offsets confirmed at the engine's own call sites.
-inline constexpr int kVtImageRender    = 5;   // +0x14  Render(SourceQuad*, DestQuad*, KColor*)
-inline constexpr int kVtImageSetFilter = 18;  // +0x48  SetFilterMode(min, mag)
-inline constexpr uintptr_t kImgFilterCacheMin = 0x38;  // engine mirrors the filter mode here
-inline constexpr uintptr_t kImgFilterCacheMag = 0x3C;
-
-// LuaEngine::PostRender — where mods are given the finished world to draw on, and so the
-// one place in the frame where compositing our own layer is guaranteed to be both legal
-// and correctly ordered. Exactly one caller (0x006FC0A6, inside the render function), and
-// its prologue `55 8B EC 6A FF` is 5 bytes on an instruction boundary.
-inline constexpr uintptr_t kLuaPostRender     = 0x00863680;  // [VER]
-
-// The rollback loop that undoes previews before the authoritative tick.
-// Self-contained; iterates Game+0x125C (array) / +0x1264 (count).
-inline constexpr uintptr_t kRollbackLoopBegin = 0x009551D8;  // [VER]
-inline constexpr uintptr_t kRollbackLoopEnd   = 0x0095522A;  // [VER]
-
-// Gate we replace. 0x9551CF `F6 87 BC AB 04 00 01` test byte [edi+4ABBC],1
-//                  0x9551D6 `75 60`               jnz -> preview branch
-// 9-byte window, nothing branches into it. [VER]
-inline constexpr uintptr_t kGateParity = 0x009551CF;
-
-}  // namespace isaac
+// J374 KAGE graphics ABI (not interchangeable with J460)
+inline constexpr uintptr_t kGraphicsManager   = 0x00BD56B0;
+inline constexpr uintptr_t kCurrentShader     = 0x00BD56C8;
+inline constexpr uintptr_t kScreenWidth       = 0x00C0E944;
+inline constexpr uintptr_t kScreenHeight      = 0x00C0E928;
+inline constexpr uintptr_t kMgrBlendState     = 0x04;
+inline constexpr uintptr_t kMgrCurRenderTgt   = 0x1C;
+inline constexpr uintptr_t kPushRenderTarget  = 0x00682000;
+inline constexpr uintptr_t kPopRenderTarget   = 0x006820C0;
+inline constexpr uintptr_t kSetRenderTarget   = 0x00A0C6E0;
+inline constexpr uintptr_t kClearTarget       = 0x00A0C880;
+inline constexpr uintptr_t kFlushBatches      = 0x00A09720;
+inline constexpr uintptr_t kCreateRenderTgt   = 0x00A13B40;
+inline constexpr uintptr_t kLuaPostRender     = 0x008633A0;
+inline constexpr int kVtImageRender    = 3;
+inline constexpr int kVtImageSetFilter = 16;
+inline constexpr uintptr_t kImgFilterCacheMin = 0x24;
+inline constexpr uintptr_t kImgFilterCacheMag = 0x28;
+} // namespace isaac

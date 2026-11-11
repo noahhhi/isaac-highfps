@@ -1,0 +1,11 @@
+{
+  "cases": [
+    "greed-camera-90-retry-20261110",
+    "menu-build-greed90-20261110"
+  ],
+  "record_count": 2175,
+  "events_equal_except_time_ui_origin": true,
+  "diagnostic_failures": 0,
+  "dll_sha256": "4119e933accfafc8f156b511f84916655825607947a9ff345bac32653bbfe9ec",
+  "source_commit": "4c552f04f793e7b976356574906cffce2d80fa09"
+}

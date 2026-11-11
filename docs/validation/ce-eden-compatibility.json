@@ -1,0 +1,795 @@
+{
+  "schema": 1,
+  "date": "2026-11-10",
+  "scope": "Eden starting-passive choice, native continuation and black-to-room fade on J374 Normal difficulty. This is not the separate earned-Blessing reward scenario.",
+  "source_summary_sha256": {
+    "r4": "0279c0bc8063d4a608e98423c7e156acb20228fe1b17b5ec9b08ce81d5952144",
+    "r5": "128f7814db78272054e97ecc50b1c5afbc346c4836ce9271b2fc0c40b934dfdd"
+  },
+  "build": {
+    "candidate": "R5 final candidate",
+    "dll_sha256": "1a2b77b5cc0ba4fc63890f9d08e09a43674d7c4cf32506f9ef446cb46af8c139",
+    "source_sha256": {
+      "src/dllmain.cpp": "e8aedce30460ced47293249675423c5d85cee689ddafdf9727498c222bd62917",
+      "src/render_timing.h": "2505fa670ff40922e695d0cf841d0142b63504361cd13d358cf58ac61f034a6e",
+      "src/input_result_cache_j374.h": "61b453ff3a0afe1aa4c399afa72ac5df08935fcc5967ee1a436bf77f39c08a04"
+    },
+    "pending_start_hook_function_sha256": "2c5af2537b68c1bd5fb0a3880d8ea76e89d344a7a65d5d39efc9372b530fef1c",
+    "hook_hash_range": "Exact source from void __fastcall HookedPendingGameStart( to immediately before void __fastcall HookedRestoreState(.",
+    "prior_r4_dll_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+    "prior_r4_source_sha256": {
+      "src/dllmain.cpp": "81ae739726e7de4374af45cd9b93fb8987291b45a626419504696b8ac77ed08d",
+      "src/render_timing.h": "2505fa670ff40922e695d0cf841d0142b63504361cd13d358cf58ac61f034a6e"
+    }
+  },
+  "cases": {
+    "native": {
+      "case": "eden-start-native60-20261110",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "eaed1e76cde46de41268fecda58ef425fcf70b5cd6e31149d012526f5bfe1179",
+      "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+      "injected_dll_sha256": null,
+      "artifact_dll_role": "staged but disabled",
+      "event_count": 153,
+      "lua_error_count": 0,
+      "cache_miss_logs": 0
+    },
+    "r2": {
+      "case": "eden-start-r2-90-20261110",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "eaed1e76cde46de41268fecda58ef425fcf70b5cd6e31149d012526f5bfe1179",
+      "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+      "injected_dll_sha256": "c3344f15c61a2c377ef3da1496ff7fcabc94abe14deaa722e0d7883c022d723c",
+      "artifact_dll_role": "enabled candidate",
+      "event_count": 153,
+      "lua_error_count": 0,
+      "cache_miss_logs": 5,
+      "measured_lifecycle_union": [
+        {
+          "epoch": 1,
+          "seconds": 0.305514,
+          "kind": "level-load"
+        },
+        {
+          "epoch": 2,
+          "seconds": 0.120731,
+          "kind": "level-load"
+        },
+        {
+          "epoch": 3,
+          "seconds": 0.074094,
+          "kind": "restore-state"
+        },
+        {
+          "epoch": 4,
+          "seconds": 0.15305,
+          "kind": "restore-state"
+        }
+      ]
+    },
+    "r4": {
+      "case": "eden-start-r4-90-20261110",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "eaed1e76cde46de41268fecda58ef425fcf70b5cd6e31149d012526f5bfe1179",
+      "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+      "injected_dll_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+      "artifact_dll_role": "enabled candidate",
+      "event_count": 153,
+      "lua_error_count": 0,
+      "cache_miss_logs": 0,
+      "measured_lifecycle_union": [
+        {
+          "epoch": 1,
+          "seconds": 0.427154,
+          "kind": "game-start-continue"
+        },
+        {
+          "epoch": 2,
+          "seconds": 0.287367,
+          "kind": "game-start-continue"
+        },
+        {
+          "epoch": 3,
+          "seconds": 0.071794,
+          "kind": "restore-state"
+        },
+        {
+          "epoch": 4,
+          "seconds": 0.223581,
+          "kind": "game-start-continue"
+        }
+      ]
+    },
+    "r5": {
+      "case": "eden-start-r5-90-20261110",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "eaed1e76cde46de41268fecda58ef425fcf70b5cd6e31149d012526f5bfe1179",
+      "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+      "injected_dll_sha256": "1a2b77b5cc0ba4fc63890f9d08e09a43674d7c4cf32506f9ef446cb46af8c139",
+      "artifact_dll_role": "enabled final candidate",
+      "event_count": 153,
+      "lua_error_count": 0,
+      "cache_miss_logs": 0,
+      "measured_lifecycle_union": [
+        {
+          "epoch": 1,
+          "seconds": 0.482077,
+          "kind": "game-start-continue"
+        },
+        {
+          "epoch": 2,
+          "seconds": 0.29326,
+          "kind": "game-start-continue"
+        },
+        {
+          "epoch": 3,
+          "seconds": 0.072739,
+          "kind": "restore-state"
+        },
+        {
+          "epoch": 4,
+          "seconds": 0.221936,
+          "kind": "game-start-continue"
+        }
+      ]
+    }
+  },
+  "post_continuation_timing": {
+    "native": {
+      "first_to_second_game_start_ms": 341,
+      "main_r2_to_r21_ms": 306,
+      "world_frame_interval": [
+        1,
+        10
+      ],
+      "same_callback_offsets": [
+        {
+          "r": 2,
+          "gf": 1,
+          "ms": 0
+        },
+        {
+          "r": 3,
+          "gf": 1,
+          "ms": 2
+        },
+        {
+          "r": 4,
+          "gf": 2,
+          "ms": 19
+        },
+        {
+          "r": 5,
+          "gf": 2,
+          "ms": 36
+        },
+        {
+          "r": 6,
+          "gf": 3,
+          "ms": 69
+        },
+        {
+          "r": 7,
+          "gf": 3,
+          "ms": 72
+        },
+        {
+          "r": 8,
+          "gf": 4,
+          "ms": 89
+        },
+        {
+          "r": 9,
+          "gf": 4,
+          "ms": 105
+        },
+        {
+          "r": 10,
+          "gf": 5,
+          "ms": 123
+        },
+        {
+          "r": 11,
+          "gf": 5,
+          "ms": 139
+        },
+        {
+          "r": 12,
+          "gf": 6,
+          "ms": 158
+        },
+        {
+          "r": 13,
+          "gf": 6,
+          "ms": 172
+        },
+        {
+          "r": 14,
+          "gf": 7,
+          "ms": 189
+        },
+        {
+          "r": 15,
+          "gf": 7,
+          "ms": 205
+        },
+        {
+          "r": 16,
+          "gf": 8,
+          "ms": 222
+        },
+        {
+          "r": 17,
+          "gf": 8,
+          "ms": 239
+        },
+        {
+          "r": 18,
+          "gf": 9,
+          "ms": 256
+        },
+        {
+          "r": 19,
+          "gf": 9,
+          "ms": 272
+        },
+        {
+          "r": 20,
+          "gf": 10,
+          "ms": 290
+        },
+        {
+          "r": 21,
+          "gf": 10,
+          "ms": 306
+        }
+      ]
+    },
+    "r2": {
+      "first_to_second_game_start_ms": 342,
+      "main_r2_to_r21_ms": 61,
+      "world_frame_interval": [
+        1,
+        10
+      ],
+      "same_callback_offsets": [
+        {
+          "r": 2,
+          "gf": 1,
+          "ms": 0
+        },
+        {
+          "r": 3,
+          "gf": 1,
+          "ms": 4
+        },
+        {
+          "r": 4,
+          "gf": 2,
+          "ms": 7
+        },
+        {
+          "r": 5,
+          "gf": 2,
+          "ms": 9
+        },
+        {
+          "r": 6,
+          "gf": 3,
+          "ms": 12
+        },
+        {
+          "r": 7,
+          "gf": 3,
+          "ms": 15
+        },
+        {
+          "r": 8,
+          "gf": 4,
+          "ms": 18
+        },
+        {
+          "r": 9,
+          "gf": 4,
+          "ms": 20
+        },
+        {
+          "r": 10,
+          "gf": 5,
+          "ms": 24
+        },
+        {
+          "r": 11,
+          "gf": 5,
+          "ms": 26
+        },
+        {
+          "r": 12,
+          "gf": 6,
+          "ms": 34
+        },
+        {
+          "r": 13,
+          "gf": 6,
+          "ms": 37
+        },
+        {
+          "r": 14,
+          "gf": 7,
+          "ms": 39
+        },
+        {
+          "r": 15,
+          "gf": 7,
+          "ms": 41
+        },
+        {
+          "r": 16,
+          "gf": 8,
+          "ms": 46
+        },
+        {
+          "r": 17,
+          "gf": 8,
+          "ms": 48
+        },
+        {
+          "r": 18,
+          "gf": 9,
+          "ms": 53
+        },
+        {
+          "r": 19,
+          "gf": 9,
+          "ms": 55
+        },
+        {
+          "r": 20,
+          "gf": 10,
+          "ms": 58
+        },
+        {
+          "r": 21,
+          "gf": 10,
+          "ms": 61
+        }
+      ]
+    },
+    "r4": {
+      "first_to_second_game_start_ms": 334,
+      "main_r2_to_r21_ms": 296,
+      "world_frame_interval": [
+        1,
+        10
+      ],
+      "same_callback_offsets": [
+        {
+          "r": 2,
+          "gf": 1,
+          "ms": 0
+        },
+        {
+          "r": 3,
+          "gf": 1,
+          "ms": 4
+        },
+        {
+          "r": 4,
+          "gf": 2,
+          "ms": 8
+        },
+        {
+          "r": 5,
+          "gf": 2,
+          "ms": 29
+        },
+        {
+          "r": 6,
+          "gf": 3,
+          "ms": 41
+        },
+        {
+          "r": 7,
+          "gf": 3,
+          "ms": 63
+        },
+        {
+          "r": 8,
+          "gf": 4,
+          "ms": 88
+        },
+        {
+          "r": 9,
+          "gf": 4,
+          "ms": 91
+        },
+        {
+          "r": 10,
+          "gf": 5,
+          "ms": 108
+        },
+        {
+          "r": 11,
+          "gf": 5,
+          "ms": 129
+        },
+        {
+          "r": 12,
+          "gf": 6,
+          "ms": 141
+        },
+        {
+          "r": 13,
+          "gf": 6,
+          "ms": 163
+        },
+        {
+          "r": 14,
+          "gf": 7,
+          "ms": 174
+        },
+        {
+          "r": 15,
+          "gf": 7,
+          "ms": 196
+        },
+        {
+          "r": 16,
+          "gf": 8,
+          "ms": 207
+        },
+        {
+          "r": 17,
+          "gf": 8,
+          "ms": 229
+        },
+        {
+          "r": 18,
+          "gf": 9,
+          "ms": 240
+        },
+        {
+          "r": 19,
+          "gf": 9,
+          "ms": 263
+        },
+        {
+          "r": 20,
+          "gf": 10,
+          "ms": 275
+        },
+        {
+          "r": 21,
+          "gf": 10,
+          "ms": 296
+        }
+      ]
+    },
+    "r5": {
+      "first_to_second_game_start_ms": 334,
+      "main_r2_to_r21_ms": 289,
+      "world_frame_interval": [
+        1,
+        10
+      ],
+      "same_callback_offsets": [
+        {
+          "r": 2,
+          "gf": 1,
+          "ms": 0
+        },
+        {
+          "r": 3,
+          "gf": 1,
+          "ms": 5
+        },
+        {
+          "r": 4,
+          "gf": 2,
+          "ms": 8
+        },
+        {
+          "r": 5,
+          "gf": 2,
+          "ms": 22
+        },
+        {
+          "r": 6,
+          "gf": 3,
+          "ms": 45
+        },
+        {
+          "r": 7,
+          "gf": 3,
+          "ms": 72
+        },
+        {
+          "r": 8,
+          "gf": 4,
+          "ms": 76
+        },
+        {
+          "r": 9,
+          "gf": 4,
+          "ms": 89
+        },
+        {
+          "r": 10,
+          "gf": 5,
+          "ms": 112
+        },
+        {
+          "r": 11,
+          "gf": 5,
+          "ms": 122
+        },
+        {
+          "r": 12,
+          "gf": 6,
+          "ms": 146
+        },
+        {
+          "r": 13,
+          "gf": 6,
+          "ms": 155
+        },
+        {
+          "r": 14,
+          "gf": 7,
+          "ms": 178
+        },
+        {
+          "r": 15,
+          "gf": 7,
+          "ms": 189
+        },
+        {
+          "r": 16,
+          "gf": 8,
+          "ms": 211
+        },
+        {
+          "r": 17,
+          "gf": 8,
+          "ms": 222
+        },
+        {
+          "r": 18,
+          "gf": 9,
+          "ms": 245
+        },
+        {
+          "r": 19,
+          "gf": 9,
+          "ms": 255
+        },
+        {
+          "r": 20,
+          "gf": 10,
+          "ms": 279
+        },
+        {
+          "r": 21,
+          "gf": 10,
+          "ms": 289
+        }
+      ]
+    }
+  },
+  "pixel_fade": {
+    "floor": {
+      "roi": [
+        880,
+        540,
+        980,
+        600
+      ],
+      "native_window": [
+        18,
+        77
+      ],
+      "native_first_to_last_state_ms": 983.8103799999999,
+      "r2": {
+        "window": [
+          4,
+          92
+        ],
+        "states": 60,
+        "exact_native_60_state_sequence": true,
+        "aligned_max_onset_difference_ms": 17.647483000000076,
+        "first_to_last_state_ms": 990.0169540000002
+      },
+      "r4": {
+        "window": [
+          28,
+          116
+        ],
+        "states": 60,
+        "exact_native_60_state_sequence": true,
+        "aligned_max_onset_difference_ms": 7.679074999999869,
+        "first_to_last_state_ms": 976.131305
+      },
+      "r5": {
+        "window": [
+          28,
+          117
+        ],
+        "states": 60,
+        "exact_native_60_state_sequence": true,
+        "aligned_max_onset_difference_ms": 5.970083999999987,
+        "first_to_last_state_ms": 988.999354
+      }
+    },
+    "top_wall": {
+      "roi": [
+        850,
+        50,
+        950,
+        100
+      ],
+      "native_window": [
+        18,
+        77
+      ],
+      "native_first_to_last_state_ms": 983.8103799999999,
+      "r2": {
+        "window": [
+          4,
+          92
+        ],
+        "states": 60,
+        "exact_native_60_state_sequence": true,
+        "aligned_max_onset_difference_ms": 17.647483000000076,
+        "first_to_last_state_ms": 990.0169540000002
+      },
+      "r4": {
+        "window": [
+          28,
+          116
+        ],
+        "states": 60,
+        "exact_native_60_state_sequence": true,
+        "aligned_max_onset_difference_ms": 7.679074999999869,
+        "first_to_last_state_ms": 976.131305
+      },
+      "r5": {
+        "window": [
+          28,
+          117
+        ],
+        "states": 60,
+        "exact_native_60_state_sequence": true,
+        "aligned_max_onset_difference_ms": 5.970083999999987,
+        "first_to_last_state_ms": 988.999354
+      }
+    },
+    "bottom_wall": {
+      "roi": [
+        500,
+        680,
+        560,
+        710
+      ],
+      "native_window": [
+        18,
+        77
+      ],
+      "native_first_to_last_state_ms": 983.8103799999999,
+      "r2": {
+        "window": [
+          4,
+          92
+        ],
+        "states": 60,
+        "exact_native_60_state_sequence": true,
+        "aligned_max_onset_difference_ms": 17.647483000000076,
+        "first_to_last_state_ms": 990.0169540000002
+      },
+      "r4": {
+        "window": [
+          28,
+          116
+        ],
+        "states": 60,
+        "exact_native_60_state_sequence": true,
+        "aligned_max_onset_difference_ms": 7.679074999999869,
+        "first_to_last_state_ms": 976.131305
+      },
+      "r5": {
+        "window": [
+          28,
+          117
+        ],
+        "states": 60,
+        "exact_native_60_state_sequence": true,
+        "aligned_max_onset_difference_ms": 5.970083999999987,
+        "first_to_last_state_ms": 988.999354
+      }
+    }
+  },
+  "startup_capture": {
+    "r4": {
+      "r4_first_frame": "Previous Isaac bootstrap: no active item,1 bomb,0 keys. This is not the new Eden scene; must not misclassify it as new-room leak.",
+      "new_eden_begins_at_capture_index": 1,
+      "r4_floor_mean_indices_1_to_27": [
+        16.0,
+        16.0
+      ],
+      "r4_first_fade_index": 28,
+      "new_eden_pre_fade_nonblack_floor_frames": 0,
+      "scope": "No dim-Eden-room-before-black flash in recorded new-Eden frames. First capture is a preceding bootstrap image; no absolute capture/native clock alignment or universal initial-frame guarantee."
+    },
+    "r5": {
+      "r5_first_frame": "Previous Isaac bootstrap: no active item,1 bomb,0 keys. This is not the new Eden scene; must not misclassify it as new-room leak.",
+      "new_eden_begins_at_capture_index": 1,
+      "r5_floor_mean_indices_1_to_27": [
+        16.0,
+        16.0
+      ],
+      "r5_first_fade_index": 28,
+      "new_eden_pre_fade_nonblack_floor_frames": 0,
+      "scope": "No dim-Eden-room-before-black flash in recorded new-Eden frames. First capture is a preceding bootstrap image; no absolute capture/native clock alignment or universal initial-frame guarantee."
+    }
+  },
+  "canonical_state_comparison": {
+    "whole_log_all_fields_identical": false,
+    "target_seed": 1500427799,
+    "target_event_counts": {
+      "native": 152,
+      "r2": 152,
+      "r4": 152,
+      "r5": 152
+    },
+    "target_semantic_fields_equal_native_vs_r2": true,
+    "target_semantic_fields_equal_native_vs_r4": true,
+    "normalization": [
+      "wall_ms excluded",
+      "player.ptr excluded",
+      "ui start offset subtracted",
+      "Exclude the unseeded bootstrap request event",
+      "Report per-pickup InitSeed differences explicitly, then compare pickup semantic fields by option-group/position/item ID"
+    ],
+    "identity_differences": "Bootstrap starts have different random seeds; three spawned pickup InitSeed values differ among processes. Their identity values are not forced equal. The comparison matches option-group/position/item ID and checks the remaining semantic fields.",
+    "spawn_rng_equivalence_claimed": false,
+    "target_semantic_fields_equal_native_vs_r5": true
+  },
+  "lifecycle_fix": {
+    "native_function": "Manager::ProcessPendingGameStart/Continue",
+    "entry_va": "0x951250",
+    "entry_bytes": "53 8B DC 83 EC 08",
+    "pending_byte_offset": "0x4B000",
+    "pending_guard_va": "0x951299",
+    "pending_guard_bytes": "80 BF 00 B0 04 00 00 0F 84 C8 05 00 00",
+    "call_site_va": "0x94CB5C",
+    "call_site_bytes": "8B CF E8 ED 46 00 00",
+    "epilogue_va": "0x951885",
+    "epilogue_bytes": "8B E5 5D 8B E3 5B C3",
+    "abi": "ECX=this, no stack arguments; fastcall bridge preserves thiscall behavior.",
+    "accounting": "Only the pending branch enters the nested lifecycle union. It includes RestoreState and the following resource restoration, fade setup and MC_POST_GAME_STARTED. No-pending calls and ordinary slow rendering do not exclude elapsed gameplay time.",
+    "presentation_gate": "A pure presentation is held without swapping until a full canonical render plus GC completes within the current lifecycle epoch. A canonical callback crossing epochs cannot mark the new lifetime ready.",
+    "r4_hold_logs": 1,
+    "r4_hold_epoch": 3,
+    "following_completed_load_epoch": 4,
+    "r4_later_hold_logs": 0,
+    "r4_main_missing_key_logs": 0,
+    "r4_all_cache_miss_logs": 0,
+    "r5_validation": {
+      "hold_logs": 1,
+      "cache_miss_logs": 0,
+      "input_cache_miss_logs": 0,
+      "pure_lua_logs": 0,
+      "pure_state_logs": 0,
+      "fatal_logs": 0,
+      "new_eden_prefade_floor_nonblack_frames": 0
+    }
+  },
+  "limits": [
+    "Three sampled room/background ROIs match the60-step native fade sequence; this is not full-frame pixel identity or every visual element.",
+    "The first R4 capture is the previous Isaac bootstrap frame. New Eden starts at capture index1; the scoped no-leak conclusion concerns those new-Eden frames. Capture-start timing is not exactly synchronized to native log clocks.",
+    "The early callback interval is 296 ms in R4 and 289 ms in R5 vs native 306 ms, not exact wall-time identity. The previous R2 interval was 61 ms, demonstrating the corrected compression.",
+    "One successful run per configuration; not runtime variable-refresh, physical VRR or hardware input coverage.",
+    "No live VM replacement, all Eden seeds, co-op, all other lifecycle paths or Blessing-pickup payout claim.",
+    "The remaining enclosing immediate rewind function707130 was not additionally hooked; these results do not show a residual harmful burst requiring that broader change.",
+    "R5 repeats the same lifecycle/ROI scenario with the new input cache active; it does not expand the tested Eden feature set or imply hardware input coverage."
+  ]
+}

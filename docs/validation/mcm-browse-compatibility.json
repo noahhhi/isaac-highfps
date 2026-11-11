@@ -1,0 +1,207 @@
+{
+  "schema": 1,
+  "date": "2026-11-10",
+  "scope": "MCM category browsing, settings preservation and repeat cadence: native60, earlier90, final R4 at45Hz. No option editing/popup or controller coverage.",
+  "comparison": {
+    "baseline_vs_earlier_90": {
+      "initial_settings_identical": true,
+      "lua_modset_hash_identical": true,
+      "category_sequence_identical": true,
+      "hold_repeat_manager_tick_offsets": [
+        [
+          24,
+          29,
+          34,
+          39,
+          44
+        ],
+        [
+          24,
+          29,
+          34,
+          39,
+          44
+        ]
+      ],
+      "limits": [
+        "Different player seeds and unsynchronized external input boundaries: not exact per-tick whole-run state equality.",
+        "Root inspected menu text/panels in both captures; this analyzer does not assert pixel equality.",
+        "Captures predate authenticated process-owner capture guard; no retrospective ownership assertion from serial94 exclusion alone.",
+        "Settings check covers 107 registered getter values, not internal save serialization bytes."
+      ]
+    },
+    "baseline_vs_r4_45": {
+      "initial_settings_identical": true,
+      "category_sequence_identical": true,
+      "hold_repeat_manager_tick_offsets": [
+        [
+          24,
+          29,
+          34,
+          39,
+          44
+        ],
+        [
+          24,
+          29,
+          34,
+          39,
+          44
+        ]
+      ],
+      "production_mod_lua_and_enable_states_identical_excluding_owned_validation_fixture": true,
+      "fixture_main_sha256_identical": true,
+      "complete_fixture_helper_identity": false,
+      "helper_sha256": {
+        "native": "7458f06ddb89fcb8b7986ac7d8a9b8070f9b55bcc8e308e2b5f2e0fe6d378083",
+        "r4_45": "a31cf253d6d2f48f6b1fe853e9e955ff1822640e6e3f26b8533c0ba12843d7e7"
+      },
+      "helper_difference": "Shared helper adds a read-only difficulty field to logging and new character-start helpers unused by MCM observer. Main observer source is unchanged."
+    }
+  },
+  "cases": [
+    {
+      "case": "mcm-native60-20261110",
+      "artifacts": {
+        "game/winmm.dll": "0221770be17b98e339bc7fb8de0ab322406d93f2fe9d721c4a3a640bc74785d1",
+        "game/isaac-highfps.ini": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "game/mods/highfps-validation/main.lua": "f3603c706e5bfd65e90bf891635b84cbd9f69c5e337c7d073524d9ed05b110a1"
+      },
+      "lua_modset_hash": "4412952272625ec1a3ec11f8efa3048f576731d67339357743f7c1064e8042bc",
+      "registered_settings_count": 107,
+      "settings_unchanged": true,
+      "settings_self_comparison": true,
+      "open_count": 1,
+      "close_count": 1,
+      "menu_open_wall_seconds": 3.733,
+      "all_sampled_positions": [
+        [
+          320.0,
+          280.0
+        ]
+      ],
+      "render_minus_ui_offsets": [
+        -700
+      ],
+      "manager_hz_regression": 59.94697222280566,
+      "final_controls": true,
+      "final_menu_visible": false,
+      "actual_present_median_hz": null,
+      "captured_frames": 250,
+      "capture_identity_recorded": false,
+      "game_error_count": 0,
+      "native_fault_count": 0,
+      "category_sequence_length": 11
+    },
+    {
+      "case": "mcm-fixed90-20261110",
+      "artifacts": {
+        "game/winmm.dll": "0221770be17b98e339bc7fb8de0ab322406d93f2fe9d721c4a3a640bc74785d1",
+        "game/isaac-highfps.ini": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "game/mods/highfps-validation/main.lua": "f3603c706e5bfd65e90bf891635b84cbd9f69c5e337c7d073524d9ed05b110a1"
+      },
+      "lua_modset_hash": "4412952272625ec1a3ec11f8efa3048f576731d67339357743f7c1064e8042bc",
+      "registered_settings_count": 107,
+      "settings_unchanged": true,
+      "settings_self_comparison": true,
+      "open_count": 1,
+      "close_count": 1,
+      "menu_open_wall_seconds": 3.765,
+      "all_sampled_positions": [
+        [
+          320.0,
+          280.0
+        ]
+      ],
+      "render_minus_ui_offsets": [
+        -768
+      ],
+      "manager_hz_regression": 60.041561190755544,
+      "final_controls": true,
+      "final_menu_visible": false,
+      "actual_present_median_hz": 90.02115497141828,
+      "captured_frames": 375,
+      "capture_identity_recorded": false,
+      "game_error_count": 0,
+      "native_fault_count": 0,
+      "category_sequence_length": 11
+    },
+    {
+      "case": "mcm-r4-45-20261110",
+      "artifacts": {
+        "game/winmm.dll": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+        "game/isaac-highfps.ini": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "game/isaac-ng.exe": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "game/mods/highfps-validation/main.lua": "f3603c706e5bfd65e90bf891635b84cbd9f69c5e337c7d073524d9ed05b110a1"
+      },
+      "registered_settings_count": 107,
+      "settings_unchanged": true,
+      "settings_self_comparison": true,
+      "open_count": 1,
+      "close_count": 1,
+      "menu_open_wall_seconds": 3.754,
+      "all_sampled_positions": [
+        [
+          320.0,
+          280.0
+        ]
+      ],
+      "render_minus_ui_offsets": [
+        -1174
+      ],
+      "manager_hz_regression": 60.04964514660327,
+      "final_controls": true,
+      "final_menu_visible": false,
+      "actual_present_median_hz": 44.99640028797696,
+      "captured_frames": 190,
+      "capture_identity_recorded": true,
+      "game_error_count": 0,
+      "native_fault_count": 0,
+      "category_sequence_length": 11,
+      "manager_counter_steps_between_consecutive_present_loop_diagnostics": {
+        "2": 72,
+        "1": 140
+      }
+    }
+  ],
+  "pixel_panel_presence": {
+    "method": "Both left paper ROI(200,520,300,580) and right paper ROI(900,400,1000,450) have mean R>20,G/R>.75,B/R>.7. Scene-specific paper presence proxy, not glyph equivalence.",
+    "cases": [
+      {
+        "case": "mcm-native60-20261110",
+        "frames": 250,
+        "detected_panel_frames": 156,
+        "first_panel_index": 67,
+        "last_panel_index": 222,
+        "interior_missing_detections": 0
+      },
+      {
+        "case": "mcm-fixed90-20261110",
+        "frames": 375,
+        "detected_panel_frames": 220,
+        "first_panel_index": 118,
+        "last_panel_index": 337,
+        "interior_missing_detections": 0
+      },
+      {
+        "case": "mcm-r4-45-20261110",
+        "frames": 190,
+        "detected_panel_frames": 118,
+        "first_panel_index": 50,
+        "last_panel_index": 167,
+        "interior_missing_detections": 0
+      }
+    ],
+    "spot_check": {
+      "case": "mcm-r4-45-20261110",
+      "frames": [
+        60,
+        120
+      ],
+      "result": "Visible panel/sprite/text rendering, including Controller Optimizer and TimeMachine category content. Early frame60 retains the native scene fade; frame120 is bright. Not exact glyph/pixel equivalence."
+    },
+    "limits": "Presence thresholds cover each detected interior interval, not every early dark/fading menu frame. No popup, editing or every text glyph claim."
+  }
+}

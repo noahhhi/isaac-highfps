@@ -1,0 +1,473 @@
+{
+  "schema": 1,
+  "date": "2026-11-10",
+  "build": "R4 final candidate; R2 retained as earlier comparison",
+  "scope": "Normal Bethany, Soul Veil visual style 1, Echo Ring hit style 3, enabled charge/shield/feedback modules; same fixed seed, scene and Lua sources.",
+  "cases": [
+    {
+      "case": "bethany-normal-native60-v2-20261110",
+      "injected_dll_sha256": null,
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "99c7ce78460f0d51c83a099776766dffbf487eddd1638cd1656a1be0695cc1bb",
+      "helper_sha256": "a31cf253d6d2f48f6b1fe853e9e955ff1822640e6e3f26b8533c0ba12843d7e7",
+      "enabled_lua_manifest_sha256": "cde2146f022d828bb7fa6c62c3772a4e9c7f5d182678bef354d39d9f32d6fb0f",
+      "record_count": 308,
+      "world_hz_regression_f30_to_240": 29.999875943767975,
+      "actual_present_median_hz": null,
+      "player_seed": 3754715714,
+      "player_pointer_mod_31_visual_phase": 20,
+      "done_world_tick": 250,
+      "main_callbacks": 546,
+      "player_render_callbacks": 486,
+      "damage_requests": 2,
+      "game_error_count": 0,
+      "capture_frames": 510,
+      "capture_duration_seconds": 8.613933196000001,
+      "authenticated_capture_owner_recorded": true,
+      "visual_charge_segments": [
+        {
+          "charge": 99,
+          "first_capture_index": 58,
+          "last_capture_index": 157,
+          "captured_frames": 100,
+          "first_stream_seconds": 0.99847971,
+          "last_stream_seconds": 2.648469141,
+          "blue_pixels_min": 10434,
+          "blue_pixels_median": 10527.5,
+          "blue_pixels_max": 11193
+        },
+        {
+          "charge": 30,
+          "first_capture_index": 158,
+          "last_capture_index": 257,
+          "captured_frames": 100,
+          "first_stream_seconds": 2.665235983,
+          "last_stream_seconds": 4.315046704,
+          "blue_pixels_min": 8658,
+          "blue_pixels_median": 8783.0,
+          "blue_pixels_max": 8936
+        },
+        {
+          "charge": 4,
+          "first_capture_index": 258,
+          "last_capture_index": 297,
+          "captured_frames": 40,
+          "first_stream_seconds": 4.331938105,
+          "last_stream_seconds": 4.981748544,
+          "blue_pixels_min": 376,
+          "blue_pixels_median": 393.0,
+          "blue_pixels_max": 417
+        },
+        {
+          "charge": 2,
+          "first_capture_index": 298,
+          "last_capture_index": 395,
+          "captured_frames": 98,
+          "first_stream_seconds": 4.998536746,
+          "last_stream_seconds": 6.648450437,
+          "blue_pixels_min": 0,
+          "blue_pixels_median": 279.0,
+          "blue_pixels_max": 8795
+        },
+        {
+          "charge": 1,
+          "first_capture_index": 396,
+          "last_capture_index": 415,
+          "captured_frames": 20,
+          "first_stream_seconds": 6.666397729,
+          "last_stream_seconds": 6.981809917,
+          "blue_pixels_min": 253,
+          "blue_pixels_median": 269.5,
+          "blue_pixels_max": 281
+        },
+        {
+          "charge": 0,
+          "first_capture_index": 416,
+          "last_capture_index": 509,
+          "captured_frames": 94,
+          "first_stream_seconds": 6.998470949,
+          "last_stream_seconds": 8.631702538,
+          "blue_pixels_min": 0,
+          "blue_pixels_median": 183.0,
+          "blue_pixels_max": 8411
+        }
+      ],
+      "observed_exhaustion_tail": {
+        "criterion": "At least 1.25 seconds after HUD first shows 00; excludes the hit flash and normal invulnerability blinking.",
+        "frames": 23,
+        "first_index": 487,
+        "last_index": 509,
+        "span_seconds": 0.3831315350000004,
+        "blue_pixels_min": 183,
+        "blue_pixels_max": 183
+      }
+    },
+    {
+      "case": "bethany-normal-r2-90-20261110",
+      "injected_dll_sha256": "c3344f15c61a2c377ef3da1496ff7fcabc94abe14deaa722e0d7883c022d723c",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "99c7ce78460f0d51c83a099776766dffbf487eddd1638cd1656a1be0695cc1bb",
+      "helper_sha256": "a31cf253d6d2f48f6b1fe853e9e955ff1822640e6e3f26b8533c0ba12843d7e7",
+      "enabled_lua_manifest_sha256": "cde2146f022d828bb7fa6c62c3772a4e9c7f5d182678bef354d39d9f32d6fb0f",
+      "record_count": 308,
+      "world_hz_regression_f30_to_240": 30.000528573187704,
+      "actual_present_median_hz": 90.00090000900009,
+      "player_seed": 3754715714,
+      "player_pointer_mod_31_visual_phase": 5,
+      "done_world_tick": 250,
+      "main_callbacks": 546,
+      "player_render_callbacks": 486,
+      "damage_requests": 2,
+      "game_error_count": 0,
+      "capture_frames": 765,
+      "capture_duration_seconds": 8.485044246,
+      "authenticated_capture_owner_recorded": true,
+      "visual_charge_segments": [
+        {
+          "charge": 99,
+          "first_capture_index": 71,
+          "last_capture_index": 220,
+          "captured_frames": 150,
+          "first_stream_seconds": 0.797557272,
+          "last_stream_seconds": 2.452003816,
+          "blue_pixels_min": 10894,
+          "blue_pixels_median": 10997.5,
+          "blue_pixels_max": 11558
+        },
+        {
+          "charge": 30,
+          "first_capture_index": 221,
+          "last_capture_index": 370,
+          "captured_frames": 150,
+          "first_stream_seconds": 2.464240444,
+          "last_stream_seconds": 4.118483578,
+          "blue_pixels_min": 7101,
+          "blue_pixels_median": 7966.5,
+          "blue_pixels_max": 8334
+        },
+        {
+          "charge": 4,
+          "first_capture_index": 371,
+          "last_capture_index": 430,
+          "captured_frames": 60,
+          "first_stream_seconds": 4.131124787,
+          "last_stream_seconds": 4.785109509,
+          "blue_pixels_min": 369,
+          "blue_pixels_median": 405.5,
+          "blue_pixels_max": 452
+        },
+        {
+          "charge": 2,
+          "first_capture_index": 431,
+          "last_capture_index": 580,
+          "captured_frames": 150,
+          "first_stream_seconds": 4.797430647,
+          "last_stream_seconds": 6.451848821,
+          "blue_pixels_min": 0,
+          "blue_pixels_median": 331.0,
+          "blue_pixels_max": 8677
+        },
+        {
+          "charge": 1,
+          "first_capture_index": 581,
+          "last_capture_index": 610,
+          "captured_frames": 30,
+          "first_stream_seconds": 6.46429439,
+          "last_stream_seconds": 6.785133962,
+          "blue_pixels_min": 254,
+          "blue_pixels_median": 265.5,
+          "blue_pixels_max": 276
+        },
+        {
+          "charge": 0,
+          "first_capture_index": 611,
+          "last_capture_index": 764,
+          "captured_frames": 154,
+          "first_stream_seconds": 6.79743463,
+          "last_stream_seconds": 8.497427945,
+          "blue_pixels_min": 0,
+          "blue_pixels_median": 183.0,
+          "blue_pixels_max": 8560
+        }
+      ],
+      "observed_exhaustion_tail": {
+        "criterion": "At least 1.25 seconds after HUD first shows 00; excludes the hit flash and normal invulnerability blinking.",
+        "frames": 41,
+        "first_index": 724,
+        "last_index": 764,
+        "span_seconds": 0.4457451680000002,
+        "blue_pixels_min": 183,
+        "blue_pixels_max": 183
+      }
+    },
+    {
+      "case": "bethany-normal-r4-90-20261110",
+      "injected_dll_sha256": "62d364bf708b6470bae3b813dbbb152da47f7fdf5b48500dbc546c072457cccc",
+      "game_exe_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+      "fixture_sha256": "99c7ce78460f0d51c83a099776766dffbf487eddd1638cd1656a1be0695cc1bb",
+      "helper_sha256": "a31cf253d6d2f48f6b1fe853e9e955ff1822640e6e3f26b8533c0ba12843d7e7",
+      "enabled_lua_manifest_sha256": "cde2146f022d828bb7fa6c62c3772a4e9c7f5d182678bef354d39d9f32d6fb0f",
+      "record_count": 308,
+      "world_hz_regression_f30_to_240": 30.00061224064868,
+      "actual_present_median_hz": 90.02520705797623,
+      "player_seed": 3754715714,
+      "player_pointer_mod_31_visual_phase": 27,
+      "done_world_tick": 250,
+      "main_callbacks": 546,
+      "player_render_callbacks": 486,
+      "damage_requests": 2,
+      "game_error_count": 0,
+      "capture_frames": 765,
+      "capture_duration_seconds": 8.485982488,
+      "authenticated_capture_owner_recorded": true,
+      "visual_charge_segments": [
+        {
+          "charge": 99,
+          "first_capture_index": 83,
+          "last_capture_index": 232,
+          "captured_frames": 150,
+          "first_stream_seconds": 0.928191532,
+          "last_stream_seconds": 2.583407507,
+          "blue_pixels_min": 10427,
+          "blue_pixels_median": 10837.5,
+          "blue_pixels_max": 11533
+        },
+        {
+          "charge": 30,
+          "first_capture_index": 233,
+          "last_capture_index": 382,
+          "captured_frames": 150,
+          "first_stream_seconds": 2.594679104,
+          "last_stream_seconds": 4.25182795,
+          "blue_pixels_min": 7039,
+          "blue_pixels_median": 8614.0,
+          "blue_pixels_max": 8943
+        },
+        {
+          "charge": 4,
+          "first_capture_index": 383,
+          "last_capture_index": 442,
+          "captured_frames": 60,
+          "first_stream_seconds": 4.261498527,
+          "last_stream_seconds": 4.918093121,
+          "blue_pixels_min": 347,
+          "blue_pixels_median": 356.0,
+          "blue_pixels_max": 366
+        },
+        {
+          "charge": 2,
+          "first_capture_index": 443,
+          "last_capture_index": 592,
+          "captured_frames": 150,
+          "first_stream_seconds": 4.928136778,
+          "last_stream_seconds": 6.584985233,
+          "blue_pixels_min": 0,
+          "blue_pixels_median": 328.0,
+          "blue_pixels_max": 8736
+        },
+        {
+          "charge": 1,
+          "first_capture_index": 593,
+          "last_capture_index": 622,
+          "captured_frames": 30,
+          "first_stream_seconds": 6.59496447,
+          "last_stream_seconds": 6.918067574,
+          "blue_pixels_min": 309,
+          "blue_pixels_median": 311.0,
+          "blue_pixels_max": 317
+        },
+        {
+          "charge": 0,
+          "first_capture_index": 623,
+          "last_capture_index": 764,
+          "captured_frames": 142,
+          "first_stream_seconds": 6.928268201,
+          "last_stream_seconds": 8.494683914,
+          "blue_pixels_min": 0,
+          "blue_pixels_median": 183.0,
+          "blue_pixels_max": 8239
+        }
+      ],
+      "observed_exhaustion_tail": {
+        "criterion": "At least 1.25 seconds after HUD first shows 00; excludes the hit flash and normal invulnerability blinking.",
+        "frames": 29,
+        "first_index": 736,
+        "last_index": 764,
+        "span_seconds": 0.3098014839999994,
+        "blue_pixels_min": 183,
+        "blue_pixels_max": 183
+      }
+    }
+  ],
+  "canonical_comparison": {
+    "same_settings": true,
+    "records": 308,
+    "all_fields_exact": true,
+    "normalization": [
+      "Exclude wall_ms",
+      "Exclude player.ptr (process-dependent identity)",
+      "Subtract each run initial ui counter; preserve all subsequent deltas"
+    ],
+    "key_order": "Original event sequence also identical; all f/kind occurrences match",
+    "same_seed": "L4A6 X4X8, asserted by fixture at actual game start",
+    "difficulty": 0,
+    "all_fields_exact_native_vs_r2_and_r4": true
+  },
+  "damage": [
+    {
+      "world_tick": 130,
+      "charge_before": 4,
+      "charge_after": 2,
+      "red_health_before": 6,
+      "red_health_after": 6,
+      "cooldown_after": 60,
+      "candidate_exactly_matches": true
+    },
+    {
+      "world_tick": 190,
+      "charge_before": 1,
+      "charge_after": 0,
+      "red_health_before": 6,
+      "red_health_after": 6,
+      "cooldown_after": 60,
+      "candidate_exactly_matches": true
+    }
+  ],
+  "visual_phase_duration_comparison": {
+    "r2": [
+      {
+        "charge": 99,
+        "native_seconds": 1.666756273,
+        "candidate_seconds": 1.666683172,
+        "difference_ms": -0.07310100000013087
+      },
+      {
+        "charge": 30,
+        "native_seconds": 1.6667021219999998,
+        "candidate_seconds": 1.666884343,
+        "difference_ms": 0.18222100000020447
+      },
+      {
+        "charge": 4,
+        "native_seconds": 0.6665986410000002,
+        "candidate_seconds": 0.6663058599999996,
+        "difference_ms": -0.29278100000063034
+      },
+      {
+        "charge": 2,
+        "native_seconds": 1.6678609829999997,
+        "candidate_seconds": 1.6668637430000004,
+        "difference_ms": -0.9972399999993442
+      },
+      {
+        "charge": 1,
+        "native_seconds": 0.33207321999999984,
+        "candidate_seconds": 0.33314023999999964,
+        "difference_ms": 1.0670199999998076
+      }
+    ],
+    "r4": [
+      {
+        "charge": 99,
+        "native_seconds": 1.666756273,
+        "candidate_seconds": 1.6664875719999999,
+        "difference_ms": -0.26870100000020436
+      },
+      {
+        "charge": 30,
+        "native_seconds": 1.6667021219999998,
+        "candidate_seconds": 1.6668194229999997,
+        "difference_ms": 0.11730099999995858
+      },
+      {
+        "charge": 4,
+        "native_seconds": 0.6665986410000002,
+        "candidate_seconds": 0.6666382510000002,
+        "difference_ms": 0.03960999999996773
+      },
+      {
+        "charge": 2,
+        "native_seconds": 1.6678609829999997,
+        "candidate_seconds": 1.666827692,
+        "difference_ms": -1.0332909999997142
+      },
+      {
+        "charge": 1,
+        "native_seconds": 0.33207321999999984,
+        "candidate_seconds": 0.333303731,
+        "difference_ms": 1.2305110000001562
+      }
+    ]
+  },
+  "visual_method": {
+    "hud": "White-digit binary mask in pixel box (105,248)-(146,279), min(R,G,B)>170; nearest template with Hamming distance <=12; uncertain initial dark frames excluded.",
+    "blue_coverage": "Count pixels in box (450,250)-(1000,450) with B-R>18, G-R>10, B>70. A scene-specific overlay-presence proxy, not a general alpha or image-equivalence metric.",
+    "steady_coverage": "All240 native,360 R2 and360 R4 captured frames in post-setup99/30/04 phases exceed the exhausted idle reference of183 blue pixels. No alternating disappearance in those captured phases.",
+    "strength": "Median blue coverage decreases99 >30 >4 in all three cases. Different process pointer modulo31 changes particle/breathing phase; values are reported per case, not normalized into false pixel equality.",
+    "anchor": "Visually inspected phase-aligned idle and moving examples: shield surrounds the rendered player in both. No exact subpixel anchor-error bound claimed.",
+    "reviewed_frames": {
+      "native": [
+        80,
+        120,
+        250,
+        278,
+        310,
+        500
+      ],
+      "candidate": [
+        104,
+        164,
+        359,
+        401,
+        450,
+        750
+      ],
+      "r4": [
+        116,
+        176,
+        371,
+        413,
+        446,
+        750
+      ]
+    },
+    "exhaustion": "Final sampled zero-charge frames show the normal player without persistent shield: native23,R2 41,R4 29 frames after1.25s. Captures end before fixture DONE f250; no claim about later frames."
+  },
+  "native_diagnostics": {
+    "r2": {
+      "fatal_pure_state_pure_lua_count": 0,
+      "startup_player_cache_misses": 1,
+      "startup_miss": {
+        "game_frame": 0,
+        "reason": "invalid-capture / unsafe-operation",
+        "unsafe_code": 241,
+        "operation": "glTexParameteri",
+        "position": [
+          320,
+          380
+        ]
+      },
+      "initialization_unsafe_operations": {
+        "glTexParameteri": 24,
+        "glTexImage2D": 3
+      },
+      "later_reported_replay_misses": 0,
+      "qualification": "Do not report zero diagnostics or universal first-frame coverage. The one startup resource-initialization rejection precedes the steady phases; no harmlessness claim is made for that unpaired startup image."
+    },
+    "r4": {
+      "fatal_pure_state_pure_lua_count": 0,
+      "reported_replay_misses": 0,
+      "unsafe_operation_lines": 0,
+      "nonzero_shader_or_retain_reject_lines": 0
+    }
+  },
+  "limits": [
+    "Synthetic penalty-damage requests test the installed real shield callback, not natural enemy collision or all damage exclusions.",
+    "Only the selected visual/hit styles, normal-size player and ordinary room are exercised. No large-room camera, all-style, multiplayer or option-toggle fade guarantee.",
+    "Input movement is fixture-driven; not Controller Optimizer or physical-controller validation.",
+    "Native60 has no injected present telemetry; its rate is test configuration.",
+    "Audio output stayed muted; no audible sound-quality validation.",
+    "Lua/source hashes match, but complete resource/config artifact manifests were not recorded.",
+    "Captures are sampled video, not proof that every display frame was captured."
+  ]
+}

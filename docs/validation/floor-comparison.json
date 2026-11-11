@@ -1,0 +1,180 @@
+{
+  "schema": "isaac-highfps-public-validation-v1",
+  "source_summary": "floor-comparison.json",
+  "source_summary_sha256": "561ac93c6d50c6629526bfd5fac37d3e4a779a5fba2fc75922e12d64f1c6bfd1",
+  "scope_note": "Quantified results apply to the identified artifacts and cases; no game files, mod lists or private paths are included.",
+  "cases": [
+    {
+      "case_id": "floor-native60",
+      "artifacts": {
+        "dll_sha256": "b8bd35fa6be0c19dd8eda5149ab643bbe1891a070ac3621f69606e88d3df6a14",
+        "configuration_sha256": "ccb4655b98969ebb3a66f4250c6e913d18ffd70e8647b4161bba308bc0e5b25f",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "b25d91676b81964d959dd66a58050d8cc9e9d21c492ee10b09a510a0f6c4161e"
+      },
+      "complete": true
+    },
+    {
+      "case_id": "floor-cached100",
+      "artifacts": {
+        "dll_sha256": "b8bd35fa6be0c19dd8eda5149ab643bbe1891a070ac3621f69606e88d3df6a14",
+        "configuration_sha256": "1094439a7381e6900d9f61afb4ce4c559c13a016ae7b873af2c684766199d908",
+        "executable_sha256": "f1c4a0e7448b8a05b653dd4535614a368fe0fcb24394cce3d4d587f10fd2c888",
+        "fixture_sha256": "b25d91676b81964d959dd66a58050d8cc9e9d21c492ee10b09a510a0f6c4161e"
+      },
+      "complete": true
+    }
+  ],
+  "comparison": {
+    "setup": {
+      "same_exe_and_fixture": true,
+      "same_metadata": true,
+      "same_enabled_lua_modset": true,
+      "candidate_actual_high_refresh": true
+    },
+    "normalized_event_snapshots_identical": true,
+    "event_counts": [
+      125,
+      125
+    ],
+    "first_mismatches": [],
+    "phases": [
+      {
+        "from": "request",
+        "to": "paused",
+        "baseline": {
+          "seconds": 0.03500000000000014,
+          "deltas": {
+            "ui": 3.0,
+            "gf": 1.0,
+            "tc": 1.0,
+            "u": 1.0,
+            "r": 3.0,
+            "pu": 2.0
+          }
+        },
+        "trial": {
+          "seconds": 0.03100000000000014,
+          "deltas": {
+            "ui": 3.0,
+            "gf": 1.0,
+            "tc": 1.0,
+            "u": 1.0,
+            "r": 3.0,
+            "pu": 2.0
+          }
+        }
+      },
+      {
+        "from": "request",
+        "to": "new_level",
+        "baseline": {
+          "seconds": 8.523,
+          "deltas": {
+            "ui": 502.0,
+            "gf": 1.0,
+            "tc": 1.0,
+            "u": 1.0,
+            "r": 145.0,
+            "pu": 47.0
+          }
+        },
+        "trial": {
+          "seconds": 8.517,
+          "deltas": {
+            "ui": 502.0,
+            "gf": 1.0,
+            "tc": 1.0,
+            "u": 1.0,
+            "r": 145.0,
+            "pu": 47.0
+          }
+        }
+      },
+      {
+        "from": "new_level",
+        "to": "unpaused",
+        "baseline": {
+          "seconds": 2.928000000000001,
+          "deltas": {
+            "ui": 177.0,
+            "gf": 0.0,
+            "tc": 0.0,
+            "u": 0.0,
+            "r": 177.0,
+            "pu": 77.0
+          }
+        },
+        "trial": {
+          "seconds": 2.9399999999999995,
+          "deltas": {
+            "ui": 177.0,
+            "gf": 0.0,
+            "tc": 0.0,
+            "u": 0.0,
+            "r": 177.0,
+            "pu": 77.0
+          }
+        }
+      },
+      {
+        "from": "unpaused",
+        "to": "done",
+        "baseline": {
+          "seconds": 0.3329999999999984,
+          "deltas": {
+            "ui": 19.0,
+            "gf": 10.0,
+            "tc": 10.0,
+            "u": 10.0,
+            "r": 19.0,
+            "pu": 20.0
+          }
+        },
+        "trial": {
+          "seconds": 0.33000000000000007,
+          "deltas": {
+            "ui": 19.0,
+            "gf": 10.0,
+            "tc": 10.0,
+            "u": 10.0,
+            "r": 19.0,
+            "pu": 20.0
+          }
+        }
+      },
+      {
+        "from": "request",
+        "to": "done",
+        "baseline": {
+          "seconds": 11.783999999999999,
+          "deltas": {
+            "ui": 698.0,
+            "gf": 11.0,
+            "tc": 11.0,
+            "u": 11.0,
+            "r": 341.0,
+            "pu": 144.0
+          }
+        },
+        "trial": {
+          "seconds": 11.786999999999999,
+          "deltas": {
+            "ui": 698.0,
+            "gf": 11.0,
+            "tc": 11.0,
+            "u": 11.0,
+            "r": 341.0,
+            "pu": 144.0
+          }
+        }
+      }
+    ],
+    "scope": "Natural ordinary trapdoor from stage1 to stage2, including entry, cinematic/load, arrival and ten resumed world updates. No claim for alternate stages or every ending route."
+  },
+  "limitations": [
+    "Different clock origins are not directly subtracted; native load durations are reported separately.",
+    "Absent fatal/pure-state diagnostics alone cannot prove every native state field was unchanged.",
+    "Stationary position/zero velocity during pause does not prove nonzero-momentum interpolation remains frozen; that requires a moving-pause case."
+  ]
+}

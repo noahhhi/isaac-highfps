@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "execution": "Root only; verified isolated display and P1 keyboard path; never the physical user game",
+  "preconditions": [
+    "Run enforce-test-silence.py after any fresh profile copy, before game launch",
+    "Install mcm-browse-observer.lua as isolated validation main.lua and copy ce_compat_probe.lua beside it",
+    "Use a clean safe Isaac starting room, one player, controls enabled, menu initially closed",
+    "Wait for HFMCM_READY with default_L=true; if false, use the logged existing keyboard binding, do not rebind",
+    "Begin synchronized capture and record actual key-down/up timestamps"
+  ],
+  "sequence": [
+    {"key": "l", "hold_seconds": 0.07, "after_seconds": 0.5, "verify": "HFMCM opened, visible=true"},
+    {"key": "Down", "hold_seconds": 0.07, "after_seconds": 0.3},
+    {"key": "Down", "hold_seconds": 0.07, "after_seconds": 0.3},
+    {"key": "Up", "hold_seconds": 0.07, "after_seconds": 0.3},
+    {"key": "Down", "hold_seconds": 0.75, "after_seconds": 0.3, "verify": "Compare category repeat sequence/cadence to native60"},
+    {"key": "Up", "hold_seconds": 0.07, "after_seconds": 0.3},
+    {"key": "l", "hold_seconds": 0.07, "after_seconds": 1.2, "verify": "HFMCM closed then HFMCM_FINAL settings_unchanged=true, ControlsEnabled restored"}
+  ],
+  "forbidden_keys": ["Left", "Right", "Return", "space", "reset binding"],
+  "coverage": "Open, category browsing, held-key repeat, close, visible text/sprites and unchanged registered setting values. No entering/changing options or preview buttons; popup and option editing remain untested."
+}
