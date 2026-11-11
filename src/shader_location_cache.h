@@ -113,6 +113,12 @@ private:
         if constexpr(sizeof(context)>4)programGroup^=std::uint32_t(std::uint64_t(context)>>32);
         return ((programGroup&15u)<<4)|nameClass;
     }
+    static HIGHFPS_LOCATION_FORCEINLINE bool SameHotName(const char*a,const char*b,unsigned length){
+        // HotClass admits only length 5 or 8..16. Both 8-byte chunks remain
+        // wholly inside the validated name, even when they overlap.
+        if(length>=8)return std::memcmp(a,b,8)==0&&std::memcmp(a+length-8,b+length-8,8)==0;
+        return length==5&&std::memcmp(a,b,4)==0&&a[4]==b[4];
+    }
     static bool SameKey(const Entry&e,std::uintptr_t context,std::uint32_t program,Kind kind,Name name){
         return e.context==context&&e.program==program&&e.kind==kind&&e.length==name.length&&
             std::memcmp(e.name.data(),name.text,name.length)==0;
@@ -161,7 +167,7 @@ private:
         auto&front=storage_->front[FrontIndex(context,program,nameClass)];
         if(front.generation==generation_&&front.index<size_){
             const auto&e=storage_->entries[front.index];
-            if(SameKey(e,context,program,kind,name)){result=e.location;++stats_.hits;++stats_.frontHits;return true;}
+            if(e.context==context&&e.program==program&&e.kind==kind&&e.length==name.length&&SameHotName(e.name.data(),name.text,name.length)){result=e.location;++stats_.hits;++stats_.frontHits;return true;}
         }
         return FindHashed(context,program,kind,name,result,&front);
     }

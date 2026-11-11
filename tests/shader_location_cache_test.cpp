@@ -5,6 +5,10 @@
 #include <cstdlib>
 #include <limits>
 #include <new>
+#if defined(_WIN32)
+#define NOMINMAX
+#include <windows.h>
+#endif
 using highfps::shader_locations::Cache;
 using highfps::shader_locations::Kind;
 static std::uint64_t allocations=0;
@@ -166,4 +170,28 @@ static void DirectFrontSafety(){
  assert(allocations==allocationsBefore);
  std::puts("direct front: 77 hot keys skip hash probes, exact collision fallback, updates, zero, misses, clear/wrap: passed");
 }
-int main(){IdentityAndNoNegative();BoundsAndReset();CollisionOverflowAndNoAlloc();ValidatedAndFullHashCollision();DirectFrontSafety();}
+static void HotNameBytesAndPageBoundary(){
+ Cache cache;const char*names[]={"Position","Color","TexCoord","ColorizeIn","ColorOffsetIn","TextureSize","PixelationAmount","ClipPlane","ChampionColorIn","Texture0","Transform"};
+ for(unsigned n=0;n<11;++n){const auto len=std::strlen(names[n]);const auto kind=n<9?Kind::Attribute:Kind::Uniform;
+  char changed[32];std::memcpy(changed,names[n],len+1);cache.Clear();assert(cache.StoreValidated(1,1,kind,names[n],len,201));int out=0;
+  assert(cache.FindValidated(1,1,kind,names[n],len,out)&&out==201);
+  for(unsigned byte=0;byte<len;++byte){changed[byte]^=1;out=717;
+   assert(!cache.FindValidated(1,1,kind,changed,len,out)&&out==717);
+   assert(cache.StoreValidated(1,1,kind,changed,len,int(byte)));
+   for(unsigned round=0;round<2;++round){assert(cache.FindValidated(1,1,kind,changed,len,out)&&out==int(byte));assert(cache.FindValidated(1,1,kind,names[n],len,out)&&out==201);}
+   changed[byte]^=1;
+  }
+ }
+#if defined(_WIN32)
+ SYSTEM_INFO info{};GetSystemInfo(&info);const auto page=info.dwPageSize;
+ auto*memory=static_cast<char*>(VirtualAlloc(nullptr,2*page,MEM_RESERVE|MEM_COMMIT,PAGE_READWRITE));assert(memory);DWORD old=0;
+ assert(VirtualProtect(memory+page,page,PAGE_NOACCESS,&old));
+ for(unsigned n=0;n<11;++n){const auto len=std::strlen(names[n]);auto*edge=memory+page-len-1;std::memcpy(edge,names[n],len+1);const auto kind=n<9?Kind::Attribute:Kind::Uniform;
+  cache.Clear();assert(cache.StoreValidated(1,1,kind,edge,len,301));int out=0;
+  assert(cache.FindValidated(1,1,kind,edge,len,out)&&out==301);assert(cache.FindValidated(1,1,kind,edge,len,out)&&out==301);
+ }
+ assert(VirtualFree(memory,0,MEM_RELEASE));
+#endif
+ std::puts("every hot name byte remains identity; NUL immediately before inaccessible page: passed");
+}
+int main(){IdentityAndNoNegative();BoundsAndReset();CollisionOverflowAndNoAlloc();ValidatedAndFullHashCollision();DirectFrontSafety();HotNameBytesAndPageBoundary();}

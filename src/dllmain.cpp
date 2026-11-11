@@ -38,6 +38,7 @@
 #include "native_spawn_budget_j374.h"
 #include "native_poof_spawn_j374.h"
 #include "native_extra_split_budget_j374.h"
+#include "native_sprite_rotation_j374.h"
 #endif
 
 namespace {
@@ -101,6 +102,7 @@ struct Config {
     bool overloadFallback = true;
     bool overloadRollingRecovery = false;
     bool cacheShaderLocations = true;
+    bool reuseSpriteRotation = true;
     bool spawnWorkBudget = false;
     bool poofWorkBudget = false;
     bool extraSplitWorkBudget = false;
@@ -134,6 +136,7 @@ void LoadConfig() {
     g_cfg.overloadFallback = GetPrivateProfileIntA("highfps","OverloadFallback",1,path)!=0;
     g_cfg.overloadRollingRecovery = GetPrivateProfileIntA("highfps","OverloadRollingRecovery",0,path)!=0;
     g_cfg.cacheShaderLocations = GetPrivateProfileIntA("highfps","CacheShaderLocations",1,path)!=0;
+    g_cfg.reuseSpriteRotation = GetPrivateProfileIntA("highfps","ReuseSpriteRotation",1,path)!=0;
     g_cfg.spawnWorkBudget = GetPrivateProfileIntA("highfps","SpawnWorkBudget",0,path)!=0;
     g_cfg.poofWorkBudget = GetPrivateProfileIntA("highfps","PoofWorkBudget",0,path)!=0;
     g_cfg.extraSplitWorkBudget = GetPrivateProfileIntA("highfps","ExtraSplitWorkBudget",0,path)!=0;
@@ -978,6 +981,7 @@ highfps_entity_probe::Runtime* g_entityRenderCache = nullptr;
 highfps::spawn_budget19715::Adapter* g_spawnBudget = nullptr;
 highfps::poof_spawn19715::Adapter* g_poofBudget=nullptr;
 highfps::extra_split19715::Adapter* g_extraSplitBudget=nullptr;
+highfps::sprite_rotation19715::Adapter* g_spriteRotation=nullptr;
 uint64_t g_extraSplitBudgetedCalls=0;
 highfps::work_budget::FrameWorkBudget* g_frameWorkBudget=nullptr;
 unsigned g_nativeUpdateScopeDepth=0;
@@ -1104,7 +1108,8 @@ bool AdmitSpawnWork(highfps::spawn_budget19715::Kind kind,void*tear,unsigned cos
     ++g_spawnBudgetedCalls;
     if(PressureEnabled()) {
         g_workRequests.Observe(static_cast<highfps::pressure::RequestKind>(k),cost);
-        if(!g_workDecision.valid||!g_workDecision.budgetAttacks){++g_pressureNativeAttacks;return true;}
+        const bool limit=(k==1||k==3)?g_workDecision.budgetLasers:g_workDecision.budgetAttacks;
+        if(!g_workDecision.valid||!limit){++g_pressureNativeAttacks;return true;}
     }
     return g_frameWorkBudget->Admit(static_cast<highfps::work_budget::Kind>(k),BudgetRead32(reinterpret_cast<uintptr_t>(tear)+0x3ec));
 }
@@ -1170,6 +1175,15 @@ void EnsureFixedRenderPipeline() {
         highfps::native_ui_replay::InstallNativeUiReplay19715(&g_luaFrameIntermediate)) {
         g_carouselPresentationEnabled=ValidateCarouselLayout();
         g_separateNativeFrames = true;
+        if(g_cfg.reuseSpriteRotation) {
+            highfps::sprite_rotation19715::Host rotationHost;
+            rotationHost.address=&ResolveCacheAddress;rotationHost.poke=&Poke;
+            rotationHost.gameThread=g_gameThreadId;rotationHost.enabled=true;
+            g_spriteRotation=new highfps::sprite_rotation19715::Adapter(rotationHost);
+            Log(g_spriteRotation->Install()
+                ? "[sprite-rotation] shared angle pairs installed; independent native instance transforms retained"
+                : "[sprite-rotation] unavailable; original instance transforms retained");
+        }
         // Install once, with runtime flags retaining native pass-through when off.
         // Lua UI never patches executable code while a run is in progress.
         g_frameWorkBudget=new highfps::work_budget::FrameWorkBudget(g_cfg.workBudget);
@@ -1573,6 +1587,11 @@ int __cdecl HookedUpdateWrapper() {
             g_successfulPresents,g_prof.nativeVisibleCalls,g_prof.nativeVisibleSum*1000,
             (now-g_statWindow)*1000,unsigned(nativeVisible));
 #ifdef HIGHFPS_BUILD_19715
+        if(g_spriteRotation) {
+            const auto stats=g_spriteRotation->GetStats();
+            Log("[sprite-rotation] cumulative=1 calls=%llu hits=%llu misses=%llu bypasses=%llu nativeSkips=%llu iatChanges=%llu",
+                stats.calls,stats.hits,stats.misses,stats.bypasses,stats.nativeSkips,stats.iatChanges);
+        }
         if(g_spawnBudget) {
             const auto stats=g_spawnBudget->GetStats();
             Log("[spawn-budget] cumulative=1 budgeted=%llu parasiteAdmit=%llu parasiteDeny=%llu searchAdmit=%llu searchDeny=%llu quadAdmit=%llu quadDeny=%llu trisAdmit=%llu trisDeny=%llu unsupported=%llu reentry=%llu exceptions=%llu",
@@ -1608,8 +1627,8 @@ int __cdecl HookedUpdateWrapper() {
 #ifdef HIGHFPS_BUILD_19715
         if(PressureEnabled()) {
             const auto& d=g_workDecision;const auto requests=g_workRequests.Snapshot();const auto& stats=g_workPressure.Stats();
-            Log("[work-pressure] world=%u severity=%u attack=%u cosmetic=%u targetHz=%.2f fixedKnown=%u pureKnown=%u fixedMs=%.3f pureMs=%.3f demand=%.3f predictedTears=%llu predictedLasers=%llu predictedPoofs=%llu searches=%llu",
-                g_populationKey.world,unsigned(d.severity),unsigned(d.budgetAttacks),unsigned(d.budgetCosmetics),d.targetHz,
+            Log("[work-pressure] world=%u severity=%u attack=%u laser=%u cosmetic=%u targetHz=%.2f fixedKnown=%u pureKnown=%u fixedMs=%.3f pureMs=%.3f demand=%.3f predictedTears=%llu predictedLasers=%llu predictedPoofs=%llu searches=%llu",
+                g_populationKey.world,unsigned(d.severity),unsigned(d.budgetAttacks),unsigned(d.budgetLasers),unsigned(d.budgetCosmetics),d.targetHz,
                 unsigned(d.fixedKnown),unsigned(d.pureKnown),d.fixedWorkSeconds*1000,d.pureRenderWorkSeconds*1000,d.estimatedWorkDemand,
                 d.projectedTears,d.projectedLasers,d.projectedPoofs,d.searchRequests);
             Log("[work-pressure-counts] requestedChildren=%llu requestedSearches=%llu requestedTris=%llu requestedPoofs=%llu nativeAttacks=%llu nativePoofs=%llu raised=%llu recovered=%llu invalid=%llu",

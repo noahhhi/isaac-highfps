@@ -52,20 +52,79 @@ static void SingleSpikeLifecycleRecovery(){
 }
 static void PredictionAndDeniedDemand(){
  Simulation s;s.c.population.tears=30;s.c.priorRequests.children=300;
- auto d=s.Step();assert(d.severity==Severity::Severe&&d.populationCause); // Before allocation, even without warmup.
- // Caps lower cost/population, but unfulfilled demand remains visible. Do not
- // alternate budget off/on just because the budget itself made work cheaper.
- s.c.population.tears=32;s.c.priorRequests.children=160;
- for(unsigned i=0;i<150;++i){d=s.Step(.002,.002);assert(d.budgetAttacks);}
- s.c.priorRequests={};for(unsigned i=0;i<240;++i)d=s.Step(.002,.002);assert(!d.budgetAttacks&&!d.budgetCosmetics);
+ auto d=s.Step();assert(d.severity==Severity::Cosmetic&&d.populationCause&&!d.budgetAttacks);
+ // Dense but cheap work, including denied-request forecasts, must not reduce
+ // damage. Forecasts still turn cosmetics on before timing warmup completes.
+ s.c.population.tears=512;s.c.priorRequests.children=160;
+ for(unsigned i=0;i<150;++i){d=s.Step(.002,.002);assert(d.budgetCosmetics&&!d.budgetAttacks&&!d.budgetLasers);}
+ s.c.population.tears=1;s.c.priorRequests={};for(unsigned i=0;i<240;++i)d=s.Step(.002,.002);assert(!d.budgetAttacks&&!d.budgetCosmetics);
  Simulation fx;fx.c.priorRequests.poofs=100;d=fx.Step();assert(d.budgetCosmetics&&!d.budgetAttacks);
- Simulation search;search.c.priorRequests.techSearches=40;d=search.Step();assert(d.budgetAttacks&&d.projectedLasers==0&&d.searchRequests==40);
- Simulation first;d=first.Step();assert(!d.budgetAttacks); // Unreported first burst is inherently unseen.
- first.c.priorRequests.children=300;d=first.Step();assert(d.budgetAttacks); // One-world latency, not hard-cap guarantee.
- // Custom lower thresholds must not recover below continuing raw pressure.
+ Simulation search;search.c.priorRequests.techSearches=400;d=search.Step();assert(d.budgetCosmetics&&!d.budgetAttacks&&d.budgetLasers&&d.projectedLasers==0&&d.searchRequests==400);
+ Simulation first;d=first.Step();assert(!d.budgetAttacks);
+ first.c.priorRequests.children=300;d=first.Step();assert(d.budgetCosmetics&&!d.budgetAttacks);
  Config custom;custom.attackTears=20;custom.severeTears=40;Simulation tuned(custom);tuned.c.population.tears=25;
- for(unsigned i=0;i<180;++i)assert(tuned.Step(.001,.001).budgetAttacks);
- std::puts("pressure: pre-flood prediction, denied demand retains pressure, search != birth, one-world latency: passed");
+ for(unsigned i=0;i<180;++i){d=tuned.Step(.001,.001);assert(d.budgetCosmetics&&!d.budgetAttacks);}
+ std::puts("pressure: dense cheap forecasts select cosmetics only; searches remain distinct from births: passed");
+}
+static void MeasuredAttackEntryAndDenseRecovery(){
+ Simulation s;s.c.population={512,0,300,1000};s.c.priorRequests={40,0,0,300};
+ auto d=s.Step(.003,.009);assert(d.severity==Severity::Cosmetic&&!d.fixedKnown&&!d.budgetAttacks);
+ // Warming up plus the ordinary three-world entry streak; no severe pair.
+ for(unsigned i=0;i<4;++i){d=s.Step(.003,.009);assert(!d.budgetAttacks&&!d.urgentWork);}
+ d=s.Step(.003,.009);assert(d.severity==Severity::Attack&&d.workCause&&!d.urgentWork);
+ const auto entered=s.time;
+ // Mutating measured evidence or forecasts in the same world cannot change
+ // the latched decision, or allow the caller to refill a world budget.
+ auto same=s.c;same.population={};same.priorRequests={};same.targetHz=60;
+ assert(s.policy.Evaluate(same).severity==Severity::Attack);
+ for(unsigned i=0;i<30;++i){d=s.Step(.002,.002);assert(d.budgetAttacks);}
+ for(unsigned i=0;i<180;++i)d=s.Step(.002,.002);
+ assert(s.time-entered>2&&d.severity==Severity::Cosmetic&&!d.budgetAttacks);
+ // Continuing high forecasts never relatch attacks; real repeated costly work
+ // still does, and severe recovery descends one level at a time.
+ for(unsigned i=0;i<150;++i)assert(!s.Step(.002,.002).budgetAttacks);
+ d=s.Step(.05,.002);assert(d.urgentWork&&d.severity==Severity::Severe);
+ bool sawAttack=false,sawCosmetic=false;auto previous=d.severity;
+ for(unsigned i=0;i<240;++i){d=s.Step(.002,.002);assert(unsigned(previous)<=unsigned(d.severity)+1);
+  sawAttack|=d.severity==Severity::Attack;sawCosmetic|=d.severity==Severity::Cosmetic;previous=d.severity;}
+ assert(sawAttack&&sawCosmetic&&!d.budgetAttacks&&d.budgetCosmetics);
+ std::puts("pressure: measured attack entry, same-world latch, timed dense recovery and urgent reentry: passed");
+}
+static void IndependentLaserGuard(){
+ Simulation s;s.c.population.tears=512;s.c.priorRequests.trisCreates=16;
+ auto d=s.Step();assert(!d.fixedKnown&&d.budgetLasers&&!d.budgetAttacks);
+ auto same=s.c;same.priorRequests={};same.population={};
+ assert(s.policy.Evaluate(same).budgetLasers); // World-latched, no mid-world refill.
+ for(unsigned i=0;i<180;++i){d=s.Step(.002,.002);assert(d.budgetLasers&&!d.budgetAttacks);}
+ // Distinct entry/exit thresholds prevent low-cost boundary oscillation.
+ s.c.priorRequests.trisCreates=12;
+ for(unsigned i=0;i<180;++i)assert(s.Step(.002,.002).budgetLasers);
+ s.c.priorRequests.trisCreates=11;
+ for(unsigned i=0;i<30;++i)assert(s.Step(.002,.002).budgetLasers);
+ for(unsigned i=0;i<90;++i)d=s.Step(.002,.002);
+ assert(!d.budgetLasers&&!d.budgetAttacks&&d.budgetCosmetics);
+ s.c.priorRequests.techSearches=32;d=s.Step(.002,.002);assert(d.budgetLasers&&!d.budgetAttacks);
+ // Measured attack proof plus continuing requests holds both guards despite
+ // lower cost under the caps. Ordinary tear population does not do this.
+ for(unsigned i=0;i<20;++i)s.Step(.02,.01);
+ assert(s.policy.Current().budgetAttacks);
+ for(unsigned i=0;i<240;++i){d=s.Step(.002,.002);assert(d.budgetAttacks&&d.budgetLasers);}
+ s.c.priorRequests={128,0,0,0};
+ for(unsigned i=0;i<180;++i)assert(s.Step(.002,.002).budgetAttacks);
+ s.c.priorRequests={};
+ for(unsigned i=0;i<240;++i)d=s.Step(.002,.002);
+ assert(!d.budgetAttacks&&!d.budgetLasers&&d.projectedTears==512);
+ // Missing timing evidence cannot establish laser recovery; lifecycle resets
+ // clear the latch, and an excluded sample restarts its quiet interval.
+ s.c.priorRequests.techSearches=32;s.Step();s.c.priorRequests={};
+ for(unsigned i=0;i<180;++i){s.time+=1.0/30;s.c.now=s.time;s.c.world=++s.tick;
+  s.policy.ObserveFixed(1,s.c.room,s.time,.002);assert(s.policy.Evaluate(s.c).budgetLasers);}
+ for(unsigned i=0;i<50;++i)s.Step(.002,.002);
+ s.Step(.5,.5,90,false);for(unsigned i=0;i<30;++i)assert(s.Step(.002,.002).budgetLasers);
+ auto room=s.c;room.room++;room.world=0;room.now+=.01;room.priorRequests={};
+ d=s.policy.Evaluate(room);assert(!d.budgetLasers&&!d.budgetAttacks);
+ s.policy.Reset();assert(!s.policy.Current().budgetLasers);
+ std::puts("pressure: laser-only forecast latch, corroborated attack recovery, dense tears, timing/lifecycle guards: passed");
 }
 static void LedgerAndBoundaries(){
  RequestLedger ledger;assert(!ledger.Observe(RequestKind::HaemoChild,1));assert(ledger.Begin(1,10,7));
@@ -75,7 +134,7 @@ static void LedgerAndBoundaries(){
  assert(!ledger.Observe(RequestKind::QuadSplit,1));assert(!ledger.Observe(static_cast<RequestKind>(99),1));
  assert(ledger.Begin(1,11,7)&&ledger.Snapshot().children==0);ledger.Reset();assert(!ledger.Observe(RequestKind::Poof,1));
  const auto max=(std::numeric_limits<std::uint64_t>::max)();assert(Add(max-1,7)==max);
- Simulation huge;huge.c.population.tears=max;huge.c.priorRequests.children=max;auto d=huge.Step();assert(d.projectedTears==max&&d.budgetAttacks);
+ Simulation huge;huge.c.population.tears=max;huge.c.priorRequests.children=max;auto d=huge.Step();assert(d.projectedTears==max&&d.budgetCosmetics&&!d.budgetAttacks);
  Simulation invalid;for(unsigned i=0;i<40;++i)invalid.Step();
  invalid.c.now+=.01;invalid.c.world++;invalid.c.targetHz=std::numeric_limits<double>::quiet_NaN();assert(!invalid.policy.Evaluate(invalid.c).valid);
  invalid.policy.ObserveFixed(1,invalid.c.room,invalid.c.now,1e308);invalid.policy.ObservePure(1,invalid.c.room,invalid.c.now,-1);
@@ -136,4 +195,4 @@ static void UrgentLowRate(){
  assert(checked);
  std::puts("pressure urgent pair: low-rate overload, one spike ignored, excluded/aged evidence, target-scaled pure threshold: passed");
 }
-int main(){TargetRatesAndOrdinaryBurst();SingleSpikeLifecycleRecovery();PredictionAndDeniedDemand();LedgerAndBoundaries();MissingPhaseAndBrokenEvidence();UrgentLowRate();}
+int main(){TargetRatesAndOrdinaryBurst();SingleSpikeLifecycleRecovery();PredictionAndDeniedDemand();MeasuredAttackEntryAndDenseRecovery();IndependentLaserGuard();LedgerAndBoundaries();MissingPhaseAndBrokenEvidence();UrgentLowRate();}

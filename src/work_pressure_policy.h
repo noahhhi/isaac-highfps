@@ -49,7 +49,7 @@ struct Context {
     bool populationValid=true,requestsValid=true;
 };
 struct Decision {
-    bool valid=false,budgetAttacks=false,budgetCosmetics=false;
+    bool valid=false,budgetAttacks=false,budgetCosmetics=false,budgetLasers=false;
     Severity severity=Severity::None;bool populationCause=false,workCause=false,urgentWork=false;
     double targetHz=0,fixedWorkSeconds=0,pureRenderWorkSeconds=0,estimatedWorkDemand=0;
     double updateWorkSeconds=0,canonicalRenderWorkSeconds=0;
@@ -103,10 +103,11 @@ class Policy {
     Config config_;Window fixed_,pure_;Counters counters_{};
     std::uint64_t epoch_=0,lastWorld_=0;std::uintptr_t room_=0;bool scoped_=false,evaluated_=false;
     double lastTime_=0,lastChange_=0,quietSince_=0;bool haveQuiet_=false;
+    bool laserBudget_=false,haveLaserQuiet_=false;double laserChanged_=0,laserQuietSince_=0;
     Severity severity_=Severity::None,candidate_=Severity::None;unsigned candidateRun_=0;Decision last_{};
     static bool Finite(double x){return std::isfinite(x)&&x>=0;}
-    void ClearState(){fixed_.Clear();pure_.Clear();evaluated_=false;last_={};severity_=candidate_=Severity::None;candidateRun_=0;haveQuiet_=false;lastChange_=0;}
-    void BreakEvidence(){candidate_=Severity::None;candidateRun_=0;haveQuiet_=false;}
+    void ClearState(){fixed_.Clear();pure_.Clear();evaluated_=false;last_={};severity_=candidate_=Severity::None;candidateRun_=0;haveQuiet_=false;lastChange_=0;laserBudget_=haveLaserQuiet_=false;laserChanged_=laserQuietSince_=0;}
+    void BreakEvidence(){candidate_=Severity::None;candidateRun_=0;haveQuiet_=haveLaserQuiet_=false;}
     bool Scope(std::uint64_t epoch,std::uintptr_t room,double now){
         if(!room){ClearState();scoped_=false;++counters_.invalidInputs;return false;}
         if(!Finite(now)){BreakEvidence();++counters_.invalidInputs;return false;}
@@ -124,11 +125,17 @@ class Policy {
     }
     bool Quiet(const Context&c,const Decision&d)const {
         if(!c.populationValid||!c.requestsValid||(!d.fixedKnown||!d.pureKnown))return false;
-        double exit=config_.cosmeticExit;std::uint64_t tears=96,lasers=12,poofs=48,effects=256,searches=16;
-        if(severity_==Severity::Attack){exit=config_.attackExit;poofs=128;effects=640;searches=24;}
-        if(severity_==Severity::Severe){exit=config_.severeExit;tears=192;lasers=24;poofs=192;effects=768;searches=64;}
-        return d.estimatedWorkDemand<exit&&d.projectedTears<tears&&d.projectedLasers<lasers&&
-            d.projectedPoofs<poofs&&d.projectedEffects<effects&&d.searchRequests<searches;
+        // Dense ordinary tears alone cannot retain attack restrictions. Once
+        // measured work has proved overload, however, repeated split/search or
+        // beam demand corroborates it: capped work being cheap is not enough
+        // to release the caps and recreate the same flood every few seconds.
+        if(unsigned(severity_)>=unsigned(Severity::Attack)){
+            const double exit=severity_==Severity::Severe?config_.severeExit:config_.attackExit;
+            return d.estimatedWorkDemand<exit&&c.priorRequests.children<config_.attackTears&&
+                d.searchRequests<config_.attackSearches&&d.projectedLasers<config_.attackLasers;
+        }
+        return d.estimatedWorkDemand<config_.cosmeticExit&&d.projectedTears<96&&d.projectedLasers<12&&
+            d.projectedPoofs<48&&d.projectedEffects<256&&d.searchRequests<16;
     }
 public:
     Policy():Policy(Config{}){}
@@ -195,7 +202,28 @@ public:
             d.projectedEffects=Add(c.population.effects,c.priorRequests.poofs);
             d.searchRequests=c.priorRequests.techSearches;
         }
-        const auto population=PopulationLevel(c,d);
+        // Population and attempted work are forecasts, not measured cost.
+        // They may pre-emptively reduce cosmetics, but attack admission needs
+        // sustained measured pressure (or the repeated-stall path below).
+        const auto population=(std::min)(PopulationLevel(c,d),Severity::Cosmetic);
+        // Known beam creation/search forecasts have a separate early guard.
+        // They never enable child/split limits without measured work evidence.
+        const bool laserForecastKnown=c.populationValid&&c.requestsValid;
+        const bool laserFlood=laserForecastKnown&&(d.projectedLasers>=config_.attackLasers||d.searchRequests>=config_.attackSearches);
+        if(laserFlood){
+            if(!laserBudget_){laserBudget_=true;laserChanged_=c.now;}
+            haveLaserQuiet_=false;
+        }else if(laserBudget_){
+            const bool quiet=laserForecastKnown&&d.fixedKnown&&d.pureKnown&&d.estimatedWorkDemand<config_.attackExit&&
+                d.projectedLasers<config_.attackLasers-config_.attackLasers/4&&
+                d.searchRequests<config_.attackSearches-config_.attackSearches/4;
+            if(quiet){
+                if(!haveLaserQuiet_){haveLaserQuiet_=true;laserQuietSince_=c.now;}
+                if(c.now-laserChanged_>=config_.minimumHold&&c.now-laserQuietSince_>=config_.quietRecovery){
+                    laserBudget_=false;haveLaserQuiet_=false;
+                }
+            }else haveLaserQuiet_=false;
+        }
         Severity work=Severity::None;
         if(d.estimatedWorkDemand>=config_.severeEnter)work=Severity::Severe;
         else if(d.estimatedWorkDemand>=config_.attackEnter)work=Severity::Attack;
@@ -222,7 +250,7 @@ public:
                 severity_=Severity(unsigned(severity_)-1);lastChange_=quietSince_=c.now;haveQuiet_=false;++counters_.recovered;
             }
         }else haveQuiet_=false;
-        d.severity=severity_;d.budgetAttacks=unsigned(severity_)>=unsigned(Severity::Attack);d.budgetCosmetics=severity_!=Severity::None;
+        d.severity=severity_;d.budgetAttacks=unsigned(severity_)>=unsigned(Severity::Attack);d.budgetCosmetics=severity_!=Severity::None;d.budgetLasers=laserBudget_||d.budgetAttacks;
         last_=d;return d;
     }
     Decision Current()const{return last_;}

@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.13.0-j374.8
+
+Repeated ANM2 sprite rotations share native sine/cosine pairs through a bounded
+index. Every projectile keeps its own native transform, collision and damage;
+unsupported inputs and poor reuse return to native calculation. Coverage follows
+the rendering path rather than a list of familiar names. Fate's Reward retains
+its partial tear-property inheritance, and Mongo Baby is not treated as a player
+attack copier.
+
+Adaptive pressure now distinguishes early beam demand from measured split-work
+cost, preserving ordinary attacks in dense but inexpensive scenes. Short built-in
+shader names also use exact bounded comparisons. See the [reuse scope and
+performance priorities](docs/performance-reuse.md) and [validation
+results](docs/validation/sprite-rotation-reuse.json). Extreme combat is still not
+proven to sustain 90 FPS without attack-output tradeoffs.
+
 ## v0.13.0
 
 **The companion can now tell you the DLL is outdated.** The two halves of this mod age

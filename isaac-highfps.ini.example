@@ -53,6 +53,11 @@ CacheEntries = 16384
 CacheMiB = 64
 CacheFileProbes = 1
 
+; J374 shares repeated sprite-angle sine/cosine results. Every projectile keeps
+; its own position, rotation, collision and damage; no projectile is merged.
+; Unsupported inputs or poor cache reuse retain native calculations.
+ReuseSpriteRotation = 1
+
 ; Reuse positive built-in shader attribute/uniform locations inside known
 ; Update/Render scopes. Relink/delete/context changes invalidate these results.
 CacheShaderLocations = 1

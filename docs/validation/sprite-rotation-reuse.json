@@ -1,0 +1,342 @@
+{
+  "schema": "isaac-sprite-rotation-reuse-v1",
+  "version": "0.13.0-j374.8",
+  "dll_sha256": "e5ef7c53819a537b057d13f2e3f785dcc1a610f3f049f59c02e17dbc330318a9",
+  "header_sha256": "292795c6431b30fea61ee434a9844d02d8434426cd9f38deffb5af8f525253e1",
+  "scope": "Two shared native ANM2 rotation calls; each instance retains native pivot/vertex operations, projectile/collision/damage/callbacks. No representative-projectile aggregation.",
+  "priority": "Performance first; reduced precision, animation and effects permitted; retain damage as much as possible.",
+  "native_tests": {
+    "windows_native_coordinate_cases": 200000,
+    "windows_confirmed_native_cache_hit_cases": 10000,
+    "deck_native_coordinate_cases": 200000,
+    "public_synthetic_coordinate_cases": 8229,
+    "full_repository_tests": "PASS",
+    "install_rollback_thread_iat_lifecycle": "PASS actual native Windows plus synthetic public tests",
+    "floating_point_status": "Transient exception flags deliberately not replayed; supported numeric outputs match bitwise."
+  },
+  "function_benchmarks": {
+    "Windows x86": {
+      "0": {
+        "native_median_ns": 1.92245,
+        "reuse_median_ns": 1.7674,
+        "samples_per_arm": 6
+      },
+      "1": {
+        "native_median_ns": 18.216549999999998,
+        "reuse_median_ns": 10.513349999999999,
+        "samples_per_arm": 6
+      },
+      "2": {
+        "native_median_ns": 20.5705,
+        "reuse_median_ns": 12.61385,
+        "samples_per_arm": 6
+      },
+      "3": {
+        "native_median_ns": 20.43835,
+        "reuse_median_ns": 20.5071,
+        "samples_per_arm": 6
+      },
+      "4": {
+        "native_median_ns": 20.44155,
+        "reuse_median_ns": 20.655450000000002,
+        "samples_per_arm": 6
+      }
+    },
+    "Steam Deck Proton CPU4": {
+      "0": {
+        "native_median_ns": 5.6565,
+        "reuse_median_ns": 4.36245,
+        "samples_per_arm": 6
+      },
+      "1": {
+        "native_median_ns": 63.35765,
+        "reuse_median_ns": 29.211100000000002,
+        "samples_per_arm": 6
+      },
+      "2": {
+        "native_median_ns": 63.7095,
+        "reuse_median_ns": 28.30105,
+        "samples_per_arm": 6
+      },
+      "3": {
+        "native_median_ns": 64.6089,
+        "reuse_median_ns": 65.92945,
+        "samples_per_arm": 6
+      },
+      "4": {
+        "native_median_ns": 56.08815,
+        "reuse_median_ns": 57.1481,
+        "samples_per_arm": 6
+      }
+    }
+  },
+  "function_benchmark_modes": {
+    "0": "zero angle",
+    "1": "repeated nonzero angle",
+    "2": "128 changing angles",
+    "3": "4096 changing angles",
+    "4": "continuously changing angles"
+  },
+  "combat_pairs": [
+    {
+      "group": "default",
+      "case": "reuse-r25-default-off",
+      "reuse_enabled": false,
+      "fps": 90.00011177029634,
+      "p99_ms": 11.223100000002404,
+      "max_ms": 15.44600000000429,
+      "damage": 1782.9375,
+      "damage_targets": [
+        1771.6875,
+        6.25,
+        5.0,
+        0.0
+      ],
+      "player_health_unchanged": true,
+      "normal_exit": true,
+      "source_fixture_sha256": "c4c690943a403441666699df4ac90b8e2aae7eb767f054fd58818aeef088d514",
+      "rotation_cumulative": null
+    },
+    {
+      "group": "default",
+      "case": "reuse-r25-default-on",
+      "reuse_enabled": true,
+      "fps": 90.0000216867522,
+      "p99_ms": 11.274719999998268,
+      "max_ms": 14.046999999997922,
+      "damage": 1786.75,
+      "damage_targets": [
+        1775.5,
+        6.25,
+        5.0,
+        0.0
+      ],
+      "player_health_unchanged": true,
+      "normal_exit": true,
+      "source_fixture_sha256": "c4c690943a403441666699df4ac90b8e2aae7eb767f054fd58818aeef088d514",
+      "rotation_cumulative": {
+        "queries": 63619,
+        "hits": 63612,
+        "misses": 7,
+        "unsupported_bypasses": 0,
+        "adaptive_native_skips": 0,
+        "iat_changes": 0
+      }
+    },
+    {
+      "group": "all-sources",
+      "case": "reuse-r25-all-sources-off",
+      "reuse_enabled": false,
+      "fps": 50.354320640167614,
+      "p99_ms": 45.84545000000339,
+      "max_ms": 71.43399999999644,
+      "damage": 5697.0,
+      "damage_targets": [
+        5500.6875,
+        173.75,
+        22.5625,
+        0.0
+      ],
+      "player_health_unchanged": true,
+      "normal_exit": true,
+      "source_fixture_sha256": "cc1a7659fb68e2e46ad3f3445cafb814ff0280b8041f198b8e7c7080ee35177c",
+      "rotation_cumulative": null
+    },
+    {
+      "group": "all-sources",
+      "case": "reuse-r25-all-sources-on",
+      "reuse_enabled": true,
+      "fps": 51.44419440733108,
+      "p99_ms": 43.834300000002095,
+      "max_ms": 69.97899999999646,
+      "damage": 5592.1875,
+      "damage_targets": [
+        5385.8125,
+        173.25,
+        28.125,
+        5.0
+      ],
+      "player_health_unchanged": true,
+      "normal_exit": true,
+      "source_fixture_sha256": "cc1a7659fb68e2e46ad3f3445cafb814ff0280b8041f198b8e7c7080ee35177c",
+      "rotation_cumulative": {
+        "queries": 23104,
+        "hits": 22029,
+        "misses": 1075,
+        "unsupported_bypasses": 0,
+        "adaptive_native_skips": 112057,
+        "iat_changes": 0
+      }
+    },
+    {
+      "group": "triple",
+      "case": "reuse-r25-triple-off",
+      "reuse_enabled": false,
+      "fps": 89.04079095619538,
+      "p99_ms": 18.122499999998322,
+      "max_ms": 25.57199999999682,
+      "damage": 2684.875,
+      "damage_targets": [
+        1739.3125,
+        340.0625,
+        342.5,
+        263.0
+      ],
+      "player_health_unchanged": true,
+      "normal_exit": true,
+      "source_fixture_sha256": "5a47957a1d136c7cd1267c1bf430c6138472caa6b8aaf3264834a223ab2d4024",
+      "rotation_cumulative": null
+    },
+    {
+      "group": "triple",
+      "case": "reuse-r25-triple-on",
+      "reuse_enabled": true,
+      "fps": 89.27561813552758,
+      "p99_ms": 17.37036000000156,
+      "max_ms": 34.0230000000048,
+      "damage": 2938.9375,
+      "damage_targets": [
+        1788.5625,
+        442.9375,
+        416.125,
+        291.3125
+      ],
+      "player_health_unchanged": true,
+      "normal_exit": true,
+      "source_fixture_sha256": "5a47957a1d136c7cd1267c1bf430c6138472caa6b8aaf3264834a223ab2d4024",
+      "rotation_cumulative": {
+        "queries": 85048,
+        "hits": 80221,
+        "misses": 4827,
+        "unsupported_bypasses": 0,
+        "adaptive_native_skips": 8192,
+        "iat_changes": 0
+      }
+    }
+  ],
+  "comparison_scope": "Matched cloned save, mods and fixture for each ON/OFF pair. Single run per arm; timing and damage fluctuate. Damage is cumulative over a fixed logical window, not wall-time DPS. High-load cases use optional attack budgets. Function speedups are not whole-game speedups.",
+  "source_coverage": {
+    "full_weapon_and_clots": [
+      "player",
+      "Incubus",
+      "six Twisted Pair familiars",
+      "Cains Other Eye",
+      "Gello",
+      "Sumptorium subtypes0..6",
+      "Lil Clot subtype7"
+    ],
+    "partial_tear_properties": [
+      "Fates Reward / 宿命的报答; special attack forms remain native and are not copied"
+    ],
+    "indirect_mechanisms": [
+      "Sprinkler: player-owned shots with native source-position signature",
+      "Multidimensional Baby: same-seed/native-source copies near familiar, ordinary variant21 tears"
+    ],
+    "non_copying_control": [
+      "Mongo Baby is not a player-projectile copier. Existing paired fixtures include it only as an ordinary-familiar control."
+    ],
+    "limitations": "Source coverage exercised ordinary tears. Other weapon rendering paths remain native; not universal third-party mod or laser/knife acceleration."
+  },
+  "rejected_candidates": [
+    "position-independent quad-prefix cache: ~2.5x slower despite >99% hits",
+    "separate scalar trig caches: no net gain",
+    "packed SIMD rotation alone: no robust net gain",
+    "zero cosmetic quota stress experiment: no demonstrated overall FPS/damage advantage; retain existing preset"
+  ],
+  "remaining": [
+    "Not stable90 in four-target triple-item combat",
+    "Physical scanout/VRR not verified",
+    "Two historical startup timeouts unresolved"
+  ],
+  "source_hashes": {
+    "src/camera_presentation.h": "f7bff7a87cdb5f8e7f871bcb0f30c898bdcf77485e1c4089bd8c6d83627061d2",
+    "src/carousel_presentation.h": "74b31f2779d46444660cdac6ba24f53db74ea95c27dc67dbee3ff31012b1a615",
+    "src/render_timing.h": "2505fa670ff40922e695d0cf841d0142b63504361cd13d358cf58ac61f034a6e",
+    "src/shader_location_cache.h": "c222025ea89961f5a6db0854ccbbe3c2a86fececa74d1ef06c1da39621c2bc67",
+    "src/native_ui_replay.h": "68df43e096e272e16434af11dae3cc56f1919c3b31e9272dfdc59f23a3ad5118",
+    "src/entity_draw_cache_probe.h": "a77ada4ad815282edf957302219e00f7ae0fb9445b0d197ab1fc098a82f893c3",
+    "src/offsets.h": "a53e76e716a79ab4cc4ff76dc19c59d38976bec5b04192d43f913690e5750827",
+    "src/entity_draw_cache_j374_hooks.h": "b1be92309cd37b9dd6263ed3f8ebdf5f98b70436061233de0b85ac6727fe52d7",
+    "src/native_extra_split_budget_j374.h": "e8e9b98d8dda8332a36e7cb014c86fd36c2de39617b12da719ac0539ca61bb1e",
+    "src/entity_draw_cache_j374_runtime.h": "b0efc1bbc7c273100799a05533fbf93a7f274a7e13ed529690ae1504b3251067",
+    "src/input_result_cache_j374.h": "61b453ff3a0afe1aa4c399afa72ac5df08935fcc5967ee1a436bf77f39c08a04",
+    "src/menu_presentation.h": "aa30220a7b25e19bc5a0b4c8a58d2cebe7b37f4fdb3487213f4c564804099a95",
+    "src/work_pressure_policy.h": "d89be19c92bd6941cd6a9f3d8ee7d76fced84d7314cbd54671a8bf73be33a544",
+    "src/overload_policy.h": "d9c8bb36ce8dc54539f70ebe8b97508b0a7ee9ec1a5f1ebf18f6f9e450df6af1",
+    "src/entity_render_subscribers_j374.h": "1712853e4d8aac2bcccfcdb44bd1183b71c879412ea9b6977e6328ff853fd9c3",
+    "src/shader_params_cache_j374.h": "64dc757c8ca6ce8c4d0962fcd5991ef3939b6c210f3830a7ec50a9d6b6a1b0e5",
+    "src/lua_work_control.h": "cf13d5672ef8c8f49bc463e39250b0621b49645f51108698d90907d7edaf7132",
+    "src/entity_draw_cache_j374_ref.h": "51ae72544819fdfd6aaa4a3a7785f487a1931077cbe172538a8281ead11f3ea0",
+    "src/inject.cpp": "01e270afcd9566fdfab09381183103214da45d0403b55b1bb4705daed8a7e0d5",
+    "src/render_ordinal_index.h": "cd9b2837256fe855a32565a7cb91f383c90e721c8727ca12d26862b06696b770",
+    "src/frame_work_budget.h": "f13a2697a20074f6949adc725fca2d014be437fb5742dda134a3c3dc019f6257",
+    "src/dllmain.cpp": "f896d4b79168293116ec575b6a5b5bb01c8a51b8477dd3417cc1f9be30a01c17",
+    "src/native_poof_spawn_j374.h": "574141028895cd9957c99ba401c03c7706983b19189e52f362cab26e4728b51b",
+    "src/native_sprite_rotation_j374.h": "292795c6431b30fea61ee434a9844d02d8434426cd9f38deffb5af8f525253e1",
+    "src/offsets_19715.h": "3127ecbe35c6aaf9354e005a84e1f08c5e9b4ed2341f4e30d4adf2aa9edd9c03",
+    "src/winmm_thunks.cpp": "ce91e4472abdc4c989204baed72f9586962a0c6edbd2824152f8c350db295cc1",
+    "src/native_render_clock.h": "c376293b188901bae6d063df2fcd5fbb7a700d6c09bc5b64bf4bf8ff3f1f5685",
+    "src/version.h": "0c5c07ccdbb4e12ccf8c52f18b3d1147e0484987ce82b1556d430fade4b07e67",
+    "src/winmm.def": "efe24a9430d603c35a5220cdd214418d8f34c5fc53208e68c3219aec3cbfeb23",
+    "src/native_spawn_budget_j374.h": "94c151634e942de36b2df1c20c9475ae32f9abbe3d196ce1384478f44778d956",
+    "src/threading_support.h": "7540b5829279288236976912669a4039b55e5da24491c4711ca52de0af5362a7"
+  },
+  "final_soak": {
+    "case": "reuse-r25-triple-final-soak",
+    "phase": "52 logical seconds firing, archived three-Twisted-Pair run plus TechnologyZero/Trisagion/Parasite; no owned four-target combat extension",
+    "actual_presentation": {
+      "completed_swap_records": 4670,
+      "measured_seconds": 51.975789999999996,
+      "completed_swap_hz": 89.83028444589299,
+      "interval_ms": {
+        "count": 4669,
+        "min": 5.302000000000362,
+        "mean": 11.132103234097237,
+        "p50": 11.110999999999649,
+        "p95": 11.181000000000552,
+        "p99": 12.76311999999704,
+        "max": 25.047000000000708
+      },
+      "over_16_7_ms": 8,
+      "over_33_ms": 0,
+      "over_100_ms": 0,
+      "logged_dt_mismatches": 0,
+      "physical_scanout_verified": false,
+      "entering_boundary": {
+        "ending_gf": 15440,
+        "previous_gf": 15439,
+        "logged_dt_ms": 24.189,
+        "measured_dt_ms": 24.188999999999794,
+        "logged_dt_consistent": true,
+        "over_16_7_ms": true,
+        "over_33_ms": false,
+        "over_100_ms": false,
+        "interval_fully_inside_segment": false
+      },
+      "exiting_boundary": {
+        "ending_gf": 17000,
+        "previous_gf": 16999,
+        "logged_dt_ms": 11.943999999999999,
+        "measured_dt_ms": 11.943000000002257,
+        "logged_dt_consistent": true,
+        "over_16_7_ms": false,
+        "over_33_ms": false,
+        "over_100_ms": false,
+        "interval_fully_inside_segment": false
+      },
+      "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+    },
+    "normal_cleanup": {
+      "saved": true,
+      "manager": 1,
+      "page": 3,
+      "pause_exit_selection": 3,
+      "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+      "game_exited": true,
+      "native_shutdown_marker": true
+    },
+    "rotation_last": "[sprite-rotation] cumulative=1 calls=233100 hits=215901 misses=17199 bypasses=0 nativeSkips=12288 iatChanges=0",
+    "evidence_errors": [],
+    "evidence_rejections": []
+  }
+}

@@ -74,7 +74,7 @@ run_core() {
 }
 run_abi() {
   local name
-  for name in native_spawn_budget_j374_test native_poof_spawn_j374_test native_extra_split_budget_j374_test; do
+  for name in native_spawn_budget_j374_test native_poof_spawn_j374_test native_extra_split_budget_j374_test native_sprite_rotation_j374_test; do
     printf '\n[abi] %s\n' "$name"
     build_windows "$repo_dir/tests/$name.cpp" "$name"
     run_windows "$output_dir/$name.exe"
