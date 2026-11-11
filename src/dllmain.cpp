@@ -27,6 +27,7 @@
 #include "overload_policy.h"
 #include "frame_work_budget.h"
 #include "work_pressure_policy.h"
+#include "lua_work_control.h"
 #include "camera_presentation.h"
 #include "menu_presentation.h"
 #include "carousel_presentation.h"
@@ -993,7 +994,20 @@ highfps::pressure::Policy g_workPressure;
 highfps::pressure::RequestLedger g_workRequests;
 highfps::pressure::Decision g_workDecision;
 uint64_t g_pressureNativeAttacks=0,g_pressureNativePoofs=0;
-bool PressureEnabled(){return g_cfg.adaptiveWorkBudget && g_frameWorkBudget;}
+highfps::work_control::Controller g_workControl;
+void ApplyWorkControl() {
+    highfps::work_control::Settings next;
+    if(!g_workControl.Apply(GetCurrentThreadId()==g_gameThreadId&&!g_nativeUpdateScopeDepth&&
+        !g_inRenderPhase&&!g_luaExecutionDepth&&!g_loadDepth,next))return;
+    g_cfg.spawnWorkBudget=next.spawn;g_cfg.extraSplitWorkBudget=next.extra;
+    g_cfg.poofWorkBudget=next.poof;g_cfg.adaptiveWorkBudget=next.adaptive;
+    g_budgetScope={};g_populationKey={};g_populationAttempted=g_populationReadable=false;
+    if(g_frameWorkBudget)g_frameWorkBudget->Reset();
+    g_workPressure.Reset();g_workRequests.Reset();g_workDecision={};
+    Log("[work-control] applied attack=%u poof=%u adaptive=%u",unsigned(next.spawn||next.extra),unsigned(next.poof),unsigned(next.adaptive));
+}
+bool PressureEnabled(){return g_cfg.adaptiveWorkBudget && g_frameWorkBudget &&
+    (g_cfg.spawnWorkBudget||g_cfg.poofWorkBudget||g_cfg.extraSplitWorkBudget);}
 double PressureTargetHz(){
     double hz=g_cfg.maxFps>0?g_cfg.maxFps:(g_displayHz>=30?g_displayHz:90);
     if(g_presentVsync&&g_displayHz>=30&&hz>g_displayHz)hz=g_displayHz;
@@ -1085,7 +1099,7 @@ bool WorkBudgetScopeReady() {
     g_budgetScope.active=false;return false;
 }
 bool AdmitSpawnWork(highfps::spawn_budget19715::Kind kind,void*tear,unsigned cost) {
-    if(!WorkBudgetScopeReady())return true;
+    if(!g_cfg.spawnWorkBudget||!WorkBudgetScopeReady())return true;
     const unsigned k=unsigned(kind);if(k>3 || cost!=(k==0?2u:k==2?4u:1u))return true;
     ++g_spawnBudgetedCalls;
     if(PressureEnabled()) {
@@ -1095,7 +1109,7 @@ bool AdmitSpawnWork(highfps::spawn_budget19715::Kind kind,void*tear,unsigned cos
     return g_frameWorkBudget->Admit(static_cast<highfps::work_budget::Kind>(k),BudgetRead32(reinterpret_cast<uintptr_t>(tear)+0x3ec));
 }
 bool AdmitExtraSplitWork(highfps::extra_split19715::Kind kind,void*tear,unsigned cost) {
-    if(!WorkBudgetScopeReady())return true;
+    if(!g_cfg.extraSplitWorkBudget||!WorkBudgetScopeReady())return true;
     const unsigned k=unsigned(kind);if(k>2 || cost!=(k==0?2u:1u))return true;
     ++g_extraSplitBudgetedCalls;
     if(PressureEnabled()) {
@@ -1105,7 +1119,7 @@ bool AdmitExtraSplitWork(highfps::extra_split19715::Kind kind,void*tear,unsigned
     return g_frameWorkBudget->Admit(static_cast<highfps::work_budget::Kind>(5+k),BudgetRead32(reinterpret_cast<uintptr_t>(tear)+0x3ec));
 }
 bool AdmitPoofWork(void*tear,unsigned,unsigned) {
-    if(!WorkBudgetScopeReady())return true;
+    if(!g_cfg.poofWorkBudget||!WorkBudgetScopeReady())return true;
     ++g_poofBudgetedCalls;
     if(PressureEnabled()) {
         g_workRequests.Observe(highfps::pressure::RequestKind::Poof,1);
@@ -1156,31 +1170,41 @@ void EnsureFixedRenderPipeline() {
         highfps::native_ui_replay::InstallNativeUiReplay19715(&g_luaFrameIntermediate)) {
         g_carouselPresentationEnabled=ValidateCarouselLayout();
         g_separateNativeFrames = true;
-        if(g_cfg.spawnWorkBudget||g_cfg.poofWorkBudget||g_cfg.extraSplitWorkBudget)g_frameWorkBudget=new highfps::work_budget::FrameWorkBudget(g_cfg.workBudget);
-        if(g_cfg.spawnWorkBudget) {
+        // Install once, with runtime flags retaining native pass-through when off.
+        // Lua UI never patches executable code while a run is in progress.
+        g_frameWorkBudget=new highfps::work_budget::FrameWorkBudget(g_cfg.workBudget);
+        bool spawnReady=false,poofReady=false,extraReady=false;
+        {
             highfps::spawn_budget19715::Host spawnHost;
             spawnHost.address=&ResolveCacheAddress;spawnHost.poke=&Poke;spawnHost.admit=&AdmitSpawnWork;
-            spawnHost.gameThread=g_gameThreadId;spawnHost.enabled=true;
+            spawnHost.gameThread=g_gameThreadId;spawnHost.enabled=true;spawnHost.activeFlag=&g_cfg.spawnWorkBudget;
             g_spawnBudget=new highfps::spawn_budget19715::Adapter(spawnHost);
-            if(g_spawnBudget->Install())Log("[spawn-budget] optional player attack work admission installed children=%u searches=%u",g_cfg.workBudget.childrenPerTick,g_cfg.workBudget.techSearchesPerTick);
+            if((spawnReady=g_spawnBudget->Install()))Log("[spawn-budget] optional player attack work admission installed children=%u searches=%u",g_cfg.workBudget.childrenPerTick,g_cfg.workBudget.techSearchesPerTick);
             else Log("[spawn-budget] optional admission unavailable; original attacks retained");
         }
-        if(g_cfg.poofWorkBudget) {
+        {
             highfps::poof_spawn19715::Host poofHost;
             poofHost.address=&ResolveCacheAddress;poofHost.poke=&Poke;poofHost.admit=&AdmitPoofWork;
-            poofHost.gameThread=g_gameThreadId;poofHost.enabled=true;
+            poofHost.gameThread=g_gameThreadId;poofHost.enabled=true;poofHost.activeFlag=&g_cfg.poofWorkBudget;
             g_poofBudget=new highfps::poof_spawn19715::Adapter(poofHost);
-            if(g_poofBudget->Install())Log("[poof-budget] native cosmetic admission installed quota=%u cap=%u",g_cfg.workBudget.poofsPerTick,g_cfg.workBudget.softPoofs);
+            if((poofReady=g_poofBudget->Install()))Log("[poof-budget] native cosmetic admission installed quota=%u cap=%u",g_cfg.workBudget.poofsPerTick,g_cfg.workBudget.softPoofs);
             else Log("[poof-budget] optional admission unavailable; original cosmetics retained");
         }
-        if(g_cfg.extraSplitWorkBudget) {
+        {
             highfps::extra_split19715::Host extraHost;
             extraHost.address=&ResolveCacheAddress;extraHost.poke=&Poke;extraHost.admit=&AdmitExtraSplitWork;
-            extraHost.gameThread=g_gameThreadId;extraHost.enabled=true;
+            extraHost.gameThread=g_gameThreadId;extraHost.enabled=true;extraHost.activeFlag=&g_cfg.extraSplitWorkBudget;
             g_extraSplitBudget=new highfps::extra_split19715::Adapter(extraHost);
-            if(g_extraSplitBudget->Install())Log("[extra-split-budget] bone/lachry/plain-tear haemo admission installed");
+            if((extraReady=g_extraSplitBudget->Install()))Log("[extra-split-budget] bone/lachry/plain-tear haemo admission installed");
             else Log("[extra-split-budget] optional admission unavailable; original split work retained");
         }
+        // A combined UI capability must never conceal a still-active partial
+        // attack limiter. Failed installations retain original native behavior.
+        const auto controlSettings=highfps::work_control::FailOpenSettings(
+            {g_cfg.spawnWorkBudget,g_cfg.extraSplitWorkBudget,g_cfg.poofWorkBudget,g_cfg.adaptiveWorkBudget},spawnReady,extraReady,poofReady);
+        g_cfg.spawnWorkBudget=controlSettings.spawn;g_cfg.extraSplitWorkBudget=controlSettings.extra;g_cfg.poofWorkBudget=controlSettings.poof;
+        g_workControl.Initialize(controlSettings,
+            spawnReady&&extraReady,poofReady,spawnReady||extraReady||poofReady);
         if (g_cfg.diag) Log("[pipeline] installation completed in %.2f ms", (Now() - installStarted) * 1000.0);
         Log("[pipeline] fixed Update -> native Render -> GC; presentation replays entity Lua drawing");
     } else {
@@ -1435,6 +1459,9 @@ int __cdecl HookedUpdateWrapper() {
     // a present path we did not anticipate — this keeps update-phase Lua from being
     // redirected into a layer that nothing would ever draw to the screen.
     g_inRenderPhase = 0;
+#ifdef HIGHFPS_BUILD_19715
+    ApplyWorkControl();
+#endif
 
     if (!g_endPacingActive) PacePresentation();
 
@@ -2986,7 +3013,7 @@ bool InstallOverlay() {
 using LuaGettopFn  = int (__cdecl*)(void*);
 using LuaSettopFn  = void(__cdecl*)(void*, int);
 using LuaPushnilFn = void(__cdecl*)(void*);
-using LuaPushIntFn = void(__cdecl*)(void*, intptr_t);
+using LuaPushIntFn = void(__cdecl*)(void*, std::int64_t);
 using LuaPushStrFn = const char*(__cdecl*)(void*, const char*);
 using LuaSetGlobalFn = void(__cdecl*)(void*, const char*);
 using LuaPcallkFn  = int (__cdecl*)(void*, int, int, int, intptr_t, void*);
@@ -3043,14 +3070,27 @@ void EmulateLuaCall(void* L, int nargs, int nresults) {
 //
 // Both are set from inside a dispatch, where a valid lua_State is in hand. Each push is
 // balanced by the setglobal that pops it, so the stack the engine is mid-call on is
-// untouched. Keyed on the state pointer, so a reloaded VM gets them again.
+// untouched. J374 uses VM-owned registry markers, so even an allocator-reused
+// lua_State address receives fresh globals after VM recreation.
 constexpr intptr_t kNativeApiVersion = 2;
 
 void* g_lastLuaState = nullptr;
 LONG g_publishedRate = 0;
+#ifdef HIGHFPS_BUILD_19715
+highfps::work_control::Bridge g_luaWorkControl;
+bool LuaControlOwner(){return g_gameThreadId&&GetCurrentThreadId()==g_gameThreadId;}
+int __cdecl LuaWorkControl(void*L){return g_luaWorkControl.Invoke(L);}
+#endif
 
 void PublishPresence(void* L) {
     if (!g_luaPushInt || !g_luaSetGlobal || !L) return;
+#ifdef HIGHFPS_BUILD_19715
+    if(!LuaControlOwner())return;
+    if(g_luaWorkControl.Ready()) {
+        g_luaWorkControl.PublishPresence(L,&LuaWorkControl,kNativeApiVersion,HIGHFPS_VERSION,g_pushRate);
+        return;
+    }
+#endif
     if (L != g_lastLuaState) {
         g_lastLuaState = L;
         g_publishedRate = -1;               // force the rate out again for the new VM
@@ -3107,6 +3147,17 @@ bool InstallLuaGate() {
     g_luaPushInt   = reinterpret_cast<LuaPushIntFn  >(GetProcAddress(lua, "lua_pushinteger"));
     g_luaPushStr   = reinterpret_cast<LuaPushStrFn  >(GetProcAddress(lua, "lua_pushstring"));
     g_luaSetGlobal = reinterpret_cast<LuaSetGlobalFn>(GetProcAddress(lua, "lua_setglobal"));
+#ifdef HIGHFPS_BUILD_19715
+    highfps::work_control::LuaApi controlApi;
+#define HF_CONTROL_LOAD(member,name) controlApi.member=reinterpret_cast<decltype(controlApi.member)>(GetProcAddress(lua,name))
+    HF_CONTROL_LOAD(gettop,"lua_gettop");HF_CONTROL_LOAD(checkstack,"lua_checkstack");HF_CONTROL_LOAD(settop,"lua_settop");
+    HF_CONTROL_LOAD(type,"lua_type");HF_CONTROL_LOAD(isinteger,"lua_isinteger");HF_CONTROL_LOAD(tointeger,"lua_tointegerx");
+    HF_CONTROL_LOAD(tostring,"lua_tolstring");HF_CONTROL_LOAD(pushnil,"lua_pushnil");HF_CONTROL_LOAD(pushinteger,"lua_pushinteger");
+    HF_CONTROL_LOAD(pushstring,"lua_pushstring");HF_CONTROL_LOAD(pushcclosure,"lua_pushcclosure");HF_CONTROL_LOAD(setglobal,"lua_setglobal");
+    HF_CONTROL_LOAD(rawgetp,"lua_rawgetp");HF_CONTROL_LOAD(rawsetp,"lua_rawsetp");
+#undef HF_CONTROL_LOAD
+    g_luaWorkControl.Configure(controlApi,&g_workControl,&LuaControlOwner);
+#endif
     if (!g_luaPushInt || !g_luaSetGlobal)
         Log("[warn] lua_pushinteger/lua_setglobal missing - mods cannot detect the native part");
 

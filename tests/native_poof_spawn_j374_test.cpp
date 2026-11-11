@@ -69,7 +69,11 @@ int main(){
  image=static_cast<std::uint8_t*>(VirtualAlloc(nullptr,0x900000,MEM_RESERVE|MEM_COMMIT,PAGE_EXECUTE_READWRITE));assert(image);
  alignas(16) std::uint8_t tear[0x900]{},player[0x500]{},frame[0x900]{};auto*fp=frame+sizeof frame;
  *reinterpret_cast<std::uintptr_t*>(tear)=Address(0xB3C128);*reinterpret_cast<unsigned*>(tear+0x28)=2;*reinterpret_cast<void**>(tear+0x3c8)=player;*reinterpret_cast<unsigned*>(player+0x28)=1;
- currentFrame=fp;Host h{Address,Poke,Admit,GetCurrentThreadId(),true};Adapter a(h);TestAccess::Activate(a);
+ currentFrame=fp;bool runtimeEnabled=false;Host h{Address,Poke,Admit,GetCurrentThreadId(),true,&runtimeEnabled};Adapter a(h);TestAccess::Activate(a);
+ const auto offCalls=calls;const auto offExceptions=a.GetStats().exceptions,offUnsupported=a.GetStats().unsupported;
+ assert(TestAccess::Decide(reinterpret_cast<void*>(1),reinterpret_cast<void*>(1))==1);
+ assert(calls==offCalls&&a.GetStats().exceptions==offExceptions&&a.GetStats().unsupported==offUnsupported);
+ runtimeEnabled=true;
  for(unsigned variant:{11u,12u,13u,79u}){*reinterpret_cast<unsigned*>(fp-0x89c)=variant;allow=false;assert(TestAccess::Decide(tear,fp)==0&&seenVariant==variant);}
  for(unsigned variant:{7u,30u,0u,14u}){*reinterpret_cast<unsigned*>(fp-0x89c)=variant;const auto before=calls;assert(TestAccess::Decide(tear,fp)==1&&calls==before);}
  *reinterpret_cast<unsigned*>(fp-0x89c)=12;*reinterpret_cast<unsigned*>(fp-0x874)=10;assert(TestAccess::Decide(tear,fp)==1);*reinterpret_cast<unsigned*>(fp-0x874)=0;

@@ -51,6 +51,33 @@ For the experimental triple-item stress settings, use [the FPS-priority preset](
 
 This preset trades attack output for frame rate: the controlled-target test retained about **30% of native total damage**. Split-child and laser-work limits reduce CPU creation/search work; a separate poof budget reduces cosmetic work. These settings do not diagnose GPU saturation or independently control all GPU costs. Native game, RNG, Lua and GL work remain on the game thread; the worker handles copied log records. See the [measured CPU/GPU scope and attack tradeoffs](docs/validation/attack-work-progress.md).
 
+## Optional in-game controls
+
+Character Enhance 1.30 adds a **High FPS** tab with **Limit shots**, **Limit
+effects** and **Adapt limits**. Each option supports Inherit/OFF/ON and is saved
+by Character Enhance for the selected save slot. Inherit restores the exact
+native startup configuration. Changes apply at the next safe main-loop boundary;
+there is no per-entity Lua pressure controller or INI write. Without this native
+bridge the options show unavailable, and Character Enhance works independently.
+Installing or enabling the DLL itself still requires restarting the game.
+
+The three controls, both languages, saved-state activation and inheritance were
+verified in an isolated game. A 52-second triple-item run activated through saved
+menu settings measured 89.88 FPS (p99 12.99 ms), with 30/60 Hz game cadence.
+[Validation and concurrency scope](docs/validation/lua-control-validation.json).
+
+For other UI mods, `HIGH_FPS_CONTROL_VERSION == 1` exposes
+`HIGH_FPS_CONTROL(key [, value])`. Keys are `attackBudget`, `poofBudget` and
+`adaptiveBudget`; setter values are integer `-1` (restore startup), `0` and `1`.
+Getter and successful setter return the requested state as integer 0/1. Attack
+ON enables both the primary and extra split adapters; its getter is ON when
+any attack limiter is enabled. Inherit preserves a mixed startup configuration
+exactly. The getter-only `attackBudgetDefault`, `poofBudgetDefault` and
+`adaptiveBudgetDefault` return aggregated startup states. Unsupported keys,
+invalid values, unavailable hooks and non-game-thread calls return `nil, error`.
+Setters queue changes; no mid-update or mid-render mutation occurs. UI modules
+should send changes only when necessary, not once per entity.
+
 ## Configuration
 
 | Setting | Default | Meaning |

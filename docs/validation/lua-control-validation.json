@@ -1,0 +1,116 @@
+{
+  "schema": "native-lua-controls-validation-v1",
+  "version": 1,
+  "controls": [
+    "attackBudget",
+    "poofBudget",
+    "adaptiveBudget"
+  ],
+  "setter_values": [
+    -1,
+    0,
+    1
+  ],
+  "native_dll_sha256": "35ec0b0304cb0bc6e6670ea5fdb4d23232dba4520cfe111e7943bbd0ccc85943",
+  "ce_version": "1.30.0",
+  "ce_module_sha256": "8d5b8d41a365255f7764566411d0d10a7db3d6c05eb4f78bec4030a4367a3541",
+  "unit": "Native queue/partial install/mixed defaults, actual Lua5.3 ABI/VM lifecycles, disabled adapter early bypass, CE modes/saves/JSON float normalization and bilingual widths passed.",
+  "menu": {
+    "case": "ce130-r15-menu-off-defaults",
+    "startup_flags": 0,
+    "controls": 3,
+    "modes": [
+      "inherit",
+      "off",
+      "on"
+    ],
+    "languages": [
+      "English",
+      "Simplified Chinese"
+    ],
+    "captures": 9,
+    "actual_native_apply_transitions": 6,
+    "saved_and_restored": true,
+    "normal_cleanup": true
+  },
+  "saved_override": {
+    "case": "ce130-r15-saved-on-cpu4-soak",
+    "startup_ini_flags": 0,
+    "saved_json_enums": "1.0 for all three settings",
+    "actual_native_requested": 1,
+    "native_apply_marker": "attack=1 poof=1 adaptive=1",
+    "normal_cleanup": {
+      "saved": true,
+      "manager": 1,
+      "page": 3,
+      "pause_exit_selection": 3,
+      "scope": "verified isolated keyboard; normal save/exit then WM_DELETE_WINDOW",
+      "game_exited": true,
+      "native_shutdown_marker": true
+    }
+  },
+  "performance": {
+    "actual_presentation": {
+      "completed_swap_records": 4673,
+      "measured_seconds": 51.977931,
+      "completed_swap_hz": 89.88430108924497,
+      "interval_ms": {
+        "count": 4672,
+        "min": 3.997999999995727,
+        "mean": 11.125413313356164,
+        "p50": 11.110999999999649,
+        "p95": 11.222000000003618,
+        "p99": 12.987289999996747,
+        "max": 23.458000000005086
+      },
+      "over_16_7_ms": 4,
+      "over_33_ms": 0,
+      "over_100_ms": 0,
+      "logged_dt_mismatches": 0,
+      "physical_scanout_verified": false,
+      "entering_boundary": {
+        "ending_gf": 15440,
+        "previous_gf": 15439,
+        "logged_dt_ms": 22.118,
+        "measured_dt_ms": 22.117999999998972,
+        "logged_dt_consistent": true,
+        "over_16_7_ms": true,
+        "over_33_ms": false,
+        "over_100_ms": false,
+        "interval_fully_inside_segment": false
+      },
+      "exiting_boundary": {
+        "ending_gf": 17000,
+        "previous_gf": 16999,
+        "logged_dt_ms": 11.088000000000001,
+        "measured_dt_ms": 11.088000000000875,
+        "logged_dt_consistent": true,
+        "over_16_7_ms": false,
+        "over_33_ms": false,
+        "over_100_ms": false,
+        "interval_fully_inside_segment": false
+      },
+      "boundary_scope": "Interval distribution uses adjacent pairs fully inside [start_gf,end_gf). Entry/exit intervals cross the boundary and are reported separately, including long frames; they are not silently called startup or attributed to a cause."
+    },
+    "canonical_callback_cadence": {
+      "u_hz": 30.00115389053425,
+      "r_hz": 60.0023077810685,
+      "ui_hz": 60.0023077810685,
+      "gf_hz": 30.00115389053425
+    },
+    "log_worker": {
+      "samples": 71,
+      "max_dropped": 0.0,
+      "max_truncated": 0.0,
+      "peak_accepted_minus_written": 10.0
+    },
+    "rejections": []
+  },
+  "scope": "Isolated test uses CPU4 while user game remains on CPU6. Native initial INI disables work flags; saved CE ON settings activate them via bridge. No entity work in CE UI.",
+  "earlier_shared_core_sample": {
+    "case": "ce130-r15-triple-ui-soak",
+    "fps": 87.90758559217115,
+    "p99_ms": 20.07882,
+    "confound": "Both test and newly launched real game pinned CPU6; retained as measured, not a clean DLL regression comparison."
+  }
+}

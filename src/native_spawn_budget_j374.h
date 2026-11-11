@@ -41,6 +41,9 @@ struct Host {
     bool(*poke)(std::uintptr_t,const std::uint8_t*,std::size_t)=nullptr;
     bool(*admit)(Kind,void*tear,unsigned cost)=nullptr;
     DWORD gameThread=0;bool enabled=false;
+    // Optional process-lifetime flag, read only on gameThread. Disabled UI
+    // controls bypass entity/frame ownership reads without repatching code.
+    const bool*activeFlag=nullptr;
 };
 struct Stats {std::uint64_t admitted[4]{},denied[4]{},unsupported=0,reentry=0,exceptions=0;};
 // Process-lifetime allocation, INCLUDING failed Install/rollback: a hook whose
@@ -68,6 +71,7 @@ class Adapter {
     }
     static unsigned __cdecl Decide(void*self,unsigned which){
         auto*r=active_;if(!r||!r->enabled_||GetCurrentThreadId()!=r->host_.gameThread||which>3)return 1;
+        if(r->host_.activeFlag&&!*r->host_.activeFlag)return 1;
         if(r->inside_){++r->stats_.reentry;return 1;}
         r->inside_=true;bool allow=true;
         __try {

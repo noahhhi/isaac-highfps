@@ -24,6 +24,9 @@ struct Host {
     // Must not call game code, mutate entities or consume gameplay RNG.
     bool(*admit)(void*tear,unsigned variant,unsigned subtype)=nullptr;
     DWORD gameThread=0;bool enabled=false;
+    // Optional process-lifetime flag, read only on gameThread. Disabled UI
+    // controls bypass entity/frame ownership reads without repatching code.
+    const bool*activeFlag=nullptr;
 };
 struct Stats {std::uint64_t admitted[4]{},denied[4]{},unsupported=0,reentry=0,exceptions=0;};
 class Adapter {
@@ -46,6 +49,7 @@ class Adapter {
     }
     static unsigned __cdecl Decide(void*self,const void*frame){
         auto*r=active_;if(!r||!r->enabled_||GetCurrentThreadId()!=r->host_.gameThread)return 1;
+        if(r->host_.activeFlag&&!*r->host_.activeFlag)return 1;
         if(r->inside_){++r->stats_.reentry;return 1;}
         r->inside_=true;bool allow=true;
         __try {

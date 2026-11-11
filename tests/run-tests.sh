@@ -59,7 +59,7 @@ run_windows() {
 }
 run_core() {
   local name source
-  for name in work_pressure_policy_test frame_work_budget_test render_timing_test overload_policy_test shader_location_cache_test camera_presentation_test menu_presentation_test carousel_presentation_test clock_lifecycle_test native_render_clock_test native_ui_replay_test entity_draw_cache_probe_test render_ordinal_index_test; do
+  for name in lua_work_control_test work_pressure_policy_test frame_work_budget_test render_timing_test overload_policy_test shader_location_cache_test camera_presentation_test menu_presentation_test carousel_presentation_test clock_lifecycle_test native_render_clock_test native_ui_replay_test entity_draw_cache_probe_test render_ordinal_index_test; do
     source="$repo_dir/tests/$name.cpp"
     printf '\n[core] %s (%s)\n' "$name" "$backend"
     if [[ "$backend" == native ]]; then
@@ -105,6 +105,9 @@ run_shader() {
   if [[ "$windows_runner" == interop ]]; then lua_windows_path="$(wslpath -w "$SHADER_LUA_DLL")"
   else lua_windows_path="$(WINEPREFIX="$prefix" WINEARCH=win64 WINEDEBUG=-all winepath -w "$SHADER_LUA_DLL")"; fi
   run_windows "$output_dir/shader_params_cache_test.exe" "$lua_windows_path"
+  printf '\n[lua-control] actual Lua runtime API and lifecycle\n'
+  build_windows "$repo_dir/tests/lua_work_control_runtime_test.cpp" lua_work_control_runtime_test
+  run_windows "$output_dir/lua_work_control_runtime_test.exe" "$lua_windows_path"
 }
 windows_path() {
   if [[ "$windows_runner" == interop ]]; then wslpath -w "$1"

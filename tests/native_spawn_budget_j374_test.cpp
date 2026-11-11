@@ -82,7 +82,11 @@ int main(){
  *reinterpret_cast<std::uintptr_t*>(tear)=Address(0xB3C128);*reinterpret_cast<unsigned*>(tear+0x28)=2;
  *reinterpret_cast<std::uint64_t*>(tear+0x428)=(1ull<<6)|(1ull<<57)|(1ull<<18)|(1ull<<60);
  *reinterpret_cast<void**>(tear+0x3c8)=player;*reinterpret_cast<unsigned*>(player+0x28)=1;
- Host h{Address,Poke,Admit,GetCurrentThreadId(),true};Adapter a(h);TestAccess::Set(a);
+ bool runtimeEnabled=false;Host h{Address,Poke,Admit,GetCurrentThreadId(),true,&runtimeEnabled};Adapter a(h);TestAccess::Set(a);
+ const auto offCalls=calls;const auto offExceptions=a.GetStats().exceptions,offUnsupported=a.GetStats().unsupported;
+ assert(TestAccess::Decide(reinterpret_cast<void*>(1),0)==1);
+ assert(calls==offCalls&&a.GetStats().exceptions==offExceptions&&a.GetStats().unsupported==offUnsupported);
+ runtimeEnabled=true;
  assert(TestAccess::Decide(tear,0)==1&&costSeen==2);permitWork=false;assert(TestAccess::Decide(tear,1)==0&&costSeen==1);
  assert(TestAccess::Decide(tear,2)==0&&costSeen==4);
  assert(TestAccess::Decide(tear,3)==0&&costSeen==1);

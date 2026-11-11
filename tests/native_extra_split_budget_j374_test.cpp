@@ -85,7 +85,11 @@ int main(){
  *reinterpret_cast<std::uintptr_t*>(tear)=Address(0xB3C128);*reinterpret_cast<unsigned*>(tear+0x28)=2;*reinterpret_cast<void**>(tear+0x3c8)=player;*reinterpret_cast<unsigned*>(player+0x28)=1;
  *reinterpret_cast<std::uint64_t*>(tear+0x428)=(1ull<<51)|(1ull<<59)|(1ull<<62);
  *reinterpret_cast<unsigned*>(fp-0x884)=5;*reinterpret_cast<unsigned*>(fp-0x88c)=1;*reinterpret_cast<unsigned*>(fp+4)=std::uint32_t(Address(0x6693d0));*reinterpret_cast<unsigned*>(stack+0x14)=5;
- Host host{Address,Poke,Admit,GetCurrentThreadId(),true};Adapter a(host);TestAccess::Activate(a);
+ bool runtimeEnabled=false;Host host{Address,Poke,Admit,GetCurrentThreadId(),true,&runtimeEnabled};Adapter a(host);TestAccess::Activate(a);
+ const auto offCalls=calls;const auto offExceptions=a.GetStats().exceptions,offUnsupported=a.GetStats().unsupported;
+ assert(TestAccess::Decide(reinterpret_cast<void*>(1),1,reinterpret_cast<void*>(1),reinterpret_cast<void*>(1))==1);
+ assert(calls==offCalls&&a.GetStats().exceptions==offExceptions&&a.GetStats().unsupported==offUnsupported);
+ runtimeEnabled=true;
  allow=false;for(unsigned k=0;k<3;++k){assert(TestAccess::Decide(tear,k,fp,stack)==0);assert(costSeen==(k==0?2u:1u));}
  *reinterpret_cast<unsigned*>(fp-0x884)=19;assert(TestAccess::Decide(tear,1,fp,stack)==1);*reinterpret_cast<unsigned*>(fp-0x884)=5;
  *reinterpret_cast<unsigned*>(stack+0x14)=12;assert(TestAccess::Decide(tear,2,fp,stack)==1);*reinterpret_cast<unsigned*>(stack+0x14)=5;
