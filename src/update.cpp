@@ -87,47 +87,69 @@ bool ReserveCheck(HANDLE state) {
            count == sizeof now && SetEndOfFile(state) && FlushFileBuffers(state);
 }
 
-bool TrustedResponse(HINTERNET request) {
-    wchar_t finalUrl[8192];
-    DWORD length = sizeof finalUrl;
-    if (!WinHttpQueryOption(request, WINHTTP_OPTION_URL, finalUrl, &length)) return false;
-    const std::wstring_view url(finalUrl);
-    for (const std::wstring_view prefix : {L"https://github.com/", L"https://release-assets.githubusercontent.com/",
-                                          L"https://objects.githubusercontent.com/"})
-        if (url.substr(0, prefix.size()) == prefix) return true;
-    return false;
+bool FollowLocation(HINTERNET request, std::wstring& host, std::wstring& path) {
+    wchar_t location[8192]{};
+    DWORD size = sizeof location;
+    if (!WinHttpQueryHeaders(request, WINHTTP_QUERY_LOCATION, WINHTTP_HEADER_NAME_BY_INDEX,
+                             location, &size, WINHTTP_NO_HEADER_INDEX)) return false;
+    constexpr std::wstring_view scheme = L"https://";
+    std::wstring_view url(location);
+    if (url.substr(0, scheme.size()) != scheme) return false;
+    url.remove_prefix(scheme.size());
+    const auto slash = url.find(L'/');
+    if (slash == std::wstring_view::npos) return false;
+    const auto nextHost = url.substr(0, slash);
+    if (nextHost != L"github.com" && nextHost != L"release-assets.githubusercontent.com" &&
+        nextHost != L"objects.githubusercontent.com") return false;
+    host.assign(nextHost);
+    path.assign(url.substr(slash));
+    return true;
 }
 
-bool Fetch(HINTERNET connection, const wchar_t* path, size_t limit, std::string& output, HANDLE game) {
+bool Fetch(HINTERNET session, const wchar_t* initialPath, size_t limit, std::string& output, HANDLE game) {
     const auto deadline = GetTickCount64() + 20000;
-    HttpHandle request{WinHttpOpenRequest(connection, L"GET", path, nullptr, WINHTTP_NO_REFERER,
-                                         WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)};
-    DWORD policy = WINHTTP_OPTION_REDIRECT_POLICY_DISALLOW_HTTPS_TO_HTTP;
-    DWORD redirects = 3;
-    if (!request.value ||
-        !WinHttpSetOption(request.value, WINHTTP_OPTION_REDIRECT_POLICY, &policy, sizeof policy) ||
-        !WinHttpSetOption(request.value, WINHTTP_OPTION_MAX_HTTP_AUTOMATIC_REDIRECTS,
-                          &redirects, sizeof redirects) ||
-        !WinHttpSendRequest(request.value, WINHTTP_NO_ADDITIONAL_HEADERS, 0, nullptr, 0, 0, 0) ||
-        !WinHttpReceiveResponse(request.value, nullptr) || !TrustedResponse(request.value))
-        return false;
-    DWORD status = 0;
-    DWORD statusSize = sizeof status;
-    if (!WinHttpQueryHeaders(request.value, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
-                             WINHTTP_HEADER_NAME_BY_INDEX, &status, &statusSize, WINHTTP_NO_HEADER_INDEX) ||
-        status != 200) return false;
-
-    std::array<char, 16384> bytes;
-    output.clear();
-    for (;;) {
-        DWORD count = 0;
-        if (GetTickCount64() >= deadline || WaitForSingleObject(game, 0) != WAIT_TIMEOUT ||
-            !WinHttpReadData(request.value, bytes.data(), static_cast<DWORD>(bytes.size()), &count))
+    std::wstring host = L"github.com";
+    std::wstring path = initialPath;
+    // The release asset redirect carries a signed query string. Keep it intact and verify
+    // the host before sending the next request.
+    for (unsigned redirects = 0; redirects <= 3; ++redirects) {
+        if (GetTickCount64() >= deadline || WaitForSingleObject(game, 0) != WAIT_TIMEOUT) return false;
+        HttpHandle connection{WinHttpConnect(session, host.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0)};
+        if (!connection.value) return false;
+        HttpHandle request{WinHttpOpenRequest(connection.value, L"GET", path.c_str(), nullptr,
+                                             WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                             WINHTTP_FLAG_SECURE | WINHTTP_FLAG_ESCAPE_DISABLE |
+                                             WINHTTP_FLAG_ESCAPE_DISABLE_QUERY)};
+        DWORD policy = WINHTTP_OPTION_REDIRECT_POLICY_NEVER;
+        if (!request.value ||
+            !WinHttpSetOption(request.value, WINHTTP_OPTION_REDIRECT_POLICY, &policy, sizeof policy) ||
+            !WinHttpSendRequest(request.value, WINHTTP_NO_ADDITIONAL_HEADERS, 0, nullptr, 0, 0, 0) ||
+            !WinHttpReceiveResponse(request.value, nullptr))
             return false;
-        if (count == 0) return !output.empty();
-        if (count > limit - output.size()) return false;
-        output.append(bytes.data(), count);
+        DWORD status = 0;
+        DWORD statusSize = sizeof status;
+        if (!WinHttpQueryHeaders(request.value, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                                 WINHTTP_HEADER_NAME_BY_INDEX, &status, &statusSize, WINHTTP_NO_HEADER_INDEX))
+            return false;
+        if (status == 301 || status == 302 || status == 303 || status == 307 || status == 308) {
+            if (!FollowLocation(request.value, host, path)) return false;
+            continue;
+        }
+        if (status != 200) return false;
+
+        std::array<char, 16384> bytes;
+        output.clear();
+        for (;;) {
+            DWORD count = 0;
+            if (GetTickCount64() >= deadline || WaitForSingleObject(game, 0) != WAIT_TIMEOUT ||
+                !WinHttpReadData(request.value, bytes.data(), static_cast<DWORD>(bytes.size()), &count))
+                return false;
+            if (count == 0) return !output.empty();
+            if (count > limit - output.size()) return false;
+            output.append(bytes.data(), count);
+        }
     }
+    return false;
 }
 
 class Sha256 {
@@ -228,10 +250,9 @@ void Check(const std::wstring& directory, HANDLE game, unsigned installedRevisio
         log.Write("Update check unavailable. Keeping the installed DLL.");
         return;
     }
-    HttpHandle connection{WinHttpConnect(session.value, L"github.com", INTERNET_DEFAULT_HTTPS_PORT, 0)};
     std::string manifestText;
     Manifest manifest;
-    if (!connection.value || !Fetch(connection.value, kManifestPath, 1024, manifestText, game) ||
+    if (!Fetch(session.value, kManifestPath, 1024, manifestText, game) ||
         !ParseManifest(manifestText, manifest)) {
         log.Write("Update manifest unavailable or invalid. Keeping the installed DLL.");
         return;
@@ -249,7 +270,7 @@ void Check(const std::wstring& directory, HANDLE game, unsigned installedRevisio
 
     const auto asset = kAssetBase + std::to_wstring(manifest.revision) + L"/winmm.dll";
     std::string payload;
-    if (!Fetch(connection.value, asset.c_str(), kMaxDllSize, payload, game)) {
+    if (!Fetch(session.value, asset.c_str(), kMaxDllSize, payload, game)) {
         log.Write("Update download failed. Keeping the installed DLL.");
         return;
     }

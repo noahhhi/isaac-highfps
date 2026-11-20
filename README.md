@@ -2,7 +2,7 @@
 
 This fork of [hunchcldev/isaac-highfps](https://github.com/hunchcldev/isaac-highfps) keeps the native update cadence while rendering extra frames between updates.
 
-**0.13.0-j510.1** targets the 32-bit Steam release of Repentance+ **1.9.7.19.J510**. It reuses native rendering under load and projects player and camera motion in eligible scrolling rooms. On Steam Deck, a matched heavy combat and scrolling test measured 89.4 → 90.0 FPS and 16.4 → 14.8 ms p99 frame time against the preceding J510 build. Results depend on the scene, hardware and display. The J510 installer checks the game's executable SHA-256 before making any changes.
+**0.13.0-j510.2** targets the 32-bit Steam release of Repentance+ **1.9.7.19.J510**. It reuses native rendering under load and projects player and camera motion in eligible scrolling rooms. On Steam Deck, a matched heavy combat and scrolling test measured 89.4 → 90.0 FPS and 16.4 → 14.8 ms p99 frame time against the preceding J510 build. Results depend on the scene, hardware and display. The J510 installer checks the game's executable SHA-256 before making any changes.
 
 ## Install or update J510
 

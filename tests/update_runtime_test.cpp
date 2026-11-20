@@ -91,11 +91,10 @@ int wmain(int argc, wchar_t** argv) {
     if (GetEnvironmentVariableW(L"HIGHFPS_TEST_GITHUB", nullptr, 0)) {
         HttpHandle session{WinHttpOpen(L"isaac-highfps-test", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
                                        WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0)};
-        HttpHandle connection{WinHttpConnect(session.value, L"github.com", INTERNET_DEFAULT_HTTPS_PORT, 0)};
         std::string payload;
-        const bool fetched = session.value && connection.value &&
+        const bool fetched = session.value &&
             WinHttpSetTimeouts(session.value, 3000, 4000, 5000, 5000) &&
-            Fetch(connection.value,
+            Fetch(session.value,
                   L"/hunchcldev/isaac-highfps/releases/download/v0.13.0/isaac-highfps-0.13.0.zip",
                   kMaxDllSize, payload, child.value);
         printf("GitHub release asset: fetched=%d, bytes=%zu, error=%lu\n",

@@ -103,6 +103,7 @@ try {
     $dll = Join-Path $GameDir 'winmm.dll'
     if ((Test-Path -LiteralPath $dll) -and -not $ReplaceExisting) {
         $known = @($manifest[3],
+            'd1273d694d9d86c8b137ceb68d3f32575316ee749fb3c634dca736f3a91d78ae',
             'c4523d848b97242c26bc88c7f35461f23120aaf0e4ef6a53cce197ae4d42e97b',
             'd1126945479e0d7ee6b60e474cd62d7ea6671afed7df103a61006678629ec8f4')
         if ((Get-Sha256 $dll) -notin $known) {
