@@ -59,7 +59,8 @@ run_windows() {
 }
 run_core() {
   local name source
-  for name in lua_work_control_test work_pressure_policy_test frame_work_budget_test render_timing_test overload_policy_test shader_location_cache_test camera_presentation_test menu_presentation_test carousel_presentation_test clock_lifecycle_test native_render_clock_test native_ui_replay_test entity_draw_cache_probe_test render_ordinal_index_test; do
+  python3 -B "$repo_dir/tests/display_tools_test.py"
+  for name in lua_work_control_test work_pressure_policy_test frame_work_budget_test render_timing_test presentation_refresh_test native_probe_j510_test native_loop_plan_j510_test overload_policy_test shader_location_cache_test camera_presentation_test menu_presentation_test carousel_presentation_test clock_lifecycle_test native_render_clock_test native_ui_replay_test entity_draw_cache_probe_test render_ordinal_index_test; do
     source="$repo_dir/tests/$name.cpp"
     printf '\n[core] %s (%s)\n' "$name" "$backend"
     if [[ "$backend" == native ]]; then

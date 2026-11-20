@@ -24,6 +24,15 @@
 #endif
 #include "version.h"
 #include "render_timing.h"
+#include "display_observation_win32.h"
+#include "native_probe_j510.h"
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+#include "native_loop_plan_j510.h"
+#include "native_shader_locations_j510.h"
+#include "j510_pressure_promotion.h"
+#include "j510_motion_projection.h"
+#include "j510_scroll_pressure.h"
+#endif
 #include "overload_policy.h"
 #include "frame_work_budget.h"
 #include "work_pressure_policy.h"
@@ -69,6 +78,7 @@ void Log(const char* fmt, ...) {
 }
 
 uintptr_t g_base = 0;
+bool g_gameBuildJ510 = false;
 HMODULE g_self = nullptr;
 HANDLE g_initThread = nullptr;
 
@@ -90,6 +100,9 @@ struct Config {
     int idleFps = 0;       // 0 keeps display cadence in menus and while paused
     int vsync = 1;         // -1 follows engine, 0 off, 1 actual display synchronization
     int  maxFps = 0;        // 0 = as fast as the display allows
+    bool followDisplayRefresh = false;
+    bool requestVrr = false;
+    int maxRefreshHz = 0;
     bool log = true;
     bool profile = false;   // sampling profiler; costs real time, for diagnosis only
     bool diag = false;      // per-frame render-state dump; costs log I/O, for diagnosis only
@@ -102,6 +115,12 @@ struct Config {
     bool overloadFallback = true;
     bool overloadRollingRecovery = false;
     bool cacheShaderLocations = true;
+    bool j510PressurePromotion = false; // isolated render deduplication trial
+    bool j510MotionGuard = true;
+    bool j510SkipEmptyOverlay = false;
+    bool j510MotionTrace = false;
+    bool j510MotionProjection = false;
+    bool j510ScrollPressurePromotion = false;
     bool reuseSpriteRotation = true;
     bool spawnWorkBudget = false;
     bool poofWorkBudget = false;
@@ -122,6 +141,9 @@ void LoadConfig() {
     g_cfg.nativeTimingProbe = GetPrivateProfileIntA("highfps", "NativeTimingProbe", 0, path) != 0;
     g_cfg.interpolate = GetPrivateProfileIntA("highfps", "Interpolate", 1, path) != 0;
     g_cfg.maxFps      = GetPrivateProfileIntA("highfps", "MaxFps", 0, path);
+    g_cfg.followDisplayRefresh = GetPrivateProfileIntA("highfps", "FollowDisplayRefresh", 0, path) != 0;
+    g_cfg.requestVrr = GetPrivateProfileIntA("highfps", "VRR", 0, path) != 0;
+    g_cfg.maxRefreshHz = int(GetPrivateProfileIntA("highfps", "MaxRefreshHz", 0, path));
     g_cfg.vsync = GetPrivateProfileIntA("highfps", "VSync", 1, path);
     g_cfg.idleFps = GetPrivateProfileIntA("highfps", "IdleFps", 0, path);
     g_cfg.log         = GetPrivateProfileIntA("highfps", "Log", 1, path) != 0;
@@ -136,6 +158,13 @@ void LoadConfig() {
     g_cfg.overloadFallback = GetPrivateProfileIntA("highfps","OverloadFallback",1,path)!=0;
     g_cfg.overloadRollingRecovery = GetPrivateProfileIntA("highfps","OverloadRollingRecovery",0,path)!=0;
     g_cfg.cacheShaderLocations = GetPrivateProfileIntA("highfps","CacheShaderLocations",1,path)!=0;
+    g_cfg.j510PressurePromotion = GetPrivateProfileIntA("highfps","J510PressurePromotion",0,path)!=0;
+    g_cfg.j510MotionGuard = GetPrivateProfileIntA("highfps","J510MotionGuard",1,path)!=0;
+    g_cfg.j510SkipEmptyOverlay = GetPrivateProfileIntA("highfps","J510SkipEmptyOverlay",0,path)!=0;
+    g_cfg.j510MotionTrace = GetPrivateProfileIntA("highfps","J510MotionTrace",0,path)!=0;
+    g_cfg.j510MotionProjection = GetPrivateProfileIntA("highfps","J510MotionProjection",0,path)!=0;
+    g_cfg.j510ScrollPressurePromotion =
+        GetPrivateProfileIntA("highfps","J510ScrollPressurePromotion",0,path)!=0;
     g_cfg.reuseSpriteRotation = GetPrivateProfileIntA("highfps","ReuseSpriteRotation",1,path)!=0;
     g_cfg.spawnWorkBudget = GetPrivateProfileIntA("highfps","SpawnWorkBudget",0,path)!=0;
     g_cfg.poofWorkBudget = GetPrivateProfileIntA("highfps","PoofWorkBudget",0,path)!=0;
@@ -329,8 +358,8 @@ double g_probeGenAt = 0.0;
 constexpr double kProbeGenSeconds = 5.0;
 
 uint32_t FrameCounter() {
-    uintptr_t mgr = *reinterpret_cast<uintptr_t*>(Addr(isaac::kGManagerPtr));
-    return mgr >= 0x10000 ? *reinterpret_cast<uint32_t*>(mgr + isaac::kMgrFrameCount) : 0;
+    uintptr_t mgr = *reinterpret_cast<uintptr_t*>(Addr(g_gameBuildJ510 ? 0xC9A0D4 : isaac::kGManagerPtr));
+    return mgr >= 0x10000 ? *reinterpret_cast<uint32_t*>(mgr + (g_gameBuildJ510 ? 0x4AE94 : isaac::kMgrFrameCount)) : 0;
 }
 
 using WrapperFn = int(__cdecl*)();
@@ -341,13 +370,17 @@ WrapperFn g_wrapperTrampoline = nullptr;
 // 0.5 * TimeScale * Friction * Velocity and marking the entity so the next logic tick can
 // roll it back. We reuse that storage and that marker, but compute the step ourselves for
 // an arbitrary fraction of the tick.
-uintptr_t GameObj() { return *reinterpret_cast<uintptr_t*>(Addr(isaac::kGGamePtr)); }
+uintptr_t GameObj() {
+    const auto address = g_gameBuildJ510 ? 0xC99538u : isaac::kGGamePtr;
+    return *reinterpret_cast<uintptr_t*>(Addr(address));
+}
 bool NativeGamePaused19715() {
 #ifdef HIGHFPS_BUILD_19715
     const uintptr_t game = GameObj();
     if (game < 0x10000) return true;
     using Fn = bool(__fastcall*)(void*, void*);
-    return reinterpret_cast<Fn>(Addr(0x6FE500))(reinterpret_cast<void*>(game), nullptr);
+    return reinterpret_cast<Fn>(Addr(g_gameBuildJ510 ? 0x704190 : 0x6FE500))(
+        reinterpret_cast<void*>(game), nullptr);
 #else
     return !g_worldAdvancing;
 #endif
@@ -358,7 +391,7 @@ bool NativeGamePaused19715() {
 // transitions and in cutscenes.
 uint32_t GameFrame() {
     uintptr_t game = GameObj();
-    return game >= 0x10000 ? *reinterpret_cast<uint32_t*>(game + 0x264F8) : 0;
+    return game >= 0x10000 ? *reinterpret_cast<uint32_t*>(game + (g_gameBuildJ510 ? 0x26508 : 0x264F8)) : 0;
 }
 
 // Game+0x18300 -> the active entity list; +0x125C is Entity*[], +0x1264 the count.
@@ -663,7 +696,7 @@ void SampleTracks() {
     });
 }
 
-double g_nextPresent = 0.0;
+highfps::refresh::Deadline g_presentDeadline;
 
 // ------------------------------------------------------------- profiling
 // Our hook runs once per loop iteration, which is enough to attribute all of it:
@@ -818,41 +851,63 @@ uint32_t EntityCount() {
 
 bool g_presentConfigured = false;
 bool g_presentVsync = false;
-int g_displayHz = 0;
+highfps::refresh::DisplayReading g_displayReading;
+highfps::refresh::Policy g_presentationPolicy;
+highfps::refresh::SwapPacingCheck g_swapPacing;
+HWND g_displayWindow = nullptr;
+double g_nextDisplayCheck = 0.0;
+
+highfps::refresh::Policy ResolvePresentation(bool idle = false) {
+    using namespace highfps::refresh;
+    return Resolve(g_displayReading.display,
+        {g_cfg.followDisplayRefresh, g_cfg.requestVrr, IntegerRate(g_cfg.maxRefreshHz),
+         IntegerRate(g_cfg.maxFps), idle ? IntegerRate(g_cfg.idleFps) : Rate{}}, g_presentVsync);
+}
 
 void ConfigurePresentation() {
-    static double nextCheck = 0.0;
-    if (g_presentConfigured && Now() < nextCheck) return;
-    nextCheck = Now() + 1.0;
+    const double now = Now();
+    if (now < g_nextDisplayCheck) return;
+    g_nextDisplayCheck = now + 1.0;
+    using namespace highfps::refresh;
     const bool oldVsync = g_presentVsync;
-    const int oldHz = g_displayHz;
+    int actualInterval = 0;
     HMODULE gl = GetModuleHandleA("opengl32.dll");
-    if (!gl) return;
     using ContextFn = HGLRC(WINAPI*)();
     using ProcFn = PROC(WINAPI*)(LPCSTR);
     using SwapFn = BOOL(WINAPI*)(int);
     using GetSwapFn = int(WINAPI*)();
-    const auto context = reinterpret_cast<ContextFn>(GetProcAddress(gl, "wglGetCurrentContext"));
-    const auto proc = reinterpret_cast<ProcFn>(GetProcAddress(gl, "wglGetProcAddress"));
-    if (!context || !context() || !proc) return;
-    const auto swap = reinterpret_cast<SwapFn>(proc("wglSwapIntervalEXT"));
-    const auto get = reinterpret_cast<GetSwapFn>(proc("wglGetSwapIntervalEXT"));
-    if (!swap || !get || reinterpret_cast<uintptr_t>(swap) <= 3 ||
-        reinterpret_cast<uintptr_t>(swap) == uintptr_t(-1) ||
-        reinterpret_cast<uintptr_t>(get) <= 3 || reinterpret_cast<uintptr_t>(get) == uintptr_t(-1)) return;
-    if (g_cfg.vsync >= 0 && !swap(g_cfg.vsync ? 1 : 0)) {
-        Log("[present] could not set swap interval; using engine interval");
+    const auto context = gl ? reinterpret_cast<ContextFn>(GetProcAddress(gl, "wglGetCurrentContext")) : nullptr;
+    const auto proc = gl ? reinterpret_cast<ProcFn>(GetProcAddress(gl, "wglGetProcAddress")) : nullptr;
+    if (context && context() && proc) {
+        const auto swap = reinterpret_cast<SwapFn>(proc("wglSwapIntervalEXT"));
+        const auto get = reinterpret_cast<GetSwapFn>(proc("wglGetSwapIntervalEXT"));
+        const auto valid = [](uintptr_t address) { return address > 3 && address != uintptr_t(-1); };
+        if (valid(reinterpret_cast<uintptr_t>(get))) {
+            const int desired = g_cfg.vsync ? 1 : 0;
+            actualInterval = get();
+            if (g_cfg.vsync >= 0 && actualInterval != desired && valid(reinterpret_cast<uintptr_t>(swap))) {
+                if (!swap(desired)) Log("[present] could not set swap interval; using engine interval");
+                actualInterval = get();
+            }
+        }
     }
-    g_presentVsync = get() > 0;
-    HMODULE user = GetModuleHandleA("user32.dll");
-    using ModeFn = BOOL(WINAPI*)(LPCSTR, DWORD, DEVMODEA*);
-    const auto mode = user ? reinterpret_cast<ModeFn>(GetProcAddress(user, "EnumDisplaySettingsA")) : nullptr;
-    DEVMODEA dm = {}; dm.dmSize = sizeof dm;
-    if (mode && mode(nullptr, ENUM_CURRENT_SETTINGS, &dm)) g_displayHz = int(dm.dmDisplayFrequency);
-    if (!g_presentConfigured || oldVsync != g_presentVsync || oldHz != g_displayHz) {
-        g_nextPresent = 0.0;
-        Log("[present] actual swap interval=%d, display=%d Hz, requested render cap=%d", get(), g_displayHz, g_cfg.maxFps);
+    g_presentVsync = actualInterval > 0;
+    const auto current = ReadDisplay(g_displayWindow);
+    const auto previous = g_displayReading;
+    g_displayReading = current;
+    const auto policy = ResolvePresentation();
+    if (!g_presentConfigured || oldVsync != g_presentVsync || previous.source != current.source ||
+        previous.id != current.id || !Equal(previous.display.mode, current.display.mode) ||
+        !Equal(g_presentationPolicy.output, policy.output) ||
+        g_presentationPolicy.pacer != policy.pacer || g_presentationPolicy.vrr != policy.vrr) {
+        g_presentDeadline.Reset();
+        g_swapPacing.Reset();
+        g_presentAnchorValid = false;
+        Log("[present] actual swap interval=%d, display=%.6f Hz, requested render cap=%d source=%s output=%.6f pacer=%s vrr=%s",
+            actualInterval, current.display.mode.Hz(), g_cfg.maxFps, Name(current.source),
+            policy.output.Hz(), Name(policy.pacer), Name(policy.vrr));
     }
+    g_presentationPolicy = policy;
     g_presentConfigured = true;
 }
 
@@ -871,18 +926,18 @@ bool g_menuWasSliding = false;
 unsigned g_menuSampleLines = 0, g_menuPresentLines = 0;
 highfps::menu_presentation::Context MenuPresentationContext() {
     highfps::menu_presentation::Context c;
-    const uintptr_t manager=*reinterpret_cast<uintptr_t*>(Addr(isaac::kGManagerPtr));
+    const uintptr_t manager=*reinterpret_cast<uintptr_t*>(Addr(g_gameBuildJ510 ? 0xC9A0D4 : isaac::kGManagerPtr));
     if(manager<0x10000) return c;
     c.managerState=*reinterpret_cast<int*>(manager+8);
     if(c.managerState!=1) return c;
-    c.menu=*reinterpret_cast<uintptr_t*>(Addr(0xC0D018));
+    c.menu=*reinterpret_cast<uintptr_t*>(Addr(g_gameBuildJ510 ? 0xC9A8E4 : 0xC0D018));
     c.epoch=g_lifecycleEpoch;
-    c.width=*reinterpret_cast<float*>(Addr(isaac::kOrthoWidth));
-    c.height=*reinterpret_cast<float*>(Addr(isaac::kOrthoHeight));
+    c.width=*reinterpret_cast<float*>(Addr(g_gameBuildJ510 ? 0xC9DDBC : isaac::kOrthoWidth));
+    c.height=*reinterpret_cast<float*>(Addr(g_gameBuildJ510 ? 0xC9E010 : isaac::kOrthoHeight));
     return c;
 }
 void SampleMenuPresentation() {
-    if(!g_separateNativeFrames || !g_menuPresentationEnabled) return;
+    if((!g_separateNativeFrames && !g_gameBuildJ510) || !g_menuPresentationEnabled) return;
     __try {
         const auto c=MenuPresentationContext();
         if(!highfps::menu_presentation::Active(c)) {g_menuHistory.Invalidate();g_menuWasSliding=false;return;}
@@ -915,13 +970,13 @@ highfps::carousel_presentation::Context CarouselPresentationContext() {
     c.managerState=menu.managerState;c.epoch=menu.epoch;c.width=menu.width;c.height=menu.height;
     c.menuPage=*reinterpret_cast<const int*>(menu.menu+0x40);
     if(c.menuPage!=5)return c;
-    c.owner=menu.menu+0x1530;
+    c.owner=menu.menu+(g_gameBuildJ510 ? 0x1534 : 0x1530);
     c.status=*reinterpret_cast<const int*>(c.owner);
     c.rosterPage=*reinterpret_cast<const int*>(c.owner+0xDB4);
     c.count=*reinterpret_cast<const unsigned*>(c.owner+0xB18);
     auto span=[](uintptr_t address) {const auto*p=reinterpret_cast<const uint32_t*>(address);return Span{p[0],p[1],p[2]};};
     c.positions=span(c.owner+0xC38);c.scales=span(c.owner+0xC44);
-    c.roster=span(reinterpret_cast<uintptr_t>(Addr(0xC0EA78)));
+    c.roster=span(reinterpret_cast<uintptr_t>(Addr(g_gameBuildJ510 ? 0xC9E01C : 0xC0EA78)));
     const auto&v=c.roster;
     if(v.begin||v.end||v.capacity) {
         if(v.begin<0x10000||(v.begin%4)||v.end<v.begin||v.capacity<v.end||(v.end-v.begin)%8||
@@ -953,7 +1008,7 @@ void LogCarousel(const char*kind,const highfps::carousel_presentation::Context&c
     Log("%s",line);
 }
 void SampleCarouselPresentation() {
-    if(!g_separateNativeFrames||!g_carouselPresentationEnabled)return;
+    if((!g_separateNativeFrames&&!g_gameBuildJ510)||!g_carouselPresentationEnabled)return;
     __try {
         const auto c=CarouselPresentationContext();
         if(g_carouselHistory.Sample(c,reinterpret_cast<const float*>(c.positions.begin),reinterpret_cast<const float*>(c.scales.begin))&&
@@ -1013,8 +1068,8 @@ void ApplyWorkControl() {
 bool PressureEnabled(){return g_cfg.adaptiveWorkBudget && g_frameWorkBudget &&
     (g_cfg.spawnWorkBudget||g_cfg.poofWorkBudget||g_cfg.extraSplitWorkBudget);}
 double PressureTargetHz(){
-    double hz=g_cfg.maxFps>0?g_cfg.maxFps:(g_displayHz>=30?g_displayHz:90);
-    if(g_presentVsync&&g_displayHz>=30&&hz>g_displayHz)hz=g_displayHz;
+    const auto output = g_presentationPolicy.output;
+    const double hz = output.Valid() ? output.Hz() : g_displayReading.display.mode.Hz();
     return hz>=30&&hz<=360?hz:90;
 }
 // Separate calls keep every dereference inside the caller's SEH boundary under
@@ -1247,41 +1302,39 @@ void __cdecl GarbageCollect19715();
 using SwapBuffersFn = BOOL(WINAPI*)(HDC);
 SwapBuffersFn g_realSwapBuffers = nullptr;
 double g_lastPresent = 0.0;
+double g_frameWorkStarted = 0.0;
+double g_frameSample = 0.0;
 uint32_t g_presentDiagLines = 0;
 
 void PacePresentation() {
-    // Pacing. Normally we want the display's full rate — that is the whole point — but
-    // there are two reasons to hold back.
-    //
-    // The configured cap is one. The other is measured: room generation costs the engine
-    // over 30 ms, and drawing 180 frames per second of an unchanging screen steals CPU
-    // and GPU from exactly that work. Once the gameplay clock has stood still for a while
-    // (a load, a menu, a long cutscene) there is nothing new to show anyway, so we drop
-    // to 60. The delay before it kicks in keeps short room-slide transitions at full rate.
-    int targetFps = g_cfg.maxFps;
-    // With display synchronization, a second independent CPU timer at the same
-    // rate causes missed vblanks. Let presentation pace us when its rate wins.
-    if (g_presentVsync && (g_displayHz <= 1 || targetFps == 0 || targetFps >= g_displayHz))
-        targetFps = 0;
-    if (g_cfg.idleFps > 0 && !g_worldAdvancing && g_frozenSince > 0.0 && Now() - g_frozenSince > 0.25)
-        if (targetFps == 0 || targetFps > g_cfg.idleFps) targetFps = g_cfg.idleFps;
-
-    if (targetFps > 0) {
-        const double period = 1.0 / targetFps;
-        double now = Now();
-        if (g_nextPresent == 0.0) g_nextPresent = now;
-        while (now < g_nextPresent) {
-            const double left = g_nextPresent - now;
-            if (left > 0.002) Sleep(DWORD(left * 1000.0) - 1);
-            now = Now();
-        }
-        g_nextPresent += period;
-        // Missed images have no simulation obligations: never burst to repay them.
-        if (g_nextPresent <= now) g_nextPresent = now + period;
+    using namespace highfps::refresh;
+    const double started = Now();
+    const bool idle = g_cfg.idleFps > 0 && !g_worldAdvancing &&
+                      g_frozenSince > 0.0 && started - g_frozenSince > 0.25;
+    auto policy = idle ? ResolvePresentation(true) : g_presentationPolicy;
+    if (policy.pacer == Pacer::External && g_swapPacing.useSoftware && policy.output.Valid())
+        policy.pacer = Pacer::Software;
+    static Rate previousCap;
+    if (policy.pacer != Pacer::Software) {
+        g_presentDeadline.Reset();
+        previousCap = {};
+        return;
     }
-
+    if (!Equal(previousCap, policy.output)) g_presentDeadline.Reset();
+    previousCap = policy.output;
+    double now = started;
+    const double due = g_presentDeadline.Due(now);
+    while (now < due) {
+        const double left = due - now;
+        if (left > 0.002) Sleep(DWORD(left * 1000.0) - 1);
+        now = Now();
+    }
+    g_presentDeadline.Consume(now, policy.output, policy.vrr);
 }
 
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+void RecordJ510MotionPresent(double presented);
+#endif
 BOOL WINAPI HookedSwapBuffers(HDC dc) {
     // A catch-up tick completes its native render/callback lifecycle, but the
     // obsolete image has no display deadline and must not update the sample clock.
@@ -1290,17 +1343,41 @@ BOOL WINAPI HookedSwapBuffers(HDC dc) {
         (g_promotingCanonical && g_promotionEpoch!=g_lifecycleEpoch))) return TRUE;
     // Only this game's main rendering thread is paced. Loading helpers and
     // another GL context must not consume its presentation deadlines.
+    if (ours) {
+        const auto window = highfps::refresh::OutputWindow(dc);
+        if (window && window != g_displayWindow) {
+            g_displayWindow = window;
+            g_nextDisplayCheck = 0.0;
+            ConfigurePresentation();
+        }
+    }
     const double swapStarted=ours?Now():0;
     if (ours) PacePresentation();
+    const double submitted = ours && g_cfg.frameTiming ? Now() : 0.0;
     const BOOL result = g_realSwapBuffers(dc);
     if (ours) {
         const double presented = Now();
         g_prof.swapSum+=presented-swapStarted;
         if(result) {
             ++g_successfulPresents;++g_presentSerial;
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+            if (g_gameBuildJ510 && g_cfg.j510MotionTrace) RecordJ510MotionPresent(presented);
+#endif
+            if ((g_cfg.followDisplayRefresh || g_cfg.requestVrr) &&
+                g_presentationPolicy.pacer == highfps::refresh::Pacer::External &&
+                g_swapPacing.Observe(presented, g_presentationPolicy.output)) {
+                Log("[present] swap is not enforcing output=%.6f; using software deadline",
+                    g_presentationPolicy.output.Hz());
+            }
             if (g_cfg.frameTiming || (g_cfg.diag && g_presentDiagLines++ < 12000))
                 Log("[present-frame] t=%.6f dt=%.6f gf=%u", presented,
                     g_lastPresent > 0 ? presented-g_lastPresent : 0, GameFrame());
+            if (g_cfg.frameTiming)
+                Log("[present-work] serial=%llu sample=%.6f ready=%.6f submitted=%.6f generateMs=%.3f paceMs=%.3f swapMs=%.3f",
+                    g_presentSerial, g_frameSample, swapStarted, submitted,
+                    g_frameWorkStarted > 0 ? (swapStarted - g_frameWorkStarted) * 1000 : 0,
+                    (submitted - swapStarted) * 1000, (presented - submitted) * 1000);
+            if (g_cfg.frameTiming) g_frameWorkStarted = presented;
             g_lastPresent = presented;
             g_presentAnchorValid = true;
         } else {g_presentAnchorValid=false;Log("[present-error] SwapBuffers failed");}
@@ -1455,7 +1532,7 @@ double ApplyLifecycleTime() {
     g_simClock.ExcludeBlocking(excluded);
     g_lastWrapperTime += excluded;
     g_lastTickTime += excluded;
-    g_nextPresent = 0;
+    g_presentDeadline.Reset();
     g_presentAnchorValid = false;
     return excluded;
 }
@@ -1478,6 +1555,7 @@ int __cdecl HookedUpdateWrapper() {
 #endif
 
     if (!g_endPacingActive) PacePresentation();
+    if (g_cfg.frameTiming) g_frameWorkStarted = Now();
 
     ApplyLifecycleTime();
     const double wallNow = Now();
@@ -1495,7 +1573,7 @@ int __cdecl HookedUpdateWrapper() {
         Log("[overload] mode=%s cause=%u t=%.6f discardedScheduleMs=%.3f next=%.6f",
             nativeVisible?"native-visible":"adaptive",unsigned(overloadFrame.cause),wallNow,
             overloadFrame.discardedScheduleSeconds*1000,g_simClock.next);
-        g_presentAnchorValid=false;g_nextPresent=0;
+        g_presentAnchorValid=false;g_presentDeadline.Reset();
         if(!nativeVisible) {
             // Native-visible output used authoritative poses. Do not interpolate
             // backwards into an older display history when high refresh resumes.
@@ -1508,12 +1586,11 @@ int __cdecl HookedUpdateWrapper() {
             g_lastWrapperTime=g_lastTickTime=wallNow;
         }
     }
-    // Lua GC and renderer cleanup can run AFTER SwapBuffers. Their variable
-    // cost must not move the sampled render timeline by a millisecond or two
-    // on alternating frames. Anchor this frame to the previous presentation.
-    // Simulation consumes only deadlines at or before that timestamp.
-    double now = !nativeVisible && g_endPacingActive && g_presentAnchorValid && g_lastPresent > 0.0 && wallNow - g_lastPresent < 0.25
-        ? g_lastPresent : wallNow;
+    // Fixed outputs use the previous swap anchor to avoid post-swap GC jitter.
+    // On VRR that anchor would turn each change in frame interval into stale pose time.
+    double now = highfps::refresh::SampleTime(g_presentationPolicy.vrr, wallNow, g_lastPresent,
+        !nativeVisible && g_endPacingActive && g_presentAnchorValid);
+    if (g_cfg.frameTiming) g_frameSample = now;
     ++g_loopFrames;
 
     if (g_prevEntry > 0.0) {
@@ -2698,7 +2775,16 @@ void*     g_overlay = nullptr;     // the ImageBase* we draw mod output into
 SmartImage g_overlayRef = {};      // held for the process lifetime, deliberately never released
 uint32_t  g_overlayW = 0, g_overlayH = 0;
 
-inline void* Mgr() { return Addr(isaac::kGraphicsManager); }
+uintptr_t OverlayGraphicsAddress() { return g_gameBuildJ510 ? 0xC9E890 : isaac::kGraphicsManager; }
+uintptr_t OverlayBlendAddress() {
+    return OverlayGraphicsAddress() + (g_gameBuildJ510 ? 0x20 : isaac::kMgrBlendState);
+}
+uintptr_t OverlayTargetAddress() {
+    return OverlayGraphicsAddress() + (g_gameBuildJ510 ? 0x68 : isaac::kMgrCurRenderTgt);
+}
+uintptr_t OverlayShaderAddress() { return g_gameBuildJ510 ? 0xC5EF48 : isaac::kCurrentShader; }
+
+inline void* Mgr() { return Addr(OverlayGraphicsAddress()); }
 #ifdef HIGHFPS_BUILD_19715
 // J374 has a 48-byte stdcall argument frame. Its trailing color is BY VALUE;
 // J460's 20-byte pointer-only call corrupts the stack on this build.
@@ -2741,12 +2827,12 @@ struct GraphicsState {
     uint32_t blend[5];
     uint32_t shader;
     void Save() {
-        memcpy(blend, Addr(isaac::kGraphicsManager + isaac::kMgrBlendState), sizeof blend);
-        shader = *reinterpret_cast<uint32_t*>(Addr(isaac::kCurrentShader));
+        memcpy(blend, Addr(OverlayBlendAddress()), sizeof blend);
+        shader = *reinterpret_cast<uint32_t*>(Addr(OverlayShaderAddress()));
     }
     void Restore() const {
-        memcpy(Addr(isaac::kGraphicsManager + isaac::kMgrBlendState), blend, sizeof blend);
-        *reinterpret_cast<uint32_t*>(Addr(isaac::kCurrentShader)) = shader;
+        memcpy(Addr(OverlayBlendAddress()), blend, sizeof blend);
+        *reinterpret_cast<uint32_t*>(Addr(OverlayShaderAddress())) = shader;
     }
 };
 
@@ -2755,8 +2841,8 @@ struct GraphicsState {
 // is why it compares against the size it last built for.
 bool EnsureOverlay() {
     if (g_overlayFailed || !g_createRt) return false;
-    const uint32_t w = *reinterpret_cast<uint32_t*>(Addr(isaac::kScreenWidth));
-    const uint32_t h = *reinterpret_cast<uint32_t*>(Addr(isaac::kScreenHeight));
+    const uint32_t w = *reinterpret_cast<uint32_t*>(Addr(g_gameBuildJ510 ? 0xC9E014 : isaac::kScreenWidth));
+    const uint32_t h = *reinterpret_cast<uint32_t*>(Addr(g_gameBuildJ510 ? 0xC9E018 : isaac::kScreenHeight));
     if (w == 0 || h == 0 || w > 16384 || h > 16384) return false;   // graphics not up yet
     if (g_overlay && w == g_overlayW && h == g_overlayH) return true;
 
@@ -2772,10 +2858,12 @@ bool EnsureOverlay() {
     g_overlayRef = created;
     g_overlay = created.image;
 
-    auto** vt = *reinterpret_cast<void***>(g_overlay);
-    reinterpret_cast<ImgFilterFn>(vt[isaac::kVtImageSetFilter])(g_overlay, nullptr, 1, 1);
-    *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(g_overlay) + isaac::kImgFilterCacheMin) = 1;
-    *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(g_overlay) + isaac::kImgFilterCacheMag) = 1;
+    if (!g_gameBuildJ510) {
+        auto** vt = *reinterpret_cast<void***>(g_overlay);
+        reinterpret_cast<ImgFilterFn>(vt[isaac::kVtImageSetFilter])(g_overlay, nullptr, 1, 1);
+        *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(g_overlay) + isaac::kImgFilterCacheMin) = 1;
+        *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(g_overlay) + isaac::kImgFilterCacheMag) = 1;
+    }
 
     g_overlayW = w; g_overlayH = h;
     Log("[overlay] surface ready: %ux%u at 0x%08X", w, h, (unsigned)(uintptr_t)g_overlay);
@@ -2792,7 +2880,7 @@ bool EnsureOverlay() {
 // dozens of times a frame both destroys batching and reorders the draws.
 class OverlayScope {
 public:
-    OverlayScope() {
+    void Bind() {
         if (!g_cfg.luaOverlay || g_overlayFailed || !g_inRenderPhase) return;
         if (g_luaFrameIntermediate) return;   // the gate holds Lua back, nothing will draw
         if (GetCurrentThreadId() != g_gameThreadId) return;   // only the GL-owning thread
@@ -2812,7 +2900,7 @@ public:
             InterlockedIncrement(&g_overlayScopes);
         } __except (OverlayFault("bind", GetExceptionInformation())) {}
     }
-    ~OverlayScope() {
+    void Unbind() {
         if (!m_active) return;
         __try {
             g_flushRt(Mgr(), nullptr, 1);
@@ -2820,8 +2908,6 @@ public:
             m_state.Restore();
         } __except (OverlayFault("unbind", GetExceptionInformation())) {}
     }
-    OverlayScope(const OverlayScope&) = delete;
-    OverlayScope& operator=(const OverlayScope&) = delete;
 private:
     GraphicsState m_state = {};
     bool m_active = false;
@@ -2843,8 +2929,8 @@ void PrepareOverlay() {
 // full-screen destination, and the blend state it uses for its own composites.
 void BlitOverlay() {
     if (!g_overlay) return;
-    const float w = *reinterpret_cast<float*>(Addr(isaac::kOrthoWidth));
-    const float h = *reinterpret_cast<float*>(Addr(isaac::kOrthoHeight));
+    const float w = *reinterpret_cast<float*>(Addr(g_gameBuildJ510 ? 0xC9DDBC : isaac::kOrthoWidth));
+    const float h = *reinterpret_cast<float*>(Addr(g_gameBuildJ510 ? 0xC9E010 : isaac::kOrthoHeight));
     if (!(w > 0.0f) || !(h > 0.0f)) return;
 
     SrcQuad src = {{0, 0}, {1, 0}, {0, 1}, {1, 1}, 0};
@@ -2861,7 +2947,7 @@ void BlitOverlay() {
     // simply joins the stream and goes out with everything else at the engine's own flush,
     // while the target it belongs to is still bound.
     GraphicsState st; st.Save();
-    auto* blend = reinterpret_cast<uint32_t*>(Addr(isaac::kGraphicsManager + isaac::kMgrBlendState));
+    auto* blend = reinterpret_cast<uint32_t*>(Addr(OverlayBlendAddress()));
     blend[0] = 0;
 #ifdef HIGHFPS_BUILD_19715
     // Rendering over transparent black has already multiplied RGB by alpha.
@@ -2881,11 +2967,12 @@ void BlitOverlay() {
         logged = true;
         Log("[overlay] first composite: layer %ux%u, quad %.0fx%.0f, target 0x%08X",
             g_overlayW, g_overlayH, w, h,
-            *reinterpret_cast<uint32_t*>(Addr(isaac::kGraphicsManager + isaac::kMgrCurRenderTgt)));
+            *reinterpret_cast<uint32_t*>(Addr(OverlayTargetAddress())));
     }
 
     auto** vt = *reinterpret_cast<void***>(g_overlay);
-    reinterpret_cast<ImgRenderFn>(vt[isaac::kVtImageRender])(g_overlay, nullptr, &src, &dst, &white);
+    reinterpret_cast<ImgRenderFn>(vt[g_gameBuildJ510 ? 5 : isaac::kVtImageRender])(
+        g_overlay, nullptr, &src, &dst, &white);
     st.Restore();
     InterlockedIncrement(&g_overlayBlits);
 }
@@ -2905,6 +2992,21 @@ void BlitOverlay() {
 using LuaPostRenderFn = int(__cdecl*)();
 LuaPostRenderFn g_luaPostRenderTramp = nullptr;
 bool g_postRenderHookInstalled = false;
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+bool g_j510EmptyOverlayVerified = false, g_j510OverlayNeedsFresh = false;
+std::uint64_t g_j510EmptyOverlaySkips = 0;
+bool J510NativePostRenderInactive() {
+    if (!g_gameBuildJ510 || !g_j510EmptyOverlayVerified || !g_cfg.j510SkipEmptyOverlay ||
+        !g_inRenderPhase || GetCurrentThreadId() != g_gameThreadId) return false;
+    __try {
+        // Same dispatch predicate as the guarded J510 LuaEngine::PostRender.
+        const auto engine = *reinterpret_cast<const uintptr_t*>(Addr(0xC99554));
+        if (engine < 0x10000) return false;
+        const auto listeners = *reinterpret_cast<const uintptr_t*>(engine);
+        return listeners >= 0x10000 && !(*reinterpret_cast<const std::uint8_t*>(listeners) & 4);
+    } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+}
+#endif
 bool OverlayPipelineReady() {
     return g_cfg.luaVanillaCadence && g_cfg.luaOverlay && g_postRenderHookInstalled;
 }
@@ -2917,6 +3019,19 @@ void CompositeOverlay() {
 }
 
 int __cdecl HookedLuaPostRender() {
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+    if (J510NativePostRenderInactive()) {
+        ++g_j510EmptyOverlaySkips;
+        g_j510OverlayNeedsFresh = true;
+        g_renderPassesDue = 0;
+        // Preserve the native call even when its listener branch is inactive.
+        return g_luaPostRenderTramp();
+    }
+    if (g_gameBuildJ510 && g_j510OverlayNeedsFresh && g_luaFrameIntermediate) {
+        // Do not composite a surface from before listeners were disabled.
+        return g_luaPostRenderTramp();
+    }
+#endif
 #ifdef HIGHFPS_BUILD_19715
     if (g_separateNativeFrames) {
         int result = 0;
@@ -2929,12 +3044,17 @@ int __cdecl HookedLuaPostRender() {
     // Fixed ticks now each complete their native render before the next update.
     // There is never a deferred batch of callbacks against the final state.
     int result = 0;
-    {
-        OverlayScope draws;
-        g_inModRenderPass = 1;
-        __try { result = g_luaPostRenderTramp(); }
-        __finally { g_inModRenderPass = 0; }
+    OverlayScope draws;
+    draws.Bind();
+    g_inModRenderPass = 1;
+    __try { result = g_luaPostRenderTramp(); }
+    __finally {
+        g_inModRenderPass = 0;
+        draws.Unbind();
     }
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+    if (g_gameBuildJ510 && !g_luaFrameIntermediate) g_j510OverlayNeedsFresh = false;
+#endif
     g_renderPassesDue = 0;
     CompositeOverlay();
     return result;
@@ -3065,6 +3185,10 @@ LuaCallkFn   g_realCallk  = nullptr;
 // actually live. If the overlay is off or has faulted, letting Lua run on every frame
 // costs performance but shows the right picture, and that is the better failure.
 bool SuppressLuaNow() {
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+    if (g_gameBuildJ510)
+        return g_inRenderPhase && g_luaFrameIntermediate && GetCurrentThreadId() == g_gameThreadId;
+#endif
     return g_inRenderPhase && g_luaFrameIntermediate && g_inModRenderPass &&
            (g_separateNativeFrames || (g_cfg.luaOverlay && !g_overlayFailed && g_overlay != nullptr)) &&
            GetCurrentThreadId() == g_gameThreadId;
@@ -3202,7 +3326,33 @@ bool InstallLuaGate() {
 // never enters the high-FPS wrapper, limiter, pacing, Lua, cache or GL adapters.
 std::atomic<SwapBuffersFn> g_nativeMeasureSwap{nullptr};
 std::atomic<DWORD> g_nativeMeasureThread{0};
+bool g_nativeMeasureJ510 = false;
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+std::atomic<bool> g_j510Pending{false};
+std::atomic<bool> g_j510Patched{false};
+uint32_t ReadJ510ManagerCounter();
+#include "native_candidate_j510.inc"
+#endif
+
+uint32_t ReadJ510ManagerCounter() {
+    __try {
+        const auto manager = *reinterpret_cast<uintptr_t*>(Addr(highfps::j510::kManager));
+        if (manager >= 0x10000)
+            return *reinterpret_cast<uint32_t*>(manager + highfps::j510::kManagerCounter);
+    } __except(EXCEPTION_EXECUTE_HANDLER) {}
+    return 0;
+}
+
 BOOL WINAPI NativeMeasureSwapBuffers(HDC dc) {
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+    if (g_j510Patched) return HookedSwapBuffers(dc);
+    if (_ReturnAddress() == Addr(0xAA1149) && g_j510Pending.load() && InitThreadExited() &&
+        g_j510Pending.exchange(false)) {
+        const BOOL result = g_nativeMeasureSwap.load(std::memory_order_acquire)(dc);
+        if (!InstallJ510Candidate()) Log("[j510] installation rejected; original frame loop retained");
+        return result;
+    }
+#endif
     const BOOL result = g_nativeMeasureSwap.load(std::memory_order_acquire)(dc);
     const DWORD nativeError = GetLastError();
     if(!result){Log("[present-error] native measurement SwapBuffers failed");SetLastError(nativeError);return result;}
@@ -3225,10 +3375,22 @@ BOOL WINAPI NativeMeasureSwapBuffers(HDC dc) {
             Log("[native-measure] ready=1 iat_only=1 pacing=0 affinity_policy=-1 thread=%lu asyncLog=%u",
                 me,unsigned(g_asyncLog.load(std::memory_order_acquire)!=nullptr));
         }
-        Log("[present-frame] t=%.6f dt=%.6f gf=%u",presented,last>0?presented-last:0,GameFrame());
+        const double interval = last > 0 ? presented - last : 0;
+        if (g_nativeMeasureJ510) {
+            Log("[native-j510-present] t=%.6f dt=%.6f manager_tick=%u", presented, interval, ReadJ510ManagerCounter());
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+            LogJ510Transition("native", presented);
+#endif
+        } else
+            Log("[present-frame] t=%.6f dt=%.6f gf=%u", presented, interval, GameFrame());
         last=presented;
         if(presented>=reportAt) {
             reportAt=presented+1;
+            if (g_nativeMeasureJ510) {
+                const auto reading = highfps::refresh::ReadDisplay(highfps::refresh::OutputWindow(dc));
+                Log("[native-j510-display] hz=%.6f source=%s", reading.display.mode.Hz(),
+                    highfps::refresh::Name(reading.source));
+            }
             if(auto* worker=g_asyncLog.load(std::memory_order_acquire))
                 Log("[log-worker] accepted=%ld written=%ld dropped=%ld truncated=%ld",
                     worker->Accepted(),worker->Written(),worker->Dropped(),worker->Truncated());
@@ -3245,7 +3407,10 @@ bool InstallNativeTimingProbe() {
 #else
     // Keep Enabled=0's original scheduling, including the thread mask. Async
     // output is compulsory for this probe so file flushes do not time the game.
-    g_cfg.mainThreadCpu=-1;
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+    if (!g_j510Pending)
+#endif
+        g_cfg.mainThreadCpu=-1;
     g_cfg.asyncLog=true;
     const auto*dos=reinterpret_cast<const IMAGE_DOS_HEADER*>(g_base);
     const auto*nt=reinterpret_cast<const IMAGE_NT_HEADERS32*>(g_base+dos->e_lfanew);
@@ -3320,13 +3485,28 @@ DWORD WINAPI Init(LPVOID) {
 #ifdef HIGHFPS_BUILD_19715
     const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(g_base);
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(g_base + dos->e_lfanew);
-    if (nt->FileHeader.TimeDateStamp != isaac::kPeTimestamp ||
-        nt->OptionalHeader.SizeOfImage != isaac::kPeImageSize) {
+    const bool isJ510 = highfps::j510::Matches(nt->FileHeader.TimeDateStamp, nt->OptionalHeader.SizeOfImage);
+    bool canRunJ510 = highfps::j510::CanMeasure(g_cfg.enabled, g_cfg.nativeTimingProbe);
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+    if (isJ510 && g_cfg.enabled) {
+        g_j510Pending = true;
+        canRunJ510 = true;
+    }
+#endif
+    if (isJ510 && !canRunJ510) {
+        Log("[FATAL] J510 high-FPS hooks are not enabled; native game unchanged");
+        return 0;
+    }
+    if (!isJ510 && (nt->FileHeader.TimeDateStamp != isaac::kPeTimestamp ||
+                    nt->OptionalHeader.SizeOfImage != isaac::kPeImageSize)) {
         Log("[FATAL] unsupported executable: this DLL requires 1.9.7.15.J374");
         return 0;
     }
-    Log(g_cfg.enabled ? "1.9.7.15.J374: scheduled interpolation and version-specific KAGE adapters"
-                      : "1.9.7.15.J374: opt-in native presentation measurement");
+    g_gameBuildJ510 = isJ510;
+    g_nativeMeasureJ510 = isJ510;
+    if (isJ510) Log("1.9.7.19.J510: opt-in native presentation measurement only");
+    else Log(g_cfg.enabled ? "1.9.7.15.J374: scheduled interpolation and version-specific KAGE adapters"
+                           : "1.9.7.15.J374: opt-in native presentation measurement");
 #endif
     LARGE_INTEGER f;
     QueryPerformanceFrequency(&f);
@@ -3342,8 +3522,9 @@ DWORD WINAPI Init(LPVOID) {
     // worse) moments later. Waiting for g_Manager to be populated puts us safely past
     // both the stub and engine construction.
     uintptr_t mgr = 0;
+    const auto managerAddress = g_nativeMeasureJ510 ? highfps::j510::kManager : isaac::kGManagerPtr;
     for (int waited = 0; waited < 1200; ++waited) {   // up to ~2 minutes of loading
-        mgr = *reinterpret_cast<uintptr_t*>(Addr(isaac::kGManagerPtr));
+        mgr = *reinterpret_cast<uintptr_t*>(Addr(managerAddress));
         if (mgr >= 0x10000) break;
         Sleep(100);
     }
@@ -3351,8 +3532,21 @@ DWORD WINAPI Init(LPVOID) {
         Log("[FATAL] g_Manager never initialised (0x%08X) - not patching", (unsigned)mgr);
         return 0;
     }
-    Log("g_Manager = 0x%08X, frameCount = %u", (unsigned)mgr,
-        *reinterpret_cast<uint32_t*>(mgr + isaac::kMgrFrameCount));
+    if (g_nativeMeasureJ510) {
+        if (!Expect(highfps::j510::kMainCalls, highfps::j510::kMainCallBytes,
+                    sizeof highfps::j510::kMainCallBytes, "J510 main update/render call pair")) return 0;
+        Log("g_Manager = 0x%08X, frameCount = %u", (unsigned)mgr, ReadJ510ManagerCounter());
+#ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+        if (g_j510Pending) {
+            if (!InstallLuaGate() || !InstallNativeTimingProbe())
+                Log("[j510] candidate bootstrap unavailable; original frame loop retained");
+            return 0;
+        }
+#endif
+    } else {
+        Log("g_Manager = 0x%08X, frameCount = %u", (unsigned)mgr,
+            *reinterpret_cast<uint32_t*>(mgr + isaac::kMgrFrameCount));
+    }
 
     if(!g_cfg.enabled) {
         if(!InstallNativeTimingProbe())Log("[native-measure] installed=0; native code and scheduling retained");
