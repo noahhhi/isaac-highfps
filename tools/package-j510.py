@@ -20,7 +20,6 @@ def main():
     name = re.search(r'^#define HIGHFPS_VERSION "([^"]+)"$', version, re.M)[1]
     assets = {
         "winmm.dll": ROOT / "build" / "winmm.dll",
-        "isaac-highfps-update.exe": ROOT / "build" / "isaac-highfps-update.exe",
         "isaac-highfps.ini": ROOT / "isaac-highfps.j510.ini.example",
         "install.sh": ROOT / "install" / "install.sh",
         "install.ps1": ROOT / "install" / "install.ps1",
@@ -30,9 +29,12 @@ def main():
     opts.output.mkdir(parents=True, exist_ok=True)
     for target, source in assets.items():
         shutil.copyfile(source, opts.output / target)
-    checksums = [sha256(path.read_bytes()).hexdigest() for path in list(assets.values())[:3]]
-    manifest = opts.output / "j510-update.txt"
-    manifest.write_bytes(("\n".join(["isaac-highfps-j510-v1", number, GAME_SHA256, *checksums]) + "\n").encode("ascii"))
+    dll_hash, ini_hash = [sha256((opts.output / asset).read_bytes()).hexdigest()
+                          for asset in ("winmm.dll", "isaac-highfps.ini")]
+    manifest = opts.output / "highfps-builds.txt"
+    rows = ["isaac-highfps-builds-v1",
+            f"1.9.7.19.J510 {GAME_SHA256} j510-r{number} {dll_hash} {ini_hash}"]
+    manifest.write_bytes(("\n".join(rows) + "\n").encode("ascii"))
 
     with ZipFile(opts.output / f"isaac-highfps-{name}.zip", "w", ZIP_DEFLATED) as archive:
         for asset in assets:

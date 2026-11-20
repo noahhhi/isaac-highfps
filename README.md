@@ -2,7 +2,9 @@
 
 This fork of [hunchcldev/isaac-highfps](https://github.com/hunchcldev/isaac-highfps) keeps the native update cadence while rendering extra frames between updates.
 
-**0.13.0-j510.2** targets the 32-bit Steam release of Repentance+ **1.9.7.19.J510**. It reuses native rendering under load and projects player and camera motion in eligible scrolling rooms. On Steam Deck, a matched heavy combat and scrolling test measured 89.4 → 90.0 FPS and 16.4 → 14.8 ms p99 frame time against the preceding J510 build. Results depend on the scene, hardware and display. The J510 installer checks the game's executable SHA-256 before making any changes.
+**0.13.0-j510.3** targets the 32-bit Steam release of Repentance+ **1.9.7.19.J510**. It reuses native rendering under load and projects player and camera motion in eligible scrolling rooms. On Steam Deck, a matched heavy combat and scrolling test measured 89.4 → 90.0 FPS and 16.4 → 14.8 ms p99 frame time against the preceding J510 build. Results depend on the scene, hardware and display. The J510 installer checks the game's executable SHA-256 before making any changes.
+
+REPENTOGON uses a separate 1.9.7.12.J273 executable. See the [J273 compatibility preview](https://github.com/noahhhi/isaac-highfps/tree/release/repentogon-j273) for the verified build identity and preview details.
 
 ## Install or update J510
 
@@ -14,33 +16,32 @@ Exit Isaac and run the command for your system. Both installers locate the Steam
 installer="$(mktemp)" && curl -qfsSL --proto '=https' --proto-redir '=https' https://github.com/noahhhi/isaac-highfps/releases/latest/download/install.sh -o "$installer" && bash "$installer"
 ```
 
-In Steam, set the game's launch options to the following once. Keep any options you already use.
-
-```text
-WINEDLLOVERRIDES="winmm=n,b" %command%
-```
-
 **Windows (PowerShell)**
 
 ```powershell
 $p = [IO.Path]::GetTempFileName() + '.ps1'; curl.exe -qfsSL --proto '=https' --proto-redir '=https' https://github.com/noahhhi/isaac-highfps/releases/latest/download/install.ps1 -o $p; if ($LASTEXITCODE -eq 0) { powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p }
 ```
 
-The [release ZIP](https://github.com/noahhhi/isaac-highfps/releases/latest) is also available for manual installation. Copy **winmm.dll** and **isaac-highfps-update.exe** beside **isaac-ng.exe**, then copy **isaac-highfps.ini** if you don't already have one. The Linux/Proton launch option above also applies to a manual install.
+Each installer prints the Steam launch option with the actual game path. Set it once to use the launcher. Keep other launch settings with your original game command. The Linux launcher sets the Proton winmm override.
+
+- Linux / Steam Deck uses `"/path/to/game/isaac-highfps.sh" --launch -- %command%`.
+- Windows uses `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\path\to\game\isaac-highfps.ps1" -Launch %command%`.
+
+The manual ZIP is available on the release page. To install without a launcher, copy **winmm.dll** beside **isaac-ng.exe**, and copy **isaac-highfps.ini** if you don't already have one. For a manual Proton install, set `WINEDLLOVERRIDES="winmm=n,b" %command%` as your Steam launch option. [Release downloads](https://github.com/noahhhi/isaac-highfps/releases/latest)
 
 If the installer finds an unfamiliar **winmm.dll**, it stops. After confirming you want to replace that DLL, rerun the saved installer with **--replace** on Linux or **-ReplaceExisting** on Windows to back it up and continue.
 
-### Automatic updates / 自动更新
+### Launch-time version checks / 启动时版本检查
 
-Automatic updates are on by default for J510 if the update helper is installed. The game starts with the local DLL. The helper runs in the background 30 seconds after the engine initializes and checks the stable GitHub release at most once every 24 hours per game directory, including after a failed check. It verifies the game executable and DLL checksum, waits for the game to exit, and leaves the old DLL as **winmm.dll.highfps-previous**. The new DLL loads on the next launch. The helper keeps the latest check result in **isaac-highfps-update.log** beside the game.
+The Steam launch script starts the local game immediately and reads its Isaac build number in the background. The installer records the build it already checked. Later launches query the GitHub releases feed once when the game version changes. If a matching DLL is published, the launcher verifies the game and DLL checksums, waits for the game to close, and backs up the previous files under **highfps-backup-…**. The matching DLL loads on the next launch. Results go to **isaac-highfps-update.log**. To check again after a failed query, or update HighFPS while the game version stays the same, rerun the curl installer.
 
-To turn it off, set **AutoUpdate=0** in the **[highfps]** section of **isaac-highfps.ini**. To roll back, use this setting, close the game, and restore the backed-up DLL from **winmm.dll.highfps-previous** or from the installer's **highfps-backup-…** directory.
+Add or change **AutoUpdate=0** under **[highfps]** in the game's **isaac-highfps.ini** to disable launch-time checks. To roll back, close the game and restore the backed-up DLL. Existing r1 and r2 users can switch to the launch scripts by rerunning the installer and using the launch option it prints.
 
-默认开启自动更新。游戏启动时直接使用本地 DLL，初始化后约 30 秒才在后台查询，每个安装目录最多每 24 小时查一次。校验通过后等游戏退出再替换，下次启动生效。要关闭，在游戏目录的 **isaac-highfps.ini** 的 **[highfps]** 下添加或修改 **AutoUpdate=0**。要回退，关闭更新和游戏后，用 **winmm.dll.highfps-previous** 或安装器备份中的 DLL 覆盖 **winmm.dll**。
+启动脚本会直接启动游戏，同时在后台读取以撒版本号。安装时已查询过的版本会记录在本地，之后只有游戏版本变化才查 GitHub 一次。找到匹配的 DLL 后先校验，等游戏退出再替换并备份旧文件。要关闭，请在游戏目录的 **isaac-highfps.ini** 的 **[highfps]** 下设置 **AutoUpdate=0**。同一游戏版本要更新 Mod，或要重试一次失败的查询，可以重跑 curl 安装命令。
 
 ### Build a J510 release
 
-Set **HIGHFPS_ENABLE_J510=1** before running **build-wsl.sh** or **build.bat**. Run **python tools/package-j510.py** to create the ZIP, manifest and standalone installers. Increment **HIGHFPS_J510_REVISION** and the public version in **src/version.h** for each stable release. Publish the assets under the corresponding **j510-rN** GitHub tag and mark that release latest. Keep all assets under the same tag so a check in progress can finish downloading its selected version.
+Set **HIGHFPS_ENABLE_J510=1** before running **build-wsl.sh** or **build.bat**. Run **python tools/package-j510.py** to create the ZIP, build manifest and installers. Increment **HIGHFPS_J510_REVISION** and the public version in **src/version.h** for each stable release. Publish the assets under the corresponding **j510-rN** GitHub tag and mark that release latest. Keep all assets under the same tag so a check in progress can finish downloading its selected version.
 
 ## Legacy Repentance+ 1.9.7.15.J374
 

@@ -5,7 +5,7 @@ repo_dir="$(cd -- "$(dirname -- "$0")/.." && pwd)"
 output_dir="$repo_dir/build/tests"
 mkdir -p "$output_dir"
 mode="${1:-core}"
-case "$mode" in core|abi|shader|lua-fixture|update|all) ;; *) echo 'Usage: tests/run-tests.sh [core|abi|shader|lua-fixture|update|all]' >&2; exit 2;; esac
+case "$mode" in core|abi|shader|lua-fixture|all) ;; *) echo 'Usage: tests/run-tests.sh [core|abi|shader|lua-fixture|all]' >&2; exit 2;; esac
 backend="${TEST_BACKEND:-auto}"
 host_compiler="${CXX:-c++}"
 windows_compiler="${CLANG_CL:-clang-cl}"
@@ -35,14 +35,14 @@ require_windows_build() {
 }
 build_windows() {
   require_windows_build
-  local source="$1" name="$2"; shift 2
+  local source="$1" name="$2"
   "$windows_compiler" --target=i686-pc-windows-msvc -fuse-ld=lld \
     /std:c++17 /EHsc /O2 /MT /D_CRT_SECURE_NO_WARNINGS \
     "/I$repo_dir/src" "/imsvc$XWIN_ROOT/crt/include" \
     "/imsvc$XWIN_ROOT/sdk/include/ucrt" "/imsvc$XWIN_ROOT/sdk/include/shared" \
     "/imsvc$XWIN_ROOT/sdk/include/um" "/Fo:$output_dir/$name.obj" \
     "/Fe:$output_dir/$name.exe" "$source" \
-    /link /SUBSYSTEM:CONSOLE "$@" "/LIBPATH:$XWIN_ROOT/crt/lib/x86" \
+    /link /SUBSYSTEM:CONSOLE "/LIBPATH:$XWIN_ROOT/crt/lib/x86" \
     "/LIBPATH:$XWIN_ROOT/sdk/lib/ucrt/x86" "/LIBPATH:$XWIN_ROOT/sdk/lib/um/x86"
 }
 run_windows() {
@@ -122,14 +122,6 @@ run_lua_fixture() {
     "$(windows_path "$repo_dir/tests/rewind_state_machine_test.lua")" \
     "$(windows_path "$repo_dir/tests/fixtures/rewind-fixture.lua")"
 }
-run_update() {
-  local fixture
-  fixture="$(mktemp -d "$output_dir/update-XXXXXXXX")"
-  build_windows "$repo_dir/tests/update_runtime_test.cpp" update_runtime_test winhttp.lib bcrypt.lib
-  run_windows "$output_dir/update_runtime_test.exe" "$(windows_path "$fixture")"
-  rm -rf -- "$fixture"
-}
-if [[ "$mode" == update || "$mode" == all ]]; then run_update; fi
 if [[ "$mode" == core || "$mode" == all ]]; then run_core; fi
 if [[ "$mode" == abi || "$mode" == all ]]; then run_abi; fi
 if [[ "$mode" == shader ]]; then run_shader; fi

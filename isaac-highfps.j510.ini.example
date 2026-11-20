@@ -6,7 +6,7 @@ FollowDisplayRefresh=1
 VSync=1
 IdleFps=0
 
-; Check GitHub at most once per 24 hours, after the game starts.
+; The launch script checks GitHub only when the Isaac version changes.
 ; Updates are installed after exit. Set this to 0 to disable automatic updates.
 AutoUpdate=1
 

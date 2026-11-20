@@ -55,12 +55,5 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /D_CRT_SECURE_NO_WARNINGS ^
    /Fo:build\ /Fe:build\inject.exe src\inject.cpp /link user32.lib >build\inject.log 2>&1
 if errorlevel 1 (echo CL_INJECT_FAILED & type build\inject.log & exit /b 1)
 
-if "%HIGHFPS_ENABLE_J510%"=="1" (
-    cl /nologo /std:c++17 /EHsc /O2 /MT /W3 /D_CRT_SECURE_NO_WARNINGS ^
-       /Fo:build\ /Fe:build\isaac-highfps-update.exe src\update.cpp ^
-       /link /SUBSYSTEM:CONSOLE winhttp.lib bcrypt.lib >build\update.log 2>&1
-    if errorlevel 1 (echo CL_UPDATER_FAILED & type build\update.log & exit /b 1)
-)
-
 echo BUILD_OK
 exit /b 0

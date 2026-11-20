@@ -27,7 +27,6 @@
 #include "display_observation_win32.h"
 #include "native_probe_j510.h"
 #ifdef HIGHFPS_ENABLE_J510_CANDIDATE
-#include "update_launch.h"
 #include "native_loop_plan_j510.h"
 #include "native_shader_locations_j510.h"
 #include "j510_pressure_promotion.h"
@@ -3541,12 +3540,8 @@ DWORD WINAPI Init(LPVOID) {
         Log("g_Manager = 0x%08X, frameCount = %u", (unsigned)mgr, ReadJ510ManagerCounter());
 #ifdef HIGHFPS_ENABLE_J510_CANDIDATE
         if (g_j510Pending) {
-            if (!InstallLuaGate() || !InstallNativeTimingProbe()) {
+            if (!InstallLuaGate() || !InstallNativeTimingProbe())
                 Log("[j510] candidate bootstrap unavailable; original frame loop retained");
-            } else if (HANDLE updater = CreateThread(nullptr, 0, highfps::update::LaunchAfterStartup,
-                                                     g_self, 0, nullptr)) {
-                CloseHandle(updater);
-            }
             return 0;
         }
 #endif
