@@ -19,3 +19,13 @@ mkdir -p build
   /Fo:build/ /Fe:build/winmm.dll src/dllmain.cpp src/winmm_thunks.cpp \
   /link /DEF:src/winmm.def "/LIBPATH:$XWIN_ROOT/crt/lib/x86" \
   "/LIBPATH:$XWIN_ROOT/sdk/lib/ucrt/x86" "/LIBPATH:$XWIN_ROOT/sdk/lib/um/x86"
+
+if [[ "${HIGHFPS_ENABLE_J510:-0}" == 1 ]]; then
+  "$compiler" --target=i686-pc-windows-msvc -fuse-ld=lld \
+    /std:c++17 /EHsc /O2 /MT /D_CRT_SECURE_NO_WARNINGS \
+    "/imsvc$XWIN_ROOT/crt/include" "/imsvc$XWIN_ROOT/sdk/include/ucrt" \
+    "/imsvc$XWIN_ROOT/sdk/include/shared" "/imsvc$XWIN_ROOT/sdk/include/um" \
+    /Fo:build/ /Fe:build/isaac-highfps-update.exe src/update.cpp \
+    /link /SUBSYSTEM:CONSOLE winhttp.lib bcrypt.lib "/LIBPATH:$XWIN_ROOT/crt/lib/x86" \
+    "/LIBPATH:$XWIN_ROOT/sdk/lib/ucrt/x86" "/LIBPATH:$XWIN_ROOT/sdk/lib/um/x86"
+fi

@@ -1,0 +1,29 @@
+[highfps]
+Enabled=1
+Interpolate=1
+MaxFps=0
+FollowDisplayRefresh=1
+VSync=1
+IdleFps=0
+
+; Check GitHub at most once per 24 hours, after the game starts.
+; Updates are installed after exit. Set this to 0 to disable automatic updates.
+AutoUpdate=1
+
+LuaVanillaCadence=1
+LuaOverlay=1
+CacheShaderLocations=1
+J510PressurePromotion=1
+J510MotionGuard=1
+J510SkipEmptyOverlay=1
+J510MotionProjection=1
+J510ScrollPressurePromotion=1
+
+SpawnWorkBudget=0
+ExtraSplitWorkBudget=0
+PoofWorkBudget=0
+AdaptiveWorkBudget=0
+
+Log=1
+Diag=0
+FrameTiming=0

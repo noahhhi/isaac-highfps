@@ -27,6 +27,7 @@
 #include "display_observation_win32.h"
 #include "native_probe_j510.h"
 #ifdef HIGHFPS_ENABLE_J510_CANDIDATE
+#include "update_launch.h"
 #include "native_loop_plan_j510.h"
 #include "native_shader_locations_j510.h"
 #include "j510_pressure_promotion.h"
@@ -158,13 +159,13 @@ void LoadConfig() {
     g_cfg.overloadFallback = GetPrivateProfileIntA("highfps","OverloadFallback",1,path)!=0;
     g_cfg.overloadRollingRecovery = GetPrivateProfileIntA("highfps","OverloadRollingRecovery",0,path)!=0;
     g_cfg.cacheShaderLocations = GetPrivateProfileIntA("highfps","CacheShaderLocations",1,path)!=0;
-    g_cfg.j510PressurePromotion = GetPrivateProfileIntA("highfps","J510PressurePromotion",0,path)!=0;
+    g_cfg.j510PressurePromotion = GetPrivateProfileIntA("highfps","J510PressurePromotion",1,path)!=0;
     g_cfg.j510MotionGuard = GetPrivateProfileIntA("highfps","J510MotionGuard",1,path)!=0;
-    g_cfg.j510SkipEmptyOverlay = GetPrivateProfileIntA("highfps","J510SkipEmptyOverlay",0,path)!=0;
+    g_cfg.j510SkipEmptyOverlay = GetPrivateProfileIntA("highfps","J510SkipEmptyOverlay",1,path)!=0;
     g_cfg.j510MotionTrace = GetPrivateProfileIntA("highfps","J510MotionTrace",0,path)!=0;
-    g_cfg.j510MotionProjection = GetPrivateProfileIntA("highfps","J510MotionProjection",0,path)!=0;
+    g_cfg.j510MotionProjection = GetPrivateProfileIntA("highfps","J510MotionProjection",1,path)!=0;
     g_cfg.j510ScrollPressurePromotion =
-        GetPrivateProfileIntA("highfps","J510ScrollPressurePromotion",0,path)!=0;
+        GetPrivateProfileIntA("highfps","J510ScrollPressurePromotion",1,path)!=0;
     g_cfg.reuseSpriteRotation = GetPrivateProfileIntA("highfps","ReuseSpriteRotation",1,path)!=0;
     g_cfg.spawnWorkBudget = GetPrivateProfileIntA("highfps","SpawnWorkBudget",0,path)!=0;
     g_cfg.poofWorkBudget = GetPrivateProfileIntA("highfps","PoofWorkBudget",0,path)!=0;
@@ -3499,12 +3500,14 @@ DWORD WINAPI Init(LPVOID) {
     }
     if (!isJ510 && (nt->FileHeader.TimeDateStamp != isaac::kPeTimestamp ||
                     nt->OptionalHeader.SizeOfImage != isaac::kPeImageSize)) {
-        Log("[FATAL] unsupported executable: this DLL requires 1.9.7.15.J374");
+        Log("[compatibility] unsupported Isaac executable: PE timestamp=0x%08X imageSize=0x%08X; native game retained",
+            (unsigned)nt->FileHeader.TimeDateStamp, (unsigned)nt->OptionalHeader.SizeOfImage);
         return 0;
     }
     g_gameBuildJ510 = isJ510;
     g_nativeMeasureJ510 = isJ510;
-    if (isJ510) Log("1.9.7.19.J510: opt-in native presentation measurement only");
+    if (isJ510) Log(g_cfg.enabled ? "1.9.7.19.J510: native high-FPS presentation"
+                                  : "1.9.7.19.J510: native frame timing measurement");
     else Log(g_cfg.enabled ? "1.9.7.15.J374: scheduled interpolation and version-specific KAGE adapters"
                            : "1.9.7.15.J374: opt-in native presentation measurement");
 #endif
@@ -3538,8 +3541,12 @@ DWORD WINAPI Init(LPVOID) {
         Log("g_Manager = 0x%08X, frameCount = %u", (unsigned)mgr, ReadJ510ManagerCounter());
 #ifdef HIGHFPS_ENABLE_J510_CANDIDATE
         if (g_j510Pending) {
-            if (!InstallLuaGate() || !InstallNativeTimingProbe())
+            if (!InstallLuaGate() || !InstallNativeTimingProbe()) {
                 Log("[j510] candidate bootstrap unavailable; original frame loop retained");
+            } else if (HANDLE updater = CreateThread(nullptr, 0, highfps::update::LaunchAfterStartup,
+                                                     g_self, 0, nullptr)) {
+                CloseHandle(updater);
+            }
             return 0;
         }
 #endif

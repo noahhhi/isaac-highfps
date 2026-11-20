@@ -1,6 +1,50 @@
-# isaac-highfps — Repentance+ 1.9.7.15.J374
+# isaac-highfps for Repentance+
 
-This fork of [hunchcldev/isaac-highfps](https://github.com/hunchcldev/isaac-highfps) separates Isaac's display output from its native update clocks. It targets the **32-bit Repentance+ 1.9.7.15.J374 executable** and is being tested on Steam Deck under Proton.
+This fork of [hunchcldev/isaac-highfps](https://github.com/hunchcldev/isaac-highfps) keeps the native update cadence while rendering extra frames between updates.
+
+**0.13.0-j510.1** targets the 32-bit Steam release of Repentance+ **1.9.7.19.J510**. It reuses native rendering under load and projects player and camera motion in eligible scrolling rooms. On Steam Deck, a matched heavy combat and scrolling test measured 89.4 → 90.0 FPS and 16.4 → 14.8 ms p99 frame time against the preceding J510 build. Results depend on the scene, hardware and display. The J510 installer checks the game's executable SHA-256 before making any changes.
+
+## Install or update J510
+
+Exit Isaac and run the command for your system. Both installers locate the Steam library, verify the downloaded files, back up an existing installation and preserve its INI. You can point the installer to a different library with **--game-dir PATH** on Linux or **-GameDir PATH** on Windows.
+
+**Linux / Steam Deck**
+
+```bash
+installer="$(mktemp)" && curl -qfsSL --proto '=https' --proto-redir '=https' https://github.com/noahhhi/isaac-highfps/releases/latest/download/install.sh -o "$installer" && bash "$installer"
+```
+
+In Steam, set the game's launch options to the following once. Keep any options you already use.
+
+```text
+WINEDLLOVERRIDES="winmm=n,b" %command%
+```
+
+**Windows (PowerShell)**
+
+```powershell
+$p = [IO.Path]::GetTempFileName() + '.ps1'; curl.exe -qfsSL --proto '=https' --proto-redir '=https' https://github.com/noahhhi/isaac-highfps/releases/latest/download/install.ps1 -o $p; if ($LASTEXITCODE -eq 0) { powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p }
+```
+
+The [release ZIP](https://github.com/noahhhi/isaac-highfps/releases/latest) is also available for manual installation. Copy **winmm.dll** and **isaac-highfps-update.exe** beside **isaac-ng.exe**, then copy **isaac-highfps.ini** if you don't already have one. The Linux/Proton launch option above also applies to a manual install.
+
+If the installer finds an unfamiliar **winmm.dll**, it stops. After confirming you want to replace that DLL, rerun the saved installer with **--replace** on Linux or **-ReplaceExisting** on Windows to back it up and continue.
+
+### Automatic updates / 自动更新
+
+Automatic updates are on by default for J510 if the update helper is installed. The game starts with the local DLL. The helper runs in the background 30 seconds after the engine initializes and checks the stable GitHub release at most once every 24 hours per game directory, including after a failed check. It verifies the game executable and DLL checksum, waits for the game to exit, and leaves the old DLL as **winmm.dll.highfps-previous**. The new DLL loads on the next launch. The helper keeps the latest check result in **isaac-highfps-update.log** beside the game.
+
+To turn it off, set **AutoUpdate=0** in the **[highfps]** section of **isaac-highfps.ini**. To roll back, use this setting, close the game, and restore the backed-up DLL from **winmm.dll.highfps-previous** or from the installer's **highfps-backup-…** directory.
+
+默认开启自动更新。游戏启动时直接使用本地 DLL，初始化后约 30 秒才在后台查询，每个安装目录最多每 24 小时查一次。校验通过后等游戏退出再替换，下次启动生效。要关闭，在游戏目录的 **isaac-highfps.ini** 的 **[highfps]** 下添加或修改 **AutoUpdate=0**。要回退，关闭更新和游戏后，用 **winmm.dll.highfps-previous** 或安装器备份中的 DLL 覆盖 **winmm.dll**。
+
+### Build a J510 release
+
+Set **HIGHFPS_ENABLE_J510=1** before running **build-wsl.sh** or **build.bat**. Run **python tools/package-j510.py** to create the ZIP, manifest and standalone installers. Increment **HIGHFPS_J510_REVISION** and the public version in **src/version.h** for each stable release. Publish the assets under the corresponding **j510-rN** GitHub tag and mark that release latest. Keep all assets under the same tag so a check in progress can finish downloading its selected version.
+
+## Legacy Repentance+ 1.9.7.15.J374
+
+The sections below document the earlier J374 builds. Install those from the [J374 branch](https://github.com/noahhhi/isaac-highfps/tree/render/independent-timeline) if you use that game executable.
 
 The main update stays at 60 Hz, full world updates stay at 30 Hz, and presentation follows the configured display or frame cap. Native entity and room-scroll previews provide intermediate positions. Audited native render-side animation updates and supported Lua drawing run on the fixed timeline, with their results reused for additional presentations.
 

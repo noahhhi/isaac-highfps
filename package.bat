@@ -3,6 +3,11 @@ rem Assembles the shippable download: release\isaac-highfps-<ver>.zip
 rem The Workshop companion is maintained in the game's mods folder, not here.
 setlocal
 cd /d "%~dp0"
+if "%HIGHFPS_ENABLE_J510%"=="1" (
+    call "%~dp0build.bat" || exit /b 1
+    python tools\package-j510.py
+    exit /b
+)
 rem The version comes from src\version.h - the same string the DLL publishes into Lua,
 rem so the zip name and what the companion sees can never drift apart.
 set VER=

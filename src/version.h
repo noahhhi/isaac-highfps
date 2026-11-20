@@ -1,8 +1,5 @@
-// The single source of the release version. package.bat parses this line for the zip
-// name, dllmain publishes it into the Lua state as HIGH_FPS_VERSION, and the Workshop
-// companion compares it against the newest version it was uploaded with.
-//
-// Releasing therefore means: bump this, run package.bat, publish the zip - and bump
-// LATEST in the companion's main.lua and re-upload it, or nobody gets told to update.
+// The public version is also reported by the DLL through HIGH_FPS_VERSION.
+// Increase HIGHFPS_J510_REVISION for each stable J510 release (tag j510-rN).
 #pragma once
-#define HIGHFPS_VERSION "0.13.0-j374.8"
+#define HIGHFPS_VERSION "0.13.0-j510.1"
+#define HIGHFPS_J510_REVISION 1
