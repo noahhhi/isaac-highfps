@@ -18,7 +18,7 @@ inline constexpr uintptr_t kImageBase = 0x00400000;
 // ------------------------------------------------------------ build select
 // The game ships as two diverging x86 builds we support with ONE dll: the main-folder
 // Steam build (v1.9.7.17, "J460") and the REPENTOGON build in the Repentogon\ subfolder
-// (v1.9.7.12, "J293"). They are different compilations - every image address moved, three
+// (v1.9.7.12, "J273"). They are different compilations - every image address moved, three
 // Manager members shifted, and the frame limiter + update wrapper have a different SHAPE
 // (see RemoveFrameLimiter / InstallWrapperHook). Struct member offsets are identical.
 //

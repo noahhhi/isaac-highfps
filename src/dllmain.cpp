@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cstdio>
 #include "offsets.h"
+#include "j273_build.h"
 #include "version.h"
 
 namespace {
@@ -37,14 +38,14 @@ HMODULE g_self = nullptr;
 struct Config {
     bool enabled = true;
     bool interpolate = true;
-    int  maxFps = 0;        // 0 = as fast as the display allows
+    int  maxFps = 90;        // 0 = as fast as the display allows
     bool log = true;
     bool profile = false;   // sampling profiler; costs real time, for diagnosis only
     bool diag = false;      // per-frame render-state dump; costs log I/O, for diagnosis only
-    bool cacheFileProbes = true;
-    bool luaVanillaCadence = true;   // pin mod callbacks to the vanilla 60 Hz
-    bool luaOverlay = true;          // and composite what they draw onto every frame
-    bool subpixelSprites = true;     // neutralise the renderer's RT-pixel snapping
+    bool cacheFileProbes = false;
+    bool luaVanillaCadence = false;   // pin mod callbacks to the vanilla 60 Hz
+    bool luaOverlay = false;          // and composite what they draw onto every frame
+    bool subpixelSprites = false;     // neutralise the renderer's RT-pixel snapping
 } g_cfg;
 
 void LoadConfig() {
@@ -56,14 +57,14 @@ void LoadConfig() {
 
     g_cfg.enabled     = GetPrivateProfileIntA("highfps", "Enabled", 1, path) != 0;
     g_cfg.interpolate = GetPrivateProfileIntA("highfps", "Interpolate", 1, path) != 0;
-    g_cfg.maxFps      = GetPrivateProfileIntA("highfps", "MaxFps", 0, path);
+    g_cfg.maxFps      = GetPrivateProfileIntA("highfps", "MaxFps", 90, path);
     g_cfg.log         = GetPrivateProfileIntA("highfps", "Log", 1, path) != 0;
     g_cfg.profile     = GetPrivateProfileIntA("highfps", "Profile", 0, path) != 0;
     g_cfg.diag        = GetPrivateProfileIntA("highfps", "Diag", 0, path) != 0;
     g_cfg.cacheFileProbes = GetPrivateProfileIntA("highfps", "CacheFileProbes", 1, path) != 0;
     g_cfg.luaVanillaCadence = GetPrivateProfileIntA("highfps", "LuaVanillaCadence", 1, path) != 0;
     g_cfg.luaOverlay        = GetPrivateProfileIntA("highfps", "LuaOverlay", 1, path) != 0;
-    g_cfg.subpixelSprites   = GetPrivateProfileIntA("highfps", "SubpixelSprites", 1, path) != 0;
+    g_cfg.subpixelSprites   = GetPrivateProfileIntA("highfps", "SubpixelSprites", 0, path) != 0;
 }
 
 inline uint8_t* Addr(uintptr_t staticVa) {
@@ -778,6 +779,15 @@ int __cdecl HookedUpdateWrapper() {
     g_prevEntry = now;
 
     if (now >= g_statWindow + 1.0) {
+        static uint32_t previousGameFrame = 0;
+        const uint32_t gameFrame = GameFrame();
+        if (gameFrame >= previousGameFrame) {
+            const double elapsed = now - g_statWindow;
+            Log("[j273-cadence] render=%.2f update=%.2f world=%.2f gameFrame=%u",
+                g_loopFrames / elapsed, g_wrapperCalls / elapsed,
+                (gameFrame - previousGameFrame) / elapsed, gameFrame);
+        }
+        previousGameFrame = gameFrame;
         // EnableInterpolation is logged here rather than at init: options.ini is parsed
         // some time after g_Manager exists, so an init-time read reports a zero that
         // means "not loaded yet", not "disabled".
@@ -2238,31 +2248,25 @@ DWORD WINAPI Init(LPVOID) {
     g_qpcToSeconds = 1.0 / double(f.QuadPart);
     QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&g_qpcStart));
 
-    // Which build loaded us? The PE header is not encrypted (only .text is, and by a stub
-    // that has not run yet), so the TimeDateStamp is readable now and selects the address
-    // set for everything below. Do this BEFORE the g_Manager wait - that read already uses
-    // a build-specific address.
-    const uint32_t peOff = *reinterpret_cast<uint32_t*>(g_base + 0x3C);
-    const uint32_t tds   = *reinterpret_cast<uint32_t*>(g_base + peOff + 8);
-    isaac::SelectBuild(tds);
-
-    char host[MAX_PATH] = {0};
-    GetModuleFileNameA(nullptr, host, MAX_PATH);
-    Log("isaac-highfps: module base 0x%08X (ASLR delta 0x%08X)",
-        (unsigned)g_base, (unsigned)(g_base - isaac::kImageBase));
-    Log("host exe = %s", host);
-    Log("build = %s (PE TimeDateStamp 0x%08X)",
-        isaac::g_isRepentogon ? "1.9.7.12 / REPENTOGON" :
-        (tds == isaac::kTimeDateStamp_1_9_7_17 ? "1.9.7.17 / Steam" : "UNKNOWN - using 1.9.7.17 offsets"),
-        tds);
-
-    // The overlay compositor's KAGE render path is not ported to 1.9.7.12 (Clear/Flush/
-    // shader select were refactored there), so keep it off on that build. High-FPS, smooth
-    // motion and subpixel sprites are unaffected; mod HUDs update at 60 Hz instead.
-    if (isaac::g_isRepentogon && g_cfg.luaOverlay) {
-        g_cfg.luaOverlay = false;
-        Log("[note] lua overlay not supported on 1.9.7.12 - disabled; mod graphics run at 60 Hz");
+    // Match the executable before any build-specific address is read.
+    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(g_base);
+    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(g_base + dos->e_lfanew);
+    const auto timestamp = nt->FileHeader.TimeDateStamp;
+    const auto imageSize = nt->OptionalHeader.SizeOfImage;
+    if (dos->e_magic != IMAGE_DOS_SIGNATURE || nt->Signature != IMAGE_NT_SIGNATURE ||
+        !highfps::j273::Matches(nt->FileHeader.Machine, timestamp, imageSize)) {
+        Log("[compatibility] unsupported Isaac executable: PE timestamp=0x%08X imageSize=0x%08X; native game retained",
+            (unsigned)timestamp, (unsigned)imageSize);
+        return 0;
     }
+    isaac::SelectBuild(timestamp);
+    Log("[compatibility] selected Repentance+ 1.9.7.12.J273 / REPENTOGON profile");
+
+    // REPENTOGON owns the Lua import table and virtual file lookups.
+    g_cfg.luaVanillaCadence = false;
+    g_cfg.luaOverlay = false;
+    g_cfg.cacheFileProbes = false;
+    Log("[compatibility] Lua and file hooks left to REPENTOGON; render callbacks follow presentations");
 
     // We are loaded as a static import, so DllMain runs before the executable's own
     // entry point — and that entry point is the Steam DRM stub in .bind, which is what
@@ -2281,6 +2285,12 @@ DWORD WINAPI Init(LPVOID) {
     }
     Log("g_Manager = 0x%08X, frameCount = %u", (unsigned)mgr,
         *reinterpret_cast<uint32_t*>(mgr + isaac::kMgrFrameCount));
+
+    using namespace highfps::j273;
+    if (!Expect(kMainCalls, kMainCallBytes, sizeof kMainCallBytes, "J273 update/render call sequence") ||
+        !Expect(kSleepClamp, kSleepBytes, sizeof kSleepBytes, "J273 limiter sleep clamp") ||
+        !Expect(kSpinBranch, kSpinBytes, sizeof kSpinBytes, "J273 limiter spin branch"))
+        return 0;
 
     g_nextWrapper = Now();
     g_statWindow = Now();

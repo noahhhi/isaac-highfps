@@ -1,4 +1,6 @@
-# isaac-highfps
+# isaac-highfps for REPENTOGON J273
+
+This branch contains the J273 compatibility preview. See the [REPENTOGON build guide](docs/repentogon-j273.md) for compatibility, build and installation instructions. The sections below describe the older upstream release.
 
 Native high-refresh support for The Binding of Isaac: Rebirth (Repentance+).
 
